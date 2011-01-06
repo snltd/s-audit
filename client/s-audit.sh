@@ -6,27 +6,24 @@
 # ----------
 #
 # Audit a machine to find out information about the hardware and software
-# it's running. Works on Solaris 2.6, 7, 8, 9, 10 and SXCE/Nevada as well
-# as OpenSolaris/Indiana/11.
+# it's running. Works on all Solaris versions from 2.6 up.
 #
-# The script needs to be run as root to perform a full audit. This is
-# because scadm, which gets information about the ALOM, appears to check the
-# UID of the user who runs it and, if it's not root, declines to execute.
-# I'm not aware of a way around this with privileges. I also check for root
-# when I call dladm in certain ways. We could get around this with
-# privileges but, as we have to be root to run scadm, I haven't bothered. If
-# anyone wants to change that, feel free, and if you can get scadm working
-# as UID>0, please do it, and tell me how you did it!
+# Can be run as any user, but a full audit requires root privileges.
+# Currently is not RBAC aware.
+#
+# For documentation and more information please see 
+#
+#   http://snltd.co.uk/s-audit
 #
 # You can do various types of audit. Currently, those types are:
-#   "hardware" : looks at the hardware
-#   "os"       : looks at the OS
-#   "app"      : examines installed versions of various applications
-#   "tool"     : examines installed versions of various tools
+#   "platform" : looks at the hardware/virtual environment
+#   "os"       : looks at the O/S
+#   "app"      : examines various applications
+#   "tool"     : examines various tools
 #   "hosted"   : looks at services hosted on the box, like databases and web
 #                sites
 #   "fs"       : gets information on local and network filesystems
-#   "security" : looks at certain security issues, including NFS
+#   "security" : looks at certain security-related issues
 #   "patch"    : lists installed patches and packages
 #
 # Yes this script is huge. Yes it could be broken up into smaller "modules".
@@ -46,51 +43,11 @@
 # function to get a list of binaries to run. Finally add "myprog" to the
 # appropriate test list.
 #
-# R Fisher 08/08
+# R Fisher 11/10
 #
 # Please record changes below
 #
-# v2.0  Initial release 19/01/10 RDF
-#
-# v2.1  Merged samba and NFS share audits to generalized "exports". Added
-#       very rudimentary iSCSI support. Merged NFS mount audit with general
-#       filesystem audit. Improved Apache website and MySQL DB auditing, as
-#       first step to understanding other engines. Fixed sendmail on broken
-#       DNS machines. Audits dtlogin daemons. RDF 09/02/10
-#
-# v2.2  Added -D option to delay startup by 'n' seconds. This lets the
-#       machine "settle down" before an automated audit is done. It is there
-#       for the benefit of the SMF method that audits a machine on every
-#       reboot. Count disks and politely fail to work out virtualization on
-#       old x86 systems. New way of checking is_global as the old way of
-#       assuming no zonename == global zone is broken by Solaris 8 and 9
-#       branded zones. Now look to see if init has a pid of 1.
-#       get_virtualization() supports Solaris 8 and 9 branded zones. Gets
-#       MAC address for all, or only plumbed, interfaces. (See DO_PLUMB
-#       variable.) Smarter Tomcat detection. Split off NIC detection into
-#       mk_nic_devlist() so code can be shared with get_nic() (formerly
-#       get_network) and get_mac(). Finds multiple versions of itself.
-#       my_pgrep() now optionally returns ALL processes matching pattern.
-#       LDOM VDISKs are reported as exports. RDF 28/02/10
-#
-# v2.3  Audit swap space along with physical memory. get_optical(),
-#       get_disk() and get_storage() are still separate functions, but now
-#       all output data as "storage". Add -q option to force it to be quiet. 
-#		Look for PCI cards, with varying degrees of success. RDF 14/03/10
-#
-# v2.4  Recognizes if it's running in a VMWare machine. New default output
-#       directory. VirtualBox virtualization reports guest additions
-#       version, if installed. Properly recognize Apache SVN module.
-#       Gracefully ignore faulted zpools. Recognize SBUS attached disks and
-#       CDs, and SBUS cards. Works properly with Solaris 2.6. Added -l
-#       option to list test in each class. Removed kstat uptime calculator.
-#
-# v2.5  Added new "all" audit type. First steps towards a full understanding
-#       of Crossbow. Revision of get_nic(). Understand vnics. List printers.
-#       Start to recognize non-Sun "distributions", with tweaks for Nexenta
-#       compatibility. -o flag to omit tests. -M flag to turn on MAC address
-#       auditing. First auditing of iPlanet hosted websites (version 7).
-#       Rewrote test list handling. Recognize Solaris 11 Express.
+# v3.0  First public release.
 #
 #=============================================================================
 
@@ -99,7 +56,7 @@
 
 PATH=/bin:/usr/bin
 
-MY_VER="2.5"
+MY_VER="3.0"
 	# The version of the script. PLEASE UPDATE
 
 typeset -R15 RKEY
@@ -154,15 +111,15 @@ IPL_DIRS="/opt/SUNWwbsvr /opt/oracle/webserver7 /usr/netscape/suitespot \
 	/sun/webserver7"
 	# Directories where we look for iPlanet software
 
-NOTESDDIR="/opt/lotus/notesdata"
-NOTESBDIR="/opt/lotus/notes/latest/sunspa"
-
 #DO_PLUMB=1
 	# If this variable is set, s-audit will temporarily plumb unconfigured
-	# network interfaces to get their MAC address during a hardware audit
+	# network interfaces to get their MAC address during a platform audit
 
 IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc "
 	# Ignore these fs types in the fs audit
+
+EXTRAS="/etc/s-audit_extras"
+	# default path for extras file
 
 # DLADM STUFF. This is to handle the ever-changing way in which dladm is
 # called. The commands are hard quoted because they're run through eval,
@@ -210,23 +167,23 @@ fi
 # "applications" as things which run as daemons, and "tools" as things which
 # are user invoked.
 
-G_HARDWARE_TESTS="hardware virtualization cpus memory sn obp alom disks \
+G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks \
 	optical lux_enclosures tape_drives pci_cards sbus_cards printers mac nic" 
-L_HARDWARE_TESTS="virtualization printers mac nic"
+L_PLATFORM_TESTS="virtualization printers mac nic"
 
 G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms uptime \
 	package_count patch_count"
 L_OS_TESTS="os_dist os_ver os_rel kernel hostid uptime package_count \
 	patch_count"
 
-L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx notes mysql_s \
+L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s \
 	ora_s svnserve sendmail exim cronolog mailman splunk sshd named ssp \
 	symon samba x vbox"
 G_APP_TESTS="vxvm vxfs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
 L_TOOL_TESTS="openssl rsync mysql_c sqlplus svn_c java perl php_cmd python \
 	ruby cc gcc pca nettracker saudit scat explorer"
-G_TOOL_TESTS="sccli monitor sneep vts $L_TOOL_TESTS"
+G_TOOL_TESTS="sccli sneep vts $L_TOOL_TESTS"
 
 G_HOSTED_TESTS="site_apache site_iplanet db_mysql"
 L_HOSTED_TESTS=$G_HOSTED_TESTS
@@ -409,8 +366,8 @@ function usage
 	usage:
 
 	    ${0##*/} [-f dir] [-z all|zone] [-qpPM] [-D secs] 
-		[-o test,test,...,test] [-R user@host:dir ]
-	    app|fs|hardware|hosted|os|plist|security|tool|machine|all
+		[-o test,test,...,test] [-R user@host:dir ] [-e file]
+	    app|fs|platform|hosted|os|plist|security|tool|machine|all
 
 	    ${0##*/} -l
 
@@ -423,7 +380,7 @@ function usage
 	           may be used to audit all running zones. The output from "-z
 	           all" can be confusing, and it is intended to be run with the
 	           -f flag
-	  -M :     in hardware audits, plumb and unplumb uncabled NICs to obtain
+	  -M :     in platform audits, plumb and unplumb uncabled NICs to obtain
 	           their MAC address
 	  -o :     omit these tests, comma separated
 	  -p :     write machine-parseable output. By default output is
@@ -433,12 +390,13 @@ function usage
 	  -R :     information for scp to copy audit files to remote host. Of
 	           form "user@host:directory"
 	  -D :     delay this many seconds before beginning the audit
+	  -e :     full path to "extras" file
 	  -l :     list tests in each audit type
 	  -V :     print version and exit
 
 	The final argument tells the script what kind of audit to perform.
 
-	           hardware : looks at the box and things attached to it
+	           platform : looks at the box and things attached to it
 	           os       : looks at the OS and virtualizations
 	           app      : examines installed versions of a range of
 	                      application software
@@ -467,7 +425,7 @@ function show_checks
 
 	typeset -u cn
 
-	for cl in hardware os app tool hosted fs patch security
+	for cl in platform os app tool hosted fs patch security
 	do
 		cn=$cl
 		print "\nGlobal zone '$cl' audit tests"
@@ -734,6 +692,22 @@ function get_hostname
 	disp "hostname" $HOSTNAME
 }
 
+function get_extras
+{
+	# Looks at the extras file and inserts data into the audit
+
+	if [[ -n $EXTRAS ]]
+	then
+
+		egrep "^$class	" $EXTRAS | while read cl k v
+		do
+			disp "$k" $v
+		done
+
+	fi
+
+}
+
 function get_time
 {
 	# Just return a nice date/time string
@@ -741,7 +715,7 @@ function get_time
 	disp "audit completed" $(date "+%H:%M:%S %d/%m/%y")
 }
 
-#-- HARDWARE AUDITING FUNCTIONS ----------------------------------------------
+#-- PLATFORM AUDITING FUNCTIONS ----------------------------------------------
 
 function get_hardware
 {
@@ -1732,22 +1706,6 @@ function get_tomcat
 
 }
 
-function get_notes
-{
-	# What follows is not remotely portable due to the frankly disgusting
-	# way the nsd.sh script works. AFAIK it's the only way to get the
-	# version of Notes.
-
-	if [[ -d $NOTESDDIR ]]
-	then
-		is_run_ver "Lotus Notes" ${NOTESBDIR}/amgr \
-			$(	cd $NOTESDDIR
-				${NOTESBDIR}/nsd.sh -version 2>/dev/null \
-				| sed -n '/Notes Version/s/^.*Release \([^ ]*\).*$/\1/p'
-			)
-	fi
-}
-
 function get_iplanet_web
 {
 	# Find Sun/iPlanet installs. This is hard because we can't properly
@@ -2328,14 +2286,6 @@ function get_saudit
 	do
 		disp "s-audit@$BIN" $($BIN -V)
 	done
-}
-
-function get_monitor
-{
-	# Get the version of my bespoke monitor software.
-
-	can_has becta_monitor.sh && MON_VER=$(becta_monitor.sh -V)
-	disp "monitor" $MON_VER
 }
 
 function get_explorer
@@ -3055,13 +3005,19 @@ whence disown >/dev/null && MYSH=93 || MYSH=88
 
 # Get options
 
-while getopts "D:f:lMo:pPqR:z:V" option 2>/dev/null
+while getopts "D:e:f:lMo:pPqR:z:V" option 2>/dev/null
 do
 	case $option in
 
 		"D")	# Delay startup by OPTARG seconds
 			T_DELAY=$OPTARG
 			;;
+
+		"e")	# Path to "extras" file
+
+			UEXTRAS=$OPTARG \
+			;;
+			
 
 		"f")	# send all output to automatically named files, optionally
 				# in the named directory
@@ -3143,6 +3099,20 @@ can_has zonename && Z_FLAG="-z $(zonename)"
 
 trap 'clean_up; exit' 2 9 15
 
+# Extras file?
+
+[[ ! -f $EXTRAS ]] && unset EXTRAS
+
+if [[ -n $UEXTRAS ]]
+then
+	unset EXTRAS
+
+	[[ -f $UEXTRAS ]] \
+		&& EXTRAS=$UEXTRAS \
+		|| print -u2 "WARNING: extras file not found. [${UEXTRAS}]"
+
+fi
+
 # Look to see if there's a lock file. If there is, report an error message.
 # That goes to the console if we're not a cron job, and out through syslog
 # if we are. Don't worry about lockfiles if we're not root
@@ -3182,7 +3152,7 @@ then
 	is_root || die "only root can perform full machine audits"
 	can_has zoneadm && ZONE=all || unset ZONE
 
-	CLASSES="hardware os fs app tool hosted security"
+	CLASSES="platform os fs app tool hosted security"
 	DO_THIS=true
 	MACHINE=true
 
@@ -3191,7 +3161,7 @@ then
 	[[ -n $OUTBASE ]] && CLASSES="$CLASSES plist"
 elif [[ $1 == "all" ]]
 then
-	CLASSES="hardware os fs app tool hosted security"
+	CLASSES="platform os fs app tool hosted security"
 else
 	CLASSES=$1
 fi
@@ -3271,7 +3241,7 @@ do
 
 	case $class in
 
-		"hardware")
+		"platform"|"hardware")
 			RWARN="Many tests, including ALOM, FC enclosure,
 			virtualization will not be run, and NIC information will be
 			limited"
@@ -3337,9 +3307,10 @@ do
 	EOWARN
 
 	# Now we're almost ready to run the checks. We always start with
-	# "hostname" and finish with "time", so bracket the list with those.
+	# "hostname" and finish with "extras", then "time", so bracket the list
+	# with those.
 
-	RUN_TESTS="hostname $TESTS time"
+	RUN_TESTS="hostname $TESTS extras time"
 	
 	# Check output is written to file descriptor 3. If OUTDIR is not set,
 	# that's already been redirected to standard out. If not, we need to

@@ -1,0 +1,280 @@
+/*==========================================================================
+ *
+ * audit.css
+ * ---------
+ *
+ * Styles required for audit display pages
+ *
+ * s-audit (c) 2010 SNLTD
+ *
+ *==========================================================================*/
+ 
+.blank { 
+	/* for invisible table cells. Should be the same background colour as body
+	 */
+
+	background-color: #fff;
+}
+
+.lalign { /* left-aligned text */
+	text-align: left
+}
+
+tt,pre { /* all fixed-width text */
+	font-family: "LucidaSansTypewriter", "Consolas", courier, monospace;
+	font-size: 10px;
+	line-height: 120%;
+}
+
+#content { /* all grid on audit pages */
+	border: 0;
+	margin: 0;
+	font-size: 8pt;
+}
+
+div.indent { /* intented divs, e.g. on hosted services */
+	margin-left: 10px;
+}
+
+a.strongr { /* links for unresolved sites on the hosted services page */
+	color: #94112D
+}
+
+a.strongg { /* links for resolved sites on the hosted services page */
+	color: #355F26;
+}
+
+a.strongr, a.strongg { /* bold face links */
+	font-weight: bold;	
+	color: #000022;
+}
+/*--------------------------------------------------------------------------*/
+/* page navigation */
+
+ul {
+	clear: both;
+	text-align: right;
+	background: #eee;
+	font-size: 8pt;
+	padding: 2px;
+	margin-top: 3px;
+	border-top: 1px solid black;
+	border-bottom: 1px solid black;
+}
+
+#navlist li {
+	display: inline;
+	list-style-type: none;
+	padding: 0 0.5em 0 0.5em;
+}
+
+li.here {
+	border-bottom: 5px solid black;
+}
+
+/*--------------------------------------------------------------------------*/
+/* General Audit Grids */
+
+th, td.comprow { /* table headings for audit grids */
+    text-align: center;
+    color: black;
+	padding: 6px 1px 6px 1px;
+	background-color: #ccc;
+	border-bottom: 2px solid black;
+	font-weight: bold;
+}
+
+.server, td.svhn { /* global zones/servers. Used in <tr> and <td> */
+	background-color: #d0d4fe;
+	color: black;
+}
+
+.zone, td.zhn { /* analagous to .server, but for local zones */
+	background-color: #e5e5e5;
+	color: #333;
+}
+
+.ldmp, td.ldmp { /* analagous to .server, but for primary LDMs */
+	background-color: #c4d5cc;
+	color: #333;
+}
+
+.ldm, td.ldm { /* analagous to .server, but for LDMs */
+	background-color: #c5ccb4;
+	color: #333;
+}
+
+.vb, td.vb { /* analagous to .server, but for VirtualBoxes */
+	background-color: #c6bdfe;
+	color: #333;
+}
+
+td.ldmp, td.ldm, td.vb { /* Stop word-breaking in the hostname column */
+	white-space: nowrap;
+}
+
+td.zonehn, td.serverhn { /* hostname for local zones */
+	white-space: nowrap;
+	text-align: left;
+	padding-left: 15px;
+}
+
+td.serverhn { /* hostname for global zones/physical servers */
+	font-weight: bold;
+	padding-left: 3px;
+}
+
+.smallrow,.smallrowbar { /* small rows for lists embedded in cells */
+    font: 9px normal helvetica, sans-serif;
+}
+
+.rowbar,.smallrowbar {
+	/* separator bars for small lists embedded in cells */
+	border-bottom: 1px solid #fcfcfc;
+}
+
+.multicell, .multicellsmall, .multicellnb, .multicellsmallnb {
+	/* multicell nested tables */
+	padding: 0px;
+	margin: 0px;
+}
+
+.multicell, .multicellsmall {
+	border-collapse: collapse;
+	border-bottom: 1px #f3f3f3 solid;
+}
+
+.multicellsmall, .multicellsmallnb {
+	font-size: xx-small;
+}
+
+.mac_addr { /* MAC addresses */
+	text-align: right;
+}
+
+/*--------------------------------------------------------------------------*/
+/* Comparison Grid */
+
+td.comprow { /* leftmost column in server comparisons, analogous to th */
+	text-align: right;
+	padding: 1px 5px 1px 1px;
+	border: none;
+}
+
+input, select { /* cycle gadgets used to select servers on compare page */
+	background: #fff;
+	color: #333;
+    font: 11px normal helvetica, sans-serif;
+}
+
+/* classes for warnings in the tools and applications grids */
+
+.sw_latest { /* latest software */
+	background: #acce9a
+}
+
+.sw_old { /* old versions of software */
+	background: #cea596
+}
+
+/*--------------------------------------------------------------------------*/
+/* classes for the IP listing page */
+
+.ip_free { /* free addresses */
+	color: #aaa;
+}
+
+.resolved { /* addresses which resolve and ping */
+	background: #acce9a
+}
+
+.onlyresolve { /* addresses which resolve, but don't ping */
+	background: #d0d4fe;
+}
+
+.onlylive {
+	/* addresses which are in the live audits, but not the scan results */
+	background: #c48cd0;
+}
+
+.obsolete {
+	/* addresses which are in the obsolete audits, but not the scan results */
+	background: #aaa;
+}
+
+.ping { /* addresses which ping, but aren't in the DNS */
+	background: #e9c243;	/* amber colour from general_classes.php */
+
+}
+
+.reserved { /* addresses in the reserved file */
+	background: #df8439;	/* orange colour from general_classes.php */
+}
+
+/*--------------------------------------------------------------------------*/
+/* classes for the keys created by the auditKey class */
+
+.key_txt { /* explanatory text in keys */
+	text-align: left;
+	padding: 3px;
+}
+
+table.key, div.key_info { /* key and notes generated by the auditKey class */
+	width: 600px;
+	margin: 20px auto 20px auto;
+	border: 1px solid black;
+}
+
+td.keyhead { /* heading in auditKey->open_key() */
+	text-align: center;
+	border-bottom: 1px solid black;
+	padding: 4px;
+	margin-bottom: 10px;
+	font: 13px;
+	font-weight: bold;
+}
+
+td.keynote { /* note in auditKey->close_key() */
+	font: 10px;
+	border-top: 1px solid black;
+}
+
+td.key_info { /* note in auditKey->key_extra_info() */
+	padding: 5px;
+	text-align: justify;
+}
+
+/*--------------------------------------------------------------------------*/
+/* classes for individual server views */
+
+td.sclh { /* headings for audit types */
+	padding-top: 20px;
+	text-size: 15px;
+	font-weight: bold;
+	border-bottom: 1px solid #ccc;
+}
+
+td.scompl { /* "audit completed" line */
+	text-align: right;
+	text-size: x-small;
+	border-top: 1px solid #ccc;
+}
+
+td.svhn, td.osvhn { /* global zone/server hostnames */
+	font-weight: bold;
+	text-align: right;
+	padding: 4px;
+}
+
+td.zhn, td.ozhn { /* local zone hostnames */
+	color: black;
+	padding: 4px;
+}
+
+td.osvhn { /* obsolete global zones */
+	background: #CA90A4
+}
+
+td.ozhn { /* obsolete local zones */
+	background: #CAB0B0
+}

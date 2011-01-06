@@ -1,0 +1,68 @@
+<span class="Comment">&lt;?</span><span class="Type">xml</span><span class="Type"> </span><span class="Type">version</span>=<span class="Constant">'1.0'</span><span class="Comment">?&gt;</span>
+
+<span class="Identifier">&lt;!</span><span class="Statement">DOCTYPE</span> service_bundle <span class="Statement">SYSTEM</span> <span class="Constant">'/usr/share/lib/xml/dtd/service_bundle.dtd.1'</span><span class="Identifier">&gt;</span>
+
+<span class="Identifier">&lt;</span><span class="Identifier">service_bundle</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'manifest'</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'export'</span><span class="Identifier">&gt;</span>
+
+  <span class="Identifier">&lt;</span><span class="Identifier">service</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'application/s-audit'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'service'</span><span class="Identifier"> </span><span class="Type">version</span>=<span class="Constant">'0'</span><span class="Identifier">&gt;</span>
+
+    <span class="Identifier">&lt;</span><span class="Identifier">single_instance</span><span class="Identifier">/&gt;</span>
+
+    <span class="Identifier">&lt;</span><span class="Identifier">property_group</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'options'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'application'</span><span class="Identifier">&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">propval</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'delay'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'astring'</span><span class="Identifier"> </span><span class="Type">value</span>=<span class="Constant">'180'</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">propval</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'dest'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'astring'</span><span class="Identifier"> </span><span class="Type">value</span>=<span class="Constant">'-R user@server:/var/s-audit'</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">propval</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'pth'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'astring'</span><span class="Identifier"> </span><span class="Type">value</span>=<span class="Constant">'/usr/local/bin/s-audit.sh'</span><span class="Identifier">/&gt;</span>
+    <span class="Identifier">&lt;/property_group&gt;</span>
+
+    <span class="Identifier">&lt;</span><span class="Identifier">property_group</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'startd'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'framework'</span><span class="Identifier">&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">stability</span><span class="Identifier"> </span><span class="Type">value</span>=<span class="Constant">'Unstable'</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">propval</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'duration'</span><span class="Identifier"> </span><span class="Type">type</span>=<span class="Constant">'astring'</span><span class="Identifier"> </span><span class="Type">value</span>=<span class="Constant">'transient'</span><span class="Identifier">/&gt;</span>
+    <span class="Identifier">&lt;/property_group&gt;</span>
+
+    <span class="Identifier">&lt;</span><span class="Identifier">instance</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'default'</span><span class="Identifier"> </span><span class="Type">enabled</span>=<span class="Constant">'true'</span><span class="Identifier">&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">dependency</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">name</span>=<span class="Constant">'multi-user'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">grouping</span>=<span class="Constant">'require_all'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">restart_on</span>=<span class="Constant">'none'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">type</span>=<span class="Constant">'service'</span><span class="Identifier">&gt;</span>
+        <span class="Identifier">&lt;</span><span class="Identifier">service_fmri</span><span class="Identifier"> </span><span class="Type">value</span>=<span class="Constant">'svc:/milestone/multi-user-server:default'</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;/dependency&gt;</span>
+
+      <span class="Identifier">&lt;</span><span class="Identifier">exec_method</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">name</span>=<span class="Constant">'start'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">type</span>=<span class="Constant">'method'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">exec</span>=<span class="Constant">'%{options/pth} -qp -D %{options/delay} %{options/dest} </span>
+<span class="Constant">        machine'</span><span class="Identifier"> </span><span class="Type">timeout_seconds</span>=<span class="Constant">'0'</span><span class="Identifier">&gt;</span>
+        <span class="Identifier">&lt;</span><span class="Identifier">method_context</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;/exec_method&gt;</span>
+
+      <span class="Identifier">&lt;</span><span class="Identifier">exec_method</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">name</span>=<span class="Constant">'stop'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">type</span>=<span class="Constant">'method'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">exec</span>=<span class="Constant">':kill'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">timeout_seconds</span>=<span class="Constant">'10'</span><span class="Identifier">&gt;</span>
+        <span class="Identifier">&lt;</span><span class="Identifier">method_context</span><span class="Identifier">/&gt;</span>
+
+      <span class="Identifier">&lt;/exec_method&gt;</span>
+
+      <span class="Identifier">&lt;</span><span class="Identifier">exec_method</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">name</span>=<span class="Constant">'refresh'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">type</span>=<span class="Constant">'method'</span><span class="Identifier"> </span>
+<span class="Identifier">        </span><span class="Type">exec</span>=<span class="Constant">'%{options/pth} -qp %{options/dest} machine'</span><span class="Identifier"> </span><span class="Type">timeout_seconds</span>=<span class="Constant">'0'</span><span class="Identifier">&gt;</span>
+        <span class="Identifier">&lt;</span><span class="Identifier">method_context</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;/exec_method&gt;</span>
+
+    <span class="Identifier">&lt;/instance&gt;</span>
+
+    <span class="Identifier">&lt;</span><span class="Identifier">template</span><span class="Identifier">&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">common_name</span><span class="Identifier">&gt;</span>
+        <span class="Identifier">&lt;</span><span class="Identifier">loctext</span><span class="Identifier"> </span><span class="Type">xml</span><span class="Comment">:</span><span class="Type">lang</span>=<span class="Constant">'C'</span><span class="Identifier">&gt;</span>s-audit system auditor<span class="Identifier">&lt;/loctext&gt;</span>
+      <span class="Identifier">&lt;/common_name&gt;</span>
+      <span class="Identifier">&lt;</span><span class="Identifier">documentation</span><span class="Identifier">&gt;</span>
+        <span class="Identifier">&lt;</span><span class="Identifier">doc_link</span><span class="Identifier"> </span><span class="Type">name</span>=<span class="Constant">'snltd.co.uk'</span><span class="Identifier"> </span><span class="Type">uri</span>=<span class="Constant">'<a href="http://snltd.co.uk/s-audit/">http://snltd.co.uk/s-audit/</a>'</span><span class="Identifier">/&gt;</span>
+      <span class="Identifier">&lt;/documentation&gt;</span>
+    <span class="Identifier">&lt;/template&gt;</span>
+
+  <span class="Identifier">&lt;/service&gt;</span>
+
+<span class="Identifier">&lt;/service_bundle&gt;</span>

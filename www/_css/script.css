@@ -1,0 +1,30 @@
+/* Special stylesheet for vim processed scripts */
+
+.Special {
+	color: #ff40ff
+}
+
+.PreProc {
+	color: #ff40ff
+}
+
+.Statement {
+	color: #67672D
+}
+
+.Type {
+	color: #264E30
+}
+
+.Constant { 
+	color: #BE2942
+}
+
+.Comment {
+	color: #312C4E
+}
+
+.Identifier {
+	color: #3964BB
+}
+

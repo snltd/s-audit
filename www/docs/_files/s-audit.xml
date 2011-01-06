@@ -1,0 +1,68 @@
+<?xml version='1.0'?>
+
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+
+<service_bundle type='manifest' name='export'>
+
+  <service name='application/s-audit' type='service' version='0'>
+
+    <single_instance/>
+
+    <property_group name='options' type='application'>
+      <propval name='delay' type='astring' value='180'/>
+      <propval name='dest' type='astring' value='-R user@server:/var/s-audit'/>
+      <propval name='pth' type='astring' value='/usr/local/bin/s-audit.sh'/>
+    </property_group>
+
+    <property_group name='startd' type='framework'>
+      <stability value='Unstable'/>
+      <propval name='duration' type='astring' value='transient'/>
+    </property_group>
+
+    <instance name='default' enabled='true'>
+      <dependency 
+	  	name='multi-user' 
+		grouping='require_all' 
+		restart_on='none' 
+		type='service'>
+        <service_fmri value='svc:/milestone/multi-user-server:default'/>
+      </dependency>
+
+      <exec_method 
+	  	name='start' 
+		type='method' 
+		exec='%{options/pth} -qp -D %{options/delay} %{options/dest} 
+		machine' timeout_seconds='0'>
+        <method_context/>
+      </exec_method>
+
+      <exec_method 
+	  	name='stop' 
+		type='method' 
+		exec=':kill' 
+		timeout_seconds='10'>
+        <method_context/>
+
+      </exec_method>
+
+      <exec_method 
+	  	name='refresh' 
+		type='method' 
+		exec='%{options/pth} -qp %{options/dest} machine' timeout_seconds='0'>
+        <method_context/>
+      </exec_method>
+
+    </instance>
+
+    <template>
+      <common_name>
+        <loctext xml:lang='C'>s-audit system auditor</loctext>
+      </common_name>
+      <documentation>
+        <doc_link name='snltd.co.uk' uri='http://snltd.co.uk/s-audit/'/>
+      </documentation>
+    </template>
+
+  </service>
+
+</service_bundle>

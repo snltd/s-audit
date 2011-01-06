@@ -1,0 +1,121 @@
+/*==========================================================================
+ *
+ * basic.css
+ * ---------
+ *
+ * General stylesheet for s-audit. Required for all audit display and
+ * documentation pages.
+ *
+ * s-audit (c) 2010 SNLTD
+ *
+ *==========================================================================*/
+
+/*--------------------------------------------------------------------------*/
+/* General HTML elements */
+
+body { /* main style for whole page */
+	font-family: "Gill Sans MT", "Lucida Grande", "Lucida Sans Unicode",
+	Verdana, Lucida, Helvetica, sans-serif;
+	font-size: 10pt;
+	margin: 0;
+	padding: 0;
+	color: #333;
+	background-color: #fff;
+}
+
+p {	/* standard paragraphs */
+	text-align: justify;
+	margin: 0.5em auto 1em auto;
+	line-height: 140%;
+}
+
+p.center { /* centered text */
+	text-align: center;
+}
+
+a {	/* standard links */
+	color: #474680;
+	text-decoration: none;
+}
+
+a.strong { /* bold face links */
+	font-weight: bold;	
+	color: #000022;
+}
+
+h1, h2, h3, h4 {
+	margin: 1em 0 1em 0;
+	padding-bottom: 0.5em;
+	border-bottom: 1px #666 solid;
+	font-weight: normal;
+	font-face: Ariel, Helvetica;
+}
+
+h2, h3, h4 {
+	padding-top: 1em;
+}
+
+.lalign { /* left-aligned text */
+	text-align: left
+}
+
+div.spacer {
+	clear: both;
+	padding-top: 5em;
+}
+
+
+/*--------------------------------------------------------------------------*/
+/* NAMED ELEMENTS */
+
+#header { /* The bar at the top of the page */
+	font-size: 8pt;
+	color: #8064c5;
+	clear: both;
+}
+
+#headerl { /* LHS of the header. Has the logo and the title */
+	float: left;
+	width: 70%;
+}
+
+#headerr { /* RHS of the header. */
+	float: right;
+	width: 29%;
+	text-align: right;
+	padding-right: 0.5em;
+}
+
+#logo {
+	font-size: 14pt;
+	font-weight: bold;
+	color: #6044b5;
+	padding-left: 0.1em;
+}
+
+#sublogo {
+	padding-left: 2em;
+}
+
+#footer { /* information bar at foot of page */
+	background-color: #eee;
+	padding: 6px 5px 4px 0;
+	text-align: right;
+	border-top: 1px black solid;
+	clear: both;
+	font-size: 8pt;
+}
+
+/*--------------------------------------------------------------------------*/
+/* Errors and warnings */
+
+.error { /* error messages. Usually used in a <tr> */
+	background-color: #ca6a5b;
+	color: white;
+	font-weight: bold;
+	text-align: center;
+}
+
+.warn { /*warning messages */
+	background-color: #ffee99;
+}
