@@ -45,7 +45,7 @@
 tt, pre { /* embedded and inline code */
 	font-family:  "Bitstream Vera Sans Mono", "Lucida Sans Typewriter",
 	Consolas, Monaco, monospace;
-	font-size: 9pt;
+	font-size: 95%;
 	font-weight: bold;
 }
 
