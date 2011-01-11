@@ -1,0 +1,216 @@
+<span class="Comment">#!/bin/ksh</span>
+
+<span class="Comment">#=============================================================================</span>
+<span class="Comment">#</span>
+<span class="Comment"># s-audit_pchdefs.sh</span>
+<span class="Comment"># ------------------</span>
+<span class="Comment">#</span>
+<span class="Comment"># Part of the support files for the s-audit interface. This script creates a</span>
+<span class="Comment"># PHP array which lets the s-audit interface single-server and comparison</span>
+<span class="Comment"># pages produce mouse-over tooltips briefly describing each installed patch.</span>
+<span class="Comment">#</span>
+<span class="Comment"># To generate the array we require a patchdiag.xref file, obtainable from</span>
+<span class="Comment"># Oracle. The script is able to download this file itself, provided either</span>
+<span class="Comment"># cURL or wget is available. You may have to tweak the CURL or WGET</span>
+<span class="Comment"># variables.</span>
+<span class="Comment">#</span>
+<span class="Comment"># You can also supply a path to an existing patchdiag.xref as a single</span>
+<span class="Comment"># argument. (This will override any instruction to download).</span>
+
+<span class="Comment"># The script writes a pch-defs file for each supported version (2.5 - 10) of</span>
+<span class="Comment"># each architecture (sparc and i386) of Solaris, in the current working</span>
+<span class="Comment"># directory, or another directory, specified with the -d option. You should</span>
+<span class="Comment"># copy the resulting files to the _lib/pkg_defs/ subdirectory of the PHP</span>
+<span class="Comment"># s-audit interface. (Or create them there in the first place.)</span>
+<span class="Comment">#</span>
+<span class="Comment"># A range of pch_def files are bundled with the s-audit interface, but</span>
+<span class="Comment"># obviously they'll get out of date pretty quickly. If you want to keep your</span>
+<span class="Comment"># patch definitions up-to-date, run this script through cron, with the</span>
+<span class="Comment"># download option, every few days.</span>
+<span class="Comment">#</span>
+<span class="Comment"># Part of s-audit. (c) 2011 SearchNet Ltd</span>
+<span class="Comment">#   see <a href="http://snltd.co.uk/s-audit">http://snltd.co.uk/s-audit</a> for licensing and documentation</span>
+<span class="Comment">#</span>
+<span class="Comment">#=============================================================================</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># VARIABLES</span>
+
+<span class="Identifier">PATCHDIAGURL</span>=<span class="Statement">&quot;</span><span class="Constant"><a href="https://getupdates.oracle.com/reports/patchdiag.xref">https://getupdates.oracle.com/reports/patchdiag.xref</a></span><span class="Statement">&quot;</span>
+    <span class="Comment"># Where to download the patchdiag.xref file from, if we're asked to</span>
+
+<span class="Identifier">USER</span>=<span class="Statement">&quot;</span><span class="Constant">username</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Oracle support username</span>
+
+<span class="Identifier">PASS</span>=<span class="Statement">&quot;</span><span class="Constant">password</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Oracle support password</span>
+
+<span class="Identifier">DESTDIR</span>=<span class="PreProc">$(</span><span class="Statement">pwd</span><span class="PreProc">)</span>
+    <span class="Comment"># Where to put temporary files. Overriden with -d option</span>
+
+<span class="Identifier">DLPATCHDIAG</span>=<span class="Statement">&quot;</span><span class="Constant">/var/tmp/patchdiag.xref</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Where to download patchdiag.xref to</span>
+
+<span class="Identifier">CURL</span>=<span class="Statement">&quot;</span><span class="Constant">/usr/local/bin/curl</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Path to curl binary</span>
+
+<span class="Identifier">WGET</span>=<span class="Statement">&quot;</span><span class="Constant">/usr/sfw/bin/wget</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Path to wget binary</span>
+
+<span class="Identifier">PATH</span>=/usr/bin
+    <span class="Comment"># Always set your PATH</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># FUNCTIONS</span>
+
+<span class="Identifier">function</span> <span class="Identifier">die</span>
+<span class="Identifier">{</span>
+    <span class="Statement">print</span><span class="Constant"> -u2 </span><span class="Statement">&quot;</span><span class="Constant">ERROR: </span><span class="PreProc">$1</span><span class="Statement">&quot;</span>
+    <span class="Statement">exit</span> <span class="PreProc">${</span><span class="PreProc">2</span><span class="Statement">:-</span>1<span class="PreProc">}</span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">function</span> <span class="Identifier">usage</span>
+<span class="Identifier">{</span>
+    <span class="Statement">cat</span><span class="Statement">&lt;&lt;-EOUSAGE</span>
+
+<span class="Constant">    usage:</span>
+
+<span class="Constant">      </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> [-k] [-d dir] &lt;-x|patchdiag&gt;</span>
+
+<span class="Constant">    where</span>
+<span class="Constant">      -d :     directory in which to write definition files</span>
+
+<span class="Constant">      -k :     keep patchdiag.xref after download</span>
+
+<span class="Constant">      -x :     download new patchdiag.ref file from</span>
+<span class="Constant">               </span><span class="PreProc">$PATCHDIAGURL</span>
+<span class="Constant">    </span>
+<span class="Constant">    If a path to patchdiag.xref is supplied as an argument, -x and -k</span>
+<span class="Constant">    options are ignored.</span>
+
+<span class="Statement">    EOUSAGE</span>
+    <span class="Statement">exit</span> <span class="Constant">2</span>
+<span class="Identifier">}</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># SCRIPT STARTS HERE</span>
+
+<span class="Statement">while </span><span class="Statement">getopts</span><span class="Statement"> </span><span class="Statement">&quot;</span><span class="Constant">d:kx</span><span class="Statement">&quot;</span><span class="Statement"> option </span><span class="Constant">2</span><span class="Statement">&gt;</span><span class="Statement">/dev/null</span>
+<span class="Statement">do</span>
+
+    <span class="Statement">case</span> <span class="PreProc">$option</span> <span class="Statement">in</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">d</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">DESTDIR</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">k</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">KEEPFILE</span>=<span class="Constant">1</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">x</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">DOWNLOAD</span>=<span class="Statement">true</span>
+                <span class="Identifier">PATCHDIAG</span>=<span class="PreProc">$DLPATCHDIAG</span>
+                <span class="Statement">;;</span>
+
+        *<span class="Statement">)</span>        usage
+
+    <span class="Statement">esac</span>
+
+<span class="Statement">done</span>
+
+<span class="Statement">shift</span> <span class="PreProc">$((</span><span class="PreProc">$OPTIND</span><span class="Special"> - </span><span class="Constant">1</span><span class="PreProc">))</span>
+<span class="Statement">print</span>
+
+<span class="Statement">if </span><span class="Special">((</span> <span class="PreProc">$#</span> <span class="Statement">==</span> <span class="Constant">0</span> <span class="Special">))</span>
+<span class="Statement">then</span>
+
+    <span class="Statement">if </span><span class="Special">[[</span> <span class="Statement">-n</span> <span class="PreProc">$DOWNLOAD</span> <span class="Special">]]</span>
+    <span class="Statement">then</span>
+        <span class="Comment"># Try to download patchdiag.xref with either cURL or wget</span>
+
+        <span class="Statement">if </span><span class="Special">[[</span> <span class="Statement">-x</span> <span class="PreProc">$CURL</span> <span class="Special">]]</span>
+        <span class="Statement">then</span>
+            <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">Downloading patchdiag.xref with cURL.</span><span class="Special">\n</span><span class="Statement">&quot;</span>
+
+            <span class="PreProc">$CURL</span> \
+                --location \
+                <span class="Statement">-k</span> <span class="Statement">-u</span><span class="PreProc">${</span><span class="PreProc">USER</span><span class="PreProc">}</span>:<span class="PreProc">$PASSWORD</span> \
+                --retry <span class="Constant">3</span> \
+                <span class="Statement">-o</span> <span class="PreProc">$DLPATCHDIAG</span> \
+            <span class="PreProc">$PATCHDIAGURL</span>
+
+        <span class="Statement">elif</span> <span class="Special">[[</span> <span class="Statement">-x</span> <span class="PreProc">$WGET</span> <span class="Special">]]</span>
+        <span class="Statement">then</span>
+            <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">Downloading patchdiag.xref with wget.</span><span class="Special">\n</span><span class="Statement">&quot;</span>
+
+            <span class="PreProc">$WGET</span> \
+                --<span class="Identifier">progress</span>=bar \
+                --<span class="Identifier">user</span>=<span class="PreProc">$USER</span> \
+                --<span class="Identifier">password</span>=<span class="PreProc">$PASSWORD</span> \
+                --no-check-certificate \
+                <span class="Statement">-O</span> <span class="PreProc">$DLPATCHDIAG</span> \
+                <span class="Statement">-t</span> <span class="Constant">3</span> \
+            <span class="PreProc">$PATCHDIAGURL</span>
+
+        <span class="Statement">else</span>
+            die <span class="Statement">&quot;</span><span class="Constant">No download mechanism found. (Tried cURL and wget.)</span><span class="Statement">&quot;</span>
+        <span class="Statement">fi</span>
+
+    <span class="Statement">else</span>
+        die <span class="Statement">&quot;</span><span class="Constant">No patchdiag.xref supplied.</span><span class="Statement">&quot;</span>
+    <span class="Statement">fi</span>
+
+<span class="Statement">elif</span> <span class="Special">((</span> <span class="PreProc">$#</span> <span class="Statement">==</span> <span class="Constant">1</span><span class="Special">))</span>
+<span class="Statement">then</span>
+    <span class="Identifier">PATCHDIAG</span>=<span class="Statement">&quot;</span><span class="PreProc">$1</span><span class="Statement">&quot;</span>
+<span class="Statement">else</span>
+    usage
+<span class="Statement">fi</span>
+
+<span class="Special">[[</span> <span class="Statement">-f</span> <span class="PreProc">$PATCHDIAG</span> <span class="Special">]]</span> || die <span class="Statement">&quot;</span><span class="Constant">No patchdiag.xref found. [</span><span class="PreProc">${</span><span class="PreProc">PATCHDIAG</span><span class="PreProc">}</span><span class="Constant">]</span><span class="Statement">&quot;</span>
+
+<span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Special">\n</span><span class="Constant">Creating files in </span><span class="PreProc">${</span><span class="PreProc">DESTDIR</span><span class="PreProc">}</span><span class="Constant">:</span><span class="Statement">&quot;</span>
+
+<span class="Comment"># For now at least, we're only interested in O/S patches. We disregard</span>
+<span class="Comment"># firmware patches and stuff</span>
+
+<span class="Statement">for </span>ver <span class="Statement">in</span> <span class="Constant">2</span>.<span class="Constant">5</span> <span class="Constant">2</span>.<span class="Constant">5</span>.<span class="Constant">1</span> <span class="Constant">2</span>.<span class="Constant">6</span> <span class="Constant">7</span> <span class="Constant">8</span> <span class="Constant">9</span> <span class="Constant">10</span>
+<span class="Statement">do</span>
+    <span class="Special">[[</span> <span class="PreProc">$ver</span> <span class="Statement">==</span> <span class="Constant">&quot;2.&quot;</span>* <span class="Special">]]</span> <span class="Statement">&amp;&amp;</span> <span class="Identifier">osn</span>=<span class="Statement">&quot;</span><span class="Constant">5</span><span class="PreProc">${</span><span class="PreProc">ver</span><span class="Statement">#</span>2<span class="PreProc">}</span><span class="Statement">&quot;</span>  <span class="Statement">||</span> <span class="Identifier">osn</span>=<span class="Statement">&quot;</span><span class="Constant">5.</span><span class="PreProc">$ver</span><span class="Statement">&quot;</span>
+
+    <span class="Statement">for </span>sfx <span class="Statement">in</span> <span class="Statement">&quot;&quot;</span> _x86
+    <span class="Statement">do</span>
+        <span class="Special">[[</span> <span class="PreProc">$sfx</span> <span class="Statement">==</span> <span class="Constant">&quot;_x86&quot;</span> <span class="Special">]]</span> <span class="Statement">&amp;&amp;</span> <span class="Identifier">arch</span>=<span class="Statement">&quot;</span><span class="Constant">i386</span><span class="Statement">&quot;</span> <span class="Statement">||</span> <span class="Identifier">arch</span>=<span class="Statement">&quot;</span><span class="Constant">sparc</span><span class="Statement">&quot;</span>
+
+        <span class="Identifier">OUTFILE</span>=<span class="Statement">&quot;</span><span class="PreProc">${</span><span class="PreProc">DESTDIR</span><span class="PreProc">}</span><span class="Constant">/pch_def-</span><span class="PreProc">${</span><span class="PreProc">osn</span><span class="PreProc">}</span><span class="Constant">-</span><span class="PreProc">${</span><span class="PreProc">arch</span><span class="PreProc">}</span><span class="Constant">.php</span><span class="Statement">&quot;</span>
+        <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">  </span><span class="PreProc">${</span><span class="PreProc">OUTFILE</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Statement">&quot;</span>
+
+        <span class="Comment"># Open the file with PHP stuff</span>
+
+        <span class="Statement">cat</span> <span class="Statement">&lt;&lt;-EOPHP</span><span class="Constant"> &gt;</span><span class="PreProc">$OUTFILE</span>
+<span class="Constant">&lt;?php</span>
+
+<span class="Constant">//============================================================================</span>
+<span class="Constant">//</span>
+<span class="Constant">// Patch definition file for </span><span class="PreProc">$arch</span><span class="Constant"> Solaris </span><span class="PreProc">${</span><span class="PreProc">ver</span><span class="PreProc">}</span><span class="Constant">.</span>
+<span class="Constant">//</span>
+<span class="Constant">// Generated </span><span class="PreProc">$(</span><span class="Special">date</span><span class="PreProc">)</span><span class="Constant"> by </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span>
+<span class="Constant">//</span>
+<span class="Constant">//============================================================================</span>
+
+<span class="Special">\$</span><span class="Constant">hover_arr = array(</span>
+<span class="Statement">        EOPHP</span>
+
+        <span class="Statement">grep</span> <span class="Statement">&quot;</span><span class="Constant">|</span><span class="PreProc">${</span><span class="PreProc">ver</span><span class="PreProc">}${</span><span class="PreProc">sfx</span><span class="PreProc">}</span><span class="Constant">|</span><span class="Statement">&quot;</span> <span class="PreProc">$PATCHDIAG</span> \
+        <span class="Statement">|</span> cut <span class="Statement">-d</span><span class="Special">\|</span> -f1,<span class="Constant">11</span> \
+        <span class="Statement">|</span> <span class="Statement">sed</span> <span class="Statement">-e</span> <span class="Statement">'</span><span class="Constant">s/&quot;//g</span><span class="Statement">'</span> <span class="Statement">-e</span> <span class="Statement">&quot;</span><span class="Constant">s/SunOS 5\..*: //</span><span class="Statement">&quot;</span> <span class="Statement">-e</span> \
+        <span class="Statement">&quot;</span><span class="Constant">s/^</span><span class="Special">\(</span><span class="Constant">[0-9][0-9][0-9][0-9][0-9][0-9]</span><span class="Special">\)</span><span class="Constant">|</span><span class="Special">\(</span><span class="Constant">.*</span><span class="Special">\)</span><span class="Constant">$/  </span><span class="Special">\&quot;</span><span class="Constant">\1</span><span class="Special">\&quot;</span><span class="Constant"> =&gt; </span><span class="Special">\&quot;</span><span class="Constant">\2</span><span class="Special">\&quot;</span><span class="Constant">,/</span><span class="Statement">&quot;</span> \
+        <span class="Statement">|</span> <span class="Statement">sed</span> <span class="Statement">'</span><span class="Constant">$s/,$/);/</span><span class="Statement">'</span> <span class="Statement">&gt;&gt;</span><span class="PreProc">$OUTFILE</span>
+
+    <span class="Comment"># And close the file</span>
+
+    <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Special">\n</span><span class="Constant">?&gt;</span><span class="Statement">&quot;</span><span class="Constant"> </span><span class="Statement">&gt;&gt;</span><span class="PreProc">$OUTFILE</span>
+
+    <span class="Statement">done</span>
+
+<span class="Statement">done</span>
+
+<span class="Statement">exit</span>

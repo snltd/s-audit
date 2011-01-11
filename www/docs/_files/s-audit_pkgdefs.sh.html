@@ -1,0 +1,104 @@
+<span class="Comment">#!/bin/ksh</span>
+
+<span class="Comment">#=============================================================================</span>
+<span class="Comment">#</span>
+<span class="Comment"># s-audit_pkgdefs.sh</span>
+<span class="Comment"># ------------------</span>
+<span class="Comment">#</span>
+<span class="Comment"># Part of the support files for the s-audit interface. This script creates a</span>
+<span class="Comment"># PHP array which lets the s-audit interface single-server and comparison</span>
+<span class="Comment"># pages produce mouse-over tooltips properly namimg each installed package.</span>
+<span class="Comment">#</span>
+<span class="Comment"># To generate the array we require a Solaris_x/Product directory, like you</span>
+<span class="Comment"># find on an installation DVD or a Jumpstart server. My Jumpstart server has</span>
+<span class="Comment"># images sorted under sparc or x86 directories. This script probably won't</span>
+<span class="Comment"># work very well for you.</span>
+<span class="Comment">#</span>
+<span class="Comment"># The script takes a single argument, a path to a directory containing a</span>
+<span class="Comment"># Solaris installation image.  It writes to pkg_defs-Solaris-5.x-arch.php,</span>
+<span class="Comment"># in the current working directory. Copy the resulting file to the</span>
+<span class="Comment"># _lib/pkg_defs/ subdirectory of the PHP auditor interface.</span>
+<span class="Comment">#</span>
+<span class="Comment"># A range of pkg_def files are bundled with the s-audit interface, so no one</span>
+<span class="Comment"># other than me will probably ever use this.</span>
+<span class="Comment">#</span>
+<span class="Comment"># Part of s-audit. (c) 2011 SearchNet Ltd</span>
+<span class="Comment">#   see <a href="http://snltd.co.uk/s-audit">http://snltd.co.uk/s-audit</a> for licensing and documentation</span>
+<span class="Comment">#</span>
+<span class="Comment">#=============================================================================</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># FUNCTIONS</span>
+
+<span class="Identifier">function</span> <span class="Identifier">die</span>
+<span class="Identifier">{</span>
+    <span class="Statement">print</span><span class="Constant"> -u2 </span><span class="Statement">&quot;</span><span class="Constant">ERROR: </span><span class="PreProc">$1</span><span class="Statement">&quot;</span>
+    <span class="Statement">exit</span> <span class="PreProc">${</span><span class="PreProc">2</span><span class="Statement">:-</span>1<span class="PreProc">}</span>
+<span class="Identifier">}</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># SCRIPT STARTS HERE</span>
+
+<span class="Statement">if </span><span class="Special">[[</span> <span class="PreProc">$#</span> <span class="Statement">!=</span> <span class="Constant">1</span> <span class="Special">]]</span>
+<span class="Statement">then</span>
+    <span class="Statement">print</span><span class="Constant"> -u2 </span><span class="Statement">&quot;</span><span class="Constant">usage: </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> &lt;dir&gt;</span><span class="Statement">&quot;</span>
+    <span class="Statement">exit</span> <span class="Constant">2</span>
+<span class="Statement">fi</span>
+
+<span class="Special">[[</span> <span class="Statement">-d</span> <span class="PreProc">$1</span> <span class="Special">]]</span> || die <span class="Statement">&quot;</span><span class="PreProc">$1</span><span class="Constant"> is not a directory.</span><span class="Statement">&quot;</span>
+
+<span class="Comment"># Get the proper location of the package directory</span>
+
+<span class="Identifier">PROD</span>=<span class="Statement">&quot;</span><span class="PreProc">$(</span><span class="Statement">find</span><span class="Special"> </span><span class="PreProc">$1</span><span class="Special"> -name Solaris_[</span><span class="Constant">0-9</span><span class="Special">]</span><span class="Special">\*</span><span class="Special"> -prune</span><span class="PreProc">)</span><span class="Constant">/Product</span><span class="Statement">&quot;</span>
+
+<span class="Special">[[</span> <span class="Statement">-d</span> <span class="PreProc">$PROD</span> <span class="Special">]]</span> || die <span class="Statement">&quot;</span><span class="Constant">no Product directory [</span><span class="PreProc">${</span><span class="PreProc">PROD</span><span class="PreProc">}</span><span class="Constant">].</span><span class="Statement">&quot;</span>
+
+<span class="Comment"># Get the architecture by looking at the ARCH value in the core Solaris</span>
+<span class="Comment"># root package</span>
+
+<span class="Identifier">ARCH</span>=<span class="PreProc">$(</span><span class="Statement">sed</span><span class="Special"> -n </span><span class="Statement">'</span><span class="Constant">/^ARCH=/s/^ARCH=//p</span><span class="Statement">'</span><span class="Special"> </span><span class="Statement">&quot;</span><span class="PreProc">${</span><span class="PreProc">PROD</span><span class="PreProc">}</span><span class="Constant">/SUNWcsr/pkginfo</span><span class="Statement">&quot;</span><span class="PreProc">)</span>
+
+<span class="Special">[[</span> <span class="Statement">-z</span> <span class="PreProc">$ARCH</span> <span class="Special">]]</span> &amp;&amp; die <span class="Statement">&quot;</span><span class="Constant">can't determinte architecture.</span><span class="Statement">&quot;</span>
+
+<span class="Comment"># Get the Solaris version from the package directory and make it 5.x style</span>
+
+<span class="Identifier">SVER</span>=<span class="PreProc">${</span><span class="PreProc">PROD</span><span class="Statement">%</span>/Product<span class="PreProc">}</span>
+<span class="Identifier">SVER</span>=<span class="PreProc">${</span><span class="PreProc">SVER</span><span class="Statement">##</span>*_<span class="PreProc">}</span>
+
+<span class="Special">[[</span> <span class="PreProc">$SVER</span> <span class="Statement">==</span> <span class="Constant">&quot;2.&quot;</span>* <span class="Special">]]</span> &amp;&amp; <span class="Identifier">SVER</span>=<span class="Statement">&quot;</span><span class="Constant">5</span><span class="PreProc">${</span><span class="PreProc">SVER</span><span class="Statement">#</span>2<span class="PreProc">}</span><span class="Statement">&quot;</span> || <span class="Identifier">SVER</span>=<span class="Statement">&quot;</span><span class="Constant">5.</span><span class="PreProc">$SVER</span><span class="Statement">&quot;</span>
+
+<span class="Comment"># Now we know what to call the file, and we can open it </span>
+
+<span class="Identifier">OUTFILE</span>=<span class="Statement">&quot;</span><span class="Constant">pkg_defs-Solaris-</span><span class="PreProc">${</span><span class="PreProc">SVER</span><span class="PreProc">}</span><span class="Constant">-</span><span class="PreProc">${</span><span class="PreProc">ARCH</span><span class="PreProc">}</span><span class="Constant">.php</span><span class="Statement">&quot;</span>
+
+<span class="Statement">cat</span> <span class="Statement">&lt;&lt;-EOPHP</span><span class="Constant"> &gt;</span><span class="PreProc">$OUTFILE</span>
+<span class="Constant">&lt;?php</span>
+
+<span class="Constant">//============================================================================</span>
+<span class="Constant">//</span>
+<span class="Constant">// Package definition file for </span><span class="PreProc">$ARCH</span><span class="Constant"> SunOS </span><span class="PreProc">${</span><span class="PreProc">SVER</span><span class="PreProc">}</span><span class="Constant">.</span>
+<span class="Constant">//</span>
+<span class="Constant">// Generated </span><span class="PreProc">$(</span><span class="Special">date</span><span class="PreProc">)</span><span class="Constant"> by </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span>
+<span class="Constant">//</span>
+<span class="Constant">//============================================================================</span>
+
+<span class="Special">\$</span><span class="Constant">hover_arr = array(</span>
+<span class="Statement">EOPHP</span>
+
+<span class="Comment"># There doesn't appear to be a safe way to parse all the pkginfo files in</span>
+<span class="Comment"># one shot, because they aren't of an entirely consistent form. This way is</span>
+<span class="Comment"># slower, but it's safer. Pull the NAME line from the pkginfo file, and</span>
+<span class="Comment"># escape soft quotes. Run all the output through sed to replace the final</span>
+<span class="Comment"># trailing comma with );</span>
+
+<span class="Statement">ls</span> <span class="PreProc">$PROD</span> | <span class="Statement">egrep</span> <span class="Special">-v</span> <span class="Statement">&quot;</span><span class="Constant">^locale$</span><span class="Statement">&quot;</span> | <span class="Statement">while </span><span class="Statement">read</span><span class="Statement"> pkg</span>
+<span class="Statement">do</span>
+    <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Special">\t</span><span class="Special">\&quot;</span><span class="PreProc">${</span><span class="PreProc">pkg</span><span class="PreProc">}</span><span class="Special">\&quot;</span><span class="Constant"> =&gt; </span><span class="Special">\&quot;</span><span class="PreProc">$(</span><span class="Statement">sed</span><span class="Special"> -n </span><span class="Statement">'</span><span class="Constant">s/\&quot;//g;/^NAME=/s/^NAME=//p</span><span class="Statement">'</span><span class="Special"> \</span>
+<span class="Special">    </span><span class="PreProc">${</span><span class="PreProc">PROD</span><span class="PreProc">}</span><span class="Special">/</span><span class="PreProc">${</span><span class="PreProc">pkg</span><span class="PreProc">}</span><span class="Special">/pkginfo</span><span class="PreProc">)</span><span class="Special">\&quot;</span><span class="Constant">,</span><span class="Statement">&quot;</span>
+<span class="Statement">done</span> | <span class="Statement">sed</span> <span class="Statement">'</span><span class="Constant">$s/,$/);/</span><span class="Statement">'</span><span class="Statement">&gt;&gt;</span><span class="PreProc">$OUTFILE</span>
+
+<span class="Comment"># Now close off the file</span>
+
+<span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Special">\n</span><span class="Constant">?&gt;</span><span class="Statement">&quot;</span><span class="Constant"> </span><span class="Statement">&gt;&gt;</span><span class="PreProc">$OUTFILE</span>
+
+<span class="Comment"># That's it.</span>
