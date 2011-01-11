@@ -36,8 +36,8 @@ sake of completeness.</p>
 <p><tt>s-audit_pkgdefs.sh</tt> accepts a single argument, the path to a
 directory containg a Solaris install image.</p>
 
-<pre>
-<strong>$</strong> s-audit_pkgdefs.sh &lt;directory&gt;
+<pre class="cmd">
+$ s-audit_pkgdefs.sh &lt;directory&gt;
 </pre>
 
 <p>It writes files in the current working directory.</p>

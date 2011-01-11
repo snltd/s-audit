@@ -16,8 +16,8 @@ $pg = new docPage("Running s-audit.sh from SMF");
 system with SMF.  To enable it, save it to <tt>s-audit.xml</tt>, then import
 it with</p>
 
-<pre>
-  <b>#</b> svccfg import s-audit.xml
+<pre class="cmd">
+# svccfg import s-audit.xml
 </pre>
 
 <h2>Properties</h2>
@@ -48,8 +48,8 @@ it with</p>
 
 <p>To change those properties, issue a command of the form:</p>
 
-<pre>
-<strong>#</strong> svccfg -s s-audit setprop options/dest="\"-f /var/s-audit/live\""
+<pre class="cmd">
+# svccfg -s s-audit setprop options/dest="\"-f /var/s-audit/live\""
 </pre>
 
 <h2>Performing an audit at boot time</h2>
@@ -62,8 +62,8 @@ zones and services so an accurate audit can be performed.</p>
 
 <p>To perform an audit on-demand, refresh the service.</p>
 
-<pre>
-<strong>#</strong> svcadm refresh s-audit
+<pre class="cmd">
+# svcadm refresh s-audit
 </pre>
 
 <p>If you wish to perform regular scheduled audits, put the <tt>svcadm</tt>

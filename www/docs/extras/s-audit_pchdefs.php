@@ -45,8 +45,8 @@ with the path to the already downloaded file as an argument.</p>
 
 <p><tt>s-audit_pchdefs.sh</tt> is invoked by:</p>
 
-<pre>
-<strong>$</strong>s-audit_pchdefs.sh [-k] [-d dir] <-x|patchdiag>
+<pre class="cmd">
+$ s-audit_pchdefs.sh [-k] [-d dir] <-x|patchdiag>
 </pre>
 
 <p>The options are:</p>
@@ -79,17 +79,16 @@ the <tt>_conf/site_config.php</tt> file.</p>
 <p>To generate a new batch of hover files from an existing
 <tt>patchdiag.xref</tt> file:</p>
 
-<pre>
+<pre class="cmd">
 $ s-audit_pchdefs.sh -d /www/s-audit/_lib/pch_defs /var/tmp/patchdiag.xref
 </pre>
 
 <p>To download a fresh <tt>patchdiag.xref</tt>, generate hover files from
 it, then remove it:</p>
 
-<pre>
+<pre class="cmd">
 $ s-audit_pchdefs.sh -d /www/s-audit/_lib/pch_defs -x
 </pre>
-
 
 <p>To automatically generate new patch lists every Sunday night, add the
 following to the crontab of a user who has permission to write to the
