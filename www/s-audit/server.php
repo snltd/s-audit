@@ -33,32 +33,29 @@ $server = (isset($_GET["s"])) ? $_GET["s"] : false;
 // We want to be able to view live and obsolete servers, so we have to make
 // a big merged map
 
-$l_map = new ZoneFileMap(LIVE_DIR);		// live server map
-//$o_map = new ZoneFileMap(OBSOLETE_DIR);	// obsolete server map
-$m_map = new ZoneFileMap(LIVE_DIR);		// merged server map
+$map = new ZoneFileMap(LIVE_DIR);
 
-foreach ($l_map as $k=>$v)
-	$m_map->$k = $l_map->$k;
-	//$m_map->$k = array_merge_recursive($l_map->$k, $o_map->$k);
+//foreach ($map as $k=>$v)
+	//$map->$k = $map->$k;
 
 if (($server)) {
 
 //- single server view ---------------------------------------------------------
 
-	$pg = new Page($server);
+	$pg = new ssPage($server, false);
 	
 	// parse all the audit files relating to this server, and create a new
 	// serverview object, passing only the relevant server array. (It's the
 	// entire contents of the array, just buried a couple of layers down.)
 
-	$data = new GetServerSingle($m_map, $server);
-	$view = new serverView($server, $data->all_data, $m_map); //, $l_map);
+	$data = new GetServerSingle($map, $server);
+	$view = new serverView($server, $data->all_data, $map);
 
 	echo $view->show_grid();
 }
 
 else {
-	$pg = new Page("single server view");
+	$pg = new ssPage("single server view", 1);
 
 //- list of servers view -------------------------------------------------------
 
@@ -66,7 +63,7 @@ else {
 	// the live map, so it's possible to distinguish live zones from
 	// obsolete ones
 
-	$grid = new serverListGrid($m_map, $l_map);
+	$grid = new serverListGrid($map, $map);
 
 	// We're going to print a key, too.
 
