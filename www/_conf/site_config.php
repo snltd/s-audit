@@ -71,6 +71,12 @@ define("SHOW_SERVER_INFO", true);
 define("DOC_SCR_DIR", ROOT . "/docs/_files");
 	// Where the codeBlock class finds syntax coloured script files
 
+define("PKG_DEF_DIR", ROOT . "/_lib/pkg_defs");
+	// Where to find package definition files
+
+define("PCH_DEF_DIR", ROOT . "/_lib/pch_defs");
+	// Where to find patch definition files
+
 // We always need our basic classes
 
 require_once(ROOT . "/_lib/display_classes.php");
