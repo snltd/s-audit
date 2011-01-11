@@ -3193,33 +3193,50 @@ class singlePlist extends singleGeneric
 			if ($field == "hostname" || $field == "audit completed")
 				continue;
 
+
+			// Work out what the hover map is likely to be called
+
+			$fn = ($this->map->is_global($hn))
+				? "get_zone_prop"
+				: "get_parent_prop";
+
+			// The hover map only currently works for "proper" Solaris,
+			// versions 10 and earlier, so ignore everything else. (This
+			// will change.)
+
+			$dist = $this->map->$fn($hn, "distribution", "os");
+
+			if ($dist == "Solaris") {
+
+				// Work out the path to the patch or package definition file
+
+				$hw = (preg_match("/SPARC/", $this->map->$fn($hn,
+				"hardware", "platform")))
+					? "sparc"
+					: "i386";
+
+				$ver = preg_replace("/^.*SunOS ([0-9.]*).*$/", "\\1",
+				$this->map->$fn($hn, "version", "os"));
+			}
+
 			// How many columns? And do we have a "hover" map?
 
+			//-- package lists -----------------------------------------------
+
 			if ($field == "package") {
-				$pdef = 5 ;
-				$map = ROOT . "/_lib/pkg_defs/pkg-def.";
-
-				$hw = ($this->map->is_global($hn))
-					? $this->map->get_zone_prop($hn, "hardware", "platform")
-					: $this->map->get_parent_prop($hn, "hardware",
-					"platform");
-
-				// i86pc hardware uses the i386 package maps, everything
-				// else uses SPARC.
-
-				$hw = ($hw == "i86pc") 
-					? "i386"
-					: "sparc";
-
-				$hover = ROOT . "/_lib/pkg_defs/pkg_def-${os}-${hw}.php";
-
-				// Include the hover map if we have it
-
-				if (file_exists($hover))
-					include($hover);
+				$pdef = 5 ;	// 5 columns for packages
+				$hover = PKG_DEF_DIR .  "/pkg_def-${dist}-${ver}-${hw}.php";
 			}
-			else
-				$pdef = 12;
+			//-- patch lists -------------------------------------------------
+			else {
+				$pdef = 12;	// 12 columns for patches
+				$hover = PCH_DEF_DIR .  "/pch_def-${ver}-${hw}.php";
+			}
+
+			// Include the hover map, if we have it
+
+			if (file_exists($hover))
+				include($hover);
 
 			$cols = (sizeof($val) > $pdef)
 				? $pdef
@@ -3252,15 +3269,18 @@ class singlePlist extends singleGeneric
 					? "smalldisk"
 					: "smallrow";
 
-				// Anything in the hover map?
+				// Anything in the hover map? We have to trim the revision
+				// off for patches
 
-				$hover = (in_array($p, array_keys($pkg_arr)))
-					? $pkg_arr[$p]
+				$pm = ($field == "package")
+					? $p
+					: substr($p, 0, 6);
+
+				$hover = (in_array($pm, array_keys($hover_arr)))
+					? $hover_arr[$pm]
 					: false;
 
-				$ret .= new Cell($p, $fcol, $bcol, false, false,
-				$hover);
-
+				$ret .= new Cell($p, $fcol, $bcol, false, false, $hover);
 				$c++;
 
 				if ($c == $cols) {
@@ -3441,6 +3461,39 @@ class audPage extends Page {
 	}
 
 }
+
+class ssPage extends audPage {
+	
+	// Special class for single server view
+
+	public function __construct($title, $s_count) {
+		$this->s_count = $s_count;
+		parent::__construct($title, $s_count, false);
+	}
+
+	protected function add_header()
+	{
+		$nav = new NavigationStaticHoriz;
+
+		return "\n
+		<div id=\"header\">
+			<div id=\"headerl\">
+				<div id=\"logo\">s-audit</div>
+				<div id=\"sublogo\">$this->type</div>
+			</div>
+			<div id=\"headerr\">
+				<div>documentation ::
+				<a href=\"/docs/index.php\">main</a> /
+				<a href=\"/docs/interface/" . basename($_SERVER["PHP_SELF"])
+				. "\">this page</a> /
+				</div>
+			</div>
+		</div>"
+		. $nav->display_navbar() . "\n<div id=\"content\">";
+	}
+
+}
+
 
 class docPage extends Page {
 
