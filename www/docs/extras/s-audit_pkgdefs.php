@@ -46,8 +46,8 @@ $ s-audit_pkgdefs.sh &lt;directory&gt;
 
 <?php
 
-$manifest = new codeBlock("s-audit_pkgdefs.sh");
-echo $manifest->show_script();
+$scr = new codeBlock("s-audit_pkgdefs.sh");
+echo $scr->show_script();
 
 $pg->close_page();
 ?>

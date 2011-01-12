@@ -104,8 +104,8 @@ following to the crontab of a user who has permission to write to the
 
 <?php
 
-$manifest = new codeBlock("s-audit_pchdefs.sh");
-echo $manifest->show_script();
+$scr = new codeBlock("s-audit_pchdefs.sh");
+echo $scr->show_script();
 
 $pg->close_page();
 
