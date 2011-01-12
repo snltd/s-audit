@@ -43,8 +43,9 @@
 /* fixed width and code examples */
 
 tt, pre { /* embedded and inline code */
-	font-family:  "Bitstream Vera Sans Mono", "Lucida Sans Typewriter",
-	Consolas, Monaco, monospace;
+	font-family: "Consolas";
+	/*"DejaVu Sans Mono", "Consolas", "Lucida Sans Typewriter",
+	"Bitstream Vera Sans Mono", "Monaco", monospace;*/
 	font-size: 95%;
 	font-weight: bold;
 }
@@ -62,25 +63,25 @@ pre.cmd {
 }
 
 pre.codeBlock {
-		background: none;
-		border: none;
-		padding: none;
-		font-size: 8pt;
-		font-weight: bold;
+	background: none;
+	border: none;
+	padding: none;
+	font-size: 8pt;
+	font-weight: bold;
 }
 
 div.codeBlockHead {
-		text-align: center;
-		font-size: 9pt;
-		font-weight: bold;
+	text-align: center;
+	font-size: 9pt;
+	font-weight: bold;
 }
 
 div.codeBlockLink {
-		text-align: center;
-		font-size: 9pt;
-		padding-bottom: 1em;
-		margin: 0 1em 1em 1em;
-		border-bottom: 1px solid #ccc;
+	text-align: center;
+	font-size: 9pt;
+	padding-bottom: 1em;
+	margin: 0 1em 1em 1em;
+	border-bottom: 1px solid #ccc;
 }
 
 /*--------------------------------------------------------------------------*/
