@@ -37,7 +37,8 @@ require_once(ROOT . "/_lib/ip_listing_classes.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$pg = new Page("IP address list");
+$pg = new audPage("IP address list", $grid->server_count(), $grid->zone_toggle());
+
 
 // We make three lists of used IP addresses, which have descending
 // "priorities"
