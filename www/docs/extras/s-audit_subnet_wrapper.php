@@ -10,7 +10,7 @@ $pg = new docPage("s-audit_subnet_wrapper.sh");
 
 ?>
 
-<h1><tt>s-audit_subnet_wrapper.sh</tt></h1>
+<h1>The <tt>s-audit_subnet_wrapper.sh</tt> script</h1>
 
 <p>This script is a simple wrapper to <a
 href="s-audit_subnet.php"><tt>s-audit_subnet.sh</tt></a>. It was written to

@@ -10,7 +10,7 @@ $pg = new docPage("s-audit_subnet.sh");
 
 ?>
 
-<h1><tt>s-audit_subnet.sh</tt></h1>
+<h1>The <tt>s-audit_subnet.sh</tt> script</h1>
 
 <p>The interface's IP address listing page is put together by looking at
 audited machines, but it is unlikely that all the machines on your network
