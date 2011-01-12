@@ -46,8 +46,7 @@ class ZoneFileMap {
 	public function __construct($audit_dir, $can_be_empty = false)
 	{
 		// If you don't mind there being no files in an audit directory,
-		// call with the second arg as true. For instance, the trash/
-		// directory.
+		// call with the second arg as true. 
 
 		$this->audit_dir = $audit_dir;
 		$this->offset = (isset($_GET["o"])) ? $_GET["o"] : 0;
@@ -333,11 +332,21 @@ class GetServers {
 
 	public function __construct($map, $pattern = false, $s_list = false)
 	{
-		// Second argument can be an array of servers to get. If not
-		// supplied, it gets all of them
+		// $map is the map created by ZoneFileMap
+		// $pattern is the audit class
+		// $s_list can be an array of servers to get. If false, then look to
+		// see if no_zones is set in the $_GET[] array. If so, get all
+		// global zones, if not, get all known zones
 
-		if (!$s_list)
-			$s_list = $map->list_all();
+		if (!$s_list) {
+
+			if (isset($_GET["no_zones"])) {
+				$s_list = $map->list_globals();
+				define("NO_ZONES", true);
+			}
+			else
+				$s_list = $map->list_all();
+		}
 
 		foreach($s_list as $s) {
 			$this->servers[$s] = $this->get_zone($map->get_base($s),
@@ -444,7 +453,7 @@ class GetServers {
 class GetServersPlatform extends GetServers
 {
 
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "platform", $slist);
 	}
@@ -456,7 +465,7 @@ class GetServersPlatform extends GetServers
 
 class GetServersOS extends GetServers
 {
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "os", $slist);
 	}
@@ -470,7 +479,7 @@ class GetServersApp extends GetServers
 {
 	// Parse the audit files for an application display
 
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "app", $slist);
 	}
@@ -484,7 +493,7 @@ class GetServersTool extends GetServers
 {
 	// Parse the audit files for a tool display
 
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "tool", $slist);
 	}
@@ -497,7 +506,7 @@ class GetServersTool extends GetServers
 class GetServersFS extends GetServers
 {
 
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "fs", $slist);
 	}
@@ -511,7 +520,7 @@ class GetServersHosted extends GetServers
 {
 	// Parse the audit files so we can make a hosted services grid
 
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "hosted", $slist);
 	}
@@ -522,7 +531,7 @@ class GetServersHosted extends GetServers
 
 class GetServersSecurity extends GetServers
 {
-	public function __construct($map, $slist)
+	public function __construct($map, $slist = false)
 	{
 		parent::__construct($map, "security", $slist);
 	}

@@ -28,7 +28,7 @@ $map = new ZoneFileMap(LIVE_DIR);
 $s = new GetServersSecurity($map);
 $grid = new SecurityGrid($map, $s->get_array());
 
-$pg = new Page("Security audit", $grid->server_count(),
+$pg = new audPage("Security audit", $grid->server_count(),
 $grid->zone_toggle());
 
 //-- SECURITY AUDITS ---------------------------------------------------------

@@ -170,19 +170,6 @@ class HostGrid {
 			: $use;
 	}
 
-	public function display_all_zones($map) 
-	{
-		// This method manages the global only/global+local zone display
-		// types. By default, all zones are shown.  The variable z is passed
-		// through the query string to control this
-
-		//$ret = ($this->show_zones == true)
-			//? $map->list_all()
-			//:  $map->list_globals();
-
-		return $ret;
-	}
-
 	protected function fold_line($str, $width = 25)
 	{
 		// Fold long lines on certain characters. The characters to fold on
@@ -259,10 +246,14 @@ class HostGrid {
 
 	public function show_server($server)
 	{
-		// Display the HTML for a single server and all its zones
+		// Display the HTML for a single server and all its zones, if
+		// necessary
 
 		$ret = $this->show_zone($this->servers[$server]);
-		$zl = $this->map->list_server_zones($server);
+
+		$zl = (defined("NO_ZONES"))
+			? false
+			: $this->map->list_server_zones($server);
 
 		if (is_array($zl)) {
 
@@ -2269,12 +2260,21 @@ class HostGrid {
 
 		// Are zones currently shown or hidden? Offer the alternative.
 
-		$str = ($this->show_zones == true)
-			? "hide"
-			: "show";
+		if (defined("NO_ZONES")) {
+			$qs = "?" . preg_replace("/(&*)no_zones/", "\\1",
+			$_SERVER["QUERY_STRING"]);
+			$txt = "show";
+		}
+		else {
+			$qs = (empty($_SERVER["QUERY_STRING"]))
+				? "?no_zones"
+				: "?" . $_SERVER["QUERY_STRING"] . "&no_zones";
+
+			$txt = "hide";
+		}
 
 		return "${prev_str}<a href=\"$_SERVER[PHP_SELF]"
-		. "?z=$str\">$str local zones</a>${next_str}";
+		. "${qs}\">$txt local zones</a>${next_str}";
 	}
 
 	//------------------------------------------------------------------------
@@ -3644,8 +3644,7 @@ class NavigationStaticHoriz {
 		"security.php" => "security",
 		"server.php" => "single server view",
 		"compare.php" => "compare two servers",
-		"ip_listing.php" => "IP address listing",
-		"netbackup.php" => "NetBackup monitor"
+		"ip_listing.php" => "IP address listing"
 	);
 
 	public function __construct()
