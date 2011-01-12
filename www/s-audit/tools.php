@@ -21,12 +21,14 @@ require_once(ROOT . "/_lib/display_classes.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$pg = new Page("software tool audit");
-
 $map = new ZoneFileMap(LIVE_DIR);
-$s = new GetServersTool($map, HostGrid::display_all_zones($map));
+$s = new GetServersTool($map);
 $grid = new SoftwareGrid($map, $s->get_array());
-echo $grid->show_grid(), $grid->zone_toggle();
+
+$pg = new audPage("software tool audit", $grid->server_count(),
+$grid->zone_toggle());
+
+echo $grid->show_grid();
 
 require_once(ROOT . "/_keys/software_key.php");
 

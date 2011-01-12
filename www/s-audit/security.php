@@ -24,16 +24,18 @@ require_once(ROOT . "/_conf/omitted_data.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$pg = new Page("Security audit");
+$map = new ZoneFileMap(LIVE_DIR);
+$s = new GetServersSecurity($map);
+$grid = new SecurityGrid($map, $s->get_array());
+
+$pg = new Page("Security audit", $grid->server_count(),
+$grid->zone_toggle());
 
 //-- SECURITY AUDITS ---------------------------------------------------------
 
 // Create list of objects of the servers we're interested in
 
-$map = new ZoneFileMap(LIVE_DIR);
-$s = new GetServersSecurity($map, HostGrid::display_all_zones($map));
-$grid = new SecurityGrid($map, $s->get_array());
-echo $grid->show_grid(), $grid->zone_toggle();
+echo $grid->show_grid();
 
 $key = new auditKey();
 

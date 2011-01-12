@@ -28,7 +28,7 @@ require_once(ROOT . "/_lib/display_classes.php");
 // Create list of objects of all the servers in the audit directory
 
 $map = new ZoneFileMap(LIVE_DIR);
-$s = new GetServersPlatform($map, HostGrid::display_all_zones($map));
+$s = new GetServersPlatform($map);
 $grid = new PlatformGrid($map, $s->get_array());
 
 $pg = new audPage("platform audit", $grid->server_count(),

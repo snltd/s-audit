@@ -23,16 +23,18 @@ require_once(ROOT . "/_lib/display_classes.php");
 //----------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$pg = new Page("filesystem audit");
+$map = new ZoneFileMap(LIVE_DIR);
+$s = new GetServersFS($map);
+$grid = new FSGrid($map, $s->get_array());
+
+$pg = new audPage("filesystem audit", $grid->server_count(),
+$grid->zone_toggle());
 
 //-- FILESYSTEM AUDITS -------------------------------------------------------
 
 // Create list of objects of all the servers in the audit directory
 
-$map = new ZoneFileMap(LIVE_DIR);
-$s = new GetServersFS($map, HostGrid::display_all_zones($map));
-$grid = new FSGrid($map, $s->get_array());
-echo $grid->show_grid(), $grid->zone_toggle();
+echo $grid->show_grid();
 
 $key = new auditKey();
 

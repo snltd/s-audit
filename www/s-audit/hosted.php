@@ -23,15 +23,17 @@ require_once(ROOT . "/_lib/display_classes.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$pg = new Page("hosted services");
+$map = new ZoneFileMap(LIVE_DIR);
+$s = new GetServersHosted($map);
+$grid = new HostedGrid($map, $s->get_array());
+
+$pg = new audPage("hosted services", $grid->server_count(),
+$grid->zone_toggle());
 
 //-- PLATFORM AUDITS ---------------------------------------------------------
 
 // Create list of objects of all the servers in the audit directory
 
-$map = new ZoneFileMap(LIVE_DIR);
-$s = new GetServersHosted($map, HostGrid::display_all_zones($map));
-$grid = new HostedGrid($map, $s->get_array());
 echo $grid->show_grid(), $grid->zone_toggle();
 
 $key = new auditKey();

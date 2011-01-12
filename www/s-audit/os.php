@@ -28,16 +28,17 @@ require_once(ROOT . "/_lib/display_classes.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$pg = new Page("O/S audit");
+$map = new ZoneFileMap(LIVE_DIR);
+$s = new GetServersOS($map);
+$grid = new OSGrid($map, $s->get_array());
+
+$pg = new audPage("O/S audit", $grid->server_count(), $grid->zone_toggle());
 
 //-- PLATFORM AUDITS ---------------------------------------------------------
 
 // Create list of objects of all the servers in the audit directory
 
-$map = new ZoneFileMap(LIVE_DIR);
-$s = new GetServersOS($map, HostGrid::display_all_zones($map));
-$grid = new OSGrid($map, $s->get_array());
-echo $grid->show_grid(), $grid->zone_toggle();
+echo $grid->show_grid();
 
 require_once(ROOT . "/_keys/os_key.php");
 
