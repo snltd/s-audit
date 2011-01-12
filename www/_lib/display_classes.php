@@ -7,12 +7,11 @@
 //
 // Classes which sort, process, and display audit data.
 //
-// R Fisher
-//
-// Please record changes below.
-// v1.0  Initial release, created from various other files.
 //
 //============================================================================
+
+define("MY_VER", "3.0");
+    // Interface software version
 
 //- generic host grid base class ---------------------------------------------
 
@@ -3440,6 +3439,12 @@ class audPage extends Page {
 	{
 		$nav = new NavigationStaticHoriz;
 
+		$fn = basename($_SERVER["PHP_SELF"]);
+
+		$class_link = ($fn == "index.php")
+			? "class_platform.php"
+			: "class_$fn";
+
 		return "\n
 		<div id=\"header\">
 			<div id=\"headerl\">
@@ -3448,11 +3453,11 @@ class audPage extends Page {
 			</div>
 			<div id=\"headerr\">
 				<div>documentation ::
-				<a href=\"/docs/index.php\">main</a> /
-				<a href=\"/docs/interface/" . basename($_SERVER["PHP_SELF"])
-				. "\">this page</a> /
-				<a href=\"/docs/client/" . basename($_SERVER["PHP_SELF"])
-				. "\">this class</a>
+				<a href=\"" . DOC_URL . "/index.php\">main</a> /
+				<a href=\"" . DOC_URL
+				. "/interface/${class_link}\">this page</a> /
+				<a href=\"" . DOC_URL
+				. "/client/${class_link}\">this class</a>
 				</div>
 				<div>$this->z_tog</div>
 			</div>
