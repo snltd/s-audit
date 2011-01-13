@@ -15,8 +15,9 @@ $pg = new docPage("s-audit.sh usage");
 <p><tt>s-audit.sh</tt> is invoked in the following ways</p>
 
 <pre class="cmd">
-# s-audit.sh [-f dir] [-z all|zone] [-qpP] [-D secs] [-R user@host:dir ]
-  [-e file] app|fs|hardware|hosted|os|plist|security|tool|machine|all
+# s-audit.sh [-f dir] [-z all|zone] [-qpP] [-D secs] 
+  [-R user@host:dir ] [-o test,test,...] [-e file]
+  app|fs|hardware|hosted|os|plist|security|tool|machine|all
 </pre>
 
 <pre class="cmd">
@@ -112,7 +113,7 @@ $ s-audit.sh -V
 be provided. The classes are:</p>
 
 <dl>
-	<dt><a href="class_app.php">app, application</a></dt>
+	<dt><a href="class_application.php">app, application</a></dt>
 	<dd>Looks for application software. Normally that means system software,
 	such as VxVm, or programs which run as a userland daemon, like
 	Apache.</dd>
@@ -121,7 +122,7 @@ be provided. The classes are:</p>
 	<dd>Looks at the storage on the box, above the physical level.
 	Filesystems, ZFS pools, NFS mounts and so-on.</dd>
 	
-	<dt><a href="class_hardware.php">hardware</a></dt>
+	<dt><a href="class_platform.php">platform</a></dt>
 	<dd>Looks at the configutation of the physical or virtual machine in
 	which the host O/S is running.</dd>
 	
@@ -140,7 +141,7 @@ be provided. The classes are:</p>
 	security. Things like non-standard users, SSH authorized keys, open
 	ports, and cron jobs.</dd>
 	
-	<dt><a href="class_tool.php">tool, tools</a></dt>
+	<dt><a href="class_tools.php">tool, tools</a></dt>
 	<dd>Looks for userland tools and scripting languages. </dd>
 	
 	<dt>all</dt>
