@@ -53,6 +53,9 @@ define("SHOW_SERVER_INFO", true);
 define("DOC_URL", "/docs");
 	// URL to top of document tree
 
+define("KEY_DIR", ROOT . "/_lib/keys");
+	// Keys for grids. Also used in documentation
+
 define("CB_URL", DOC_URL . "/_files");
 	// URL to code blocks and HTMLized code blocks
 
@@ -70,6 +73,5 @@ define("PCH_DEF_DIR", ROOT . "/_lib/pch_defs");
 
 require_once(ROOT . "/_lib/display_classes.php");
 require_once(ROOT . "/_lib/colours.php");
-require_once(ROOT . "/_lib/key_classes.php");
 
 ?>
