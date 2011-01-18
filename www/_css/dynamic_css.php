@@ -13,47 +13,101 @@
 // use the classes boxcol and solidcol. If you use both, colour the
 // field with the class, and the box with the inline style functions.
 //
+// Always generates box and solid styles for the colours in the
+// colours::cols array. Also generates other styles depending on the name of
+// the page which includes it.
+//
 // Part of s-audit. (c) 2011 SearchNet Ltd
 //  see http://snltd.co.uk/s-audit for licensing and documentation
 //
 //============================================================================
 
+// Get the colours file, which has the arrays in it which define our
+// colours.
+
 require_once("../_lib/colours.php");
+
+// Set a couple of variables
+
+$col_grp = $fscol_grp = $storcol_grp = "";
+
+$qs = preg_replace("/\?.*$/", "", $_SERVER["QUERY_STRING"]);
+
+// Tell the browser what's coming, and open the stylesheet with a comment.
 
 header("Content-Type: text/css");
 
+echo "/* Dynamically generated stylesheet */\n/* begin \"cols\" */\n";
+
+//----------------------------------------------------------------------------
+// colours::cols array
+
+// These are used all over the place, so they're always present. Work
+// through the cols array, producing a td.boxcol and td.solidcol for each.
+// Store up the names to do a group padding setting
+
 foreach(colours::$cols as $name=>$hex) {
-	echo "\ntd.solid$name {\n  background: ${hex}\n}\n"
-	. "\ntd.box$name {\n  padding: 0px;\n  border: 2px solid ${hex}\n}\n";
+	echo "\ntd.solid$name { background: ${hex} }"
+	. "\ntd.box$name { border: 2px solid ${hex} }\n";
+	$col_grp .= "td.box$name, ";
 }
+
+
+echo "\n" . preg_replace("/, $/", " { padding: 0px }", $col_grp) . 
+"\n\n/* end cols */\n";
+
+//----------------------------------------------------------------------------
+// colours::fs_cols
 
 // These colours are for filesystem audits. There are two class types,
-// solidcol and smallcol, where "col" is the filesystem type, such as ufs or
-// hsfs. Solidcol is used in the "root fs" column, smallcol in the fs column
+// boxcol and smallboxcol, where "col" is the filesystem type, such as ufs
+// or hsfs. boxcol is used in the "root fs" column, smallboxcol in the fs
+// column. These are only created if the calling page is fs.php
 
-$smallrow = "";
+if ($qs == "fs.php") {
+	
+	echo "\n/* begin fscols */\n";
 
-foreach(colours::$fs_cols as $name=>$hex) {
-	echo "\ntd.solid${name}, td.small$name {\n  background: ${hex}\n}\n";
-	$smallrow .= "td.small${name}, ";
+	foreach(colours::$fs_cols as $name=>$hex) {
+		echo "\ntd.box${name}, td.smallbox${name} { border: 2px solid $hex }\n";
+		$fscol_grp .= "td.smallbox$name, ";
+	}
+
+	echo "\n" . preg_replace("/, $/", " {\n  font-size: x-small;\n  "
+	. "text-align: left\n }", $fscol_grp) . 
+	"\n\n/* end fscols */\n";
 }
+
+//----------------------------------------------------------------------------
+// colours::stor_cols
+
+// storage types aren't left-aligned. Just coloured and small
+
+if ($qs == "index.php") {
+
+	echo "\n/* begin storcols */\n";
+
+	foreach(colours::$stor_cols as $name=>$hex) {
+		echo "\ntd.small$name { background: ${hex} }";
+		$storcol_grp .= "td.small$name, ";
+	}
+
+	echo "\n" . preg_replace("/, $/", " { font-size: x-small }" ,
+	$storcol_grp) . "\n\n/* end storcols */\n";
+}
+	/*
 
 // Web server and DB server colours only come in small
 
 foreach(array_merge(colours::$db_cols, colours::$ws_cols) as $name=>$hex) {
 	echo "\ntd.small$name {\n  background: ${hex}\n}\n";
-	$smallrow .= "td.small${name}, ";
+	$smallboxrow .= "td.small${name}, ";
 }
 
-echo "\n", preg_replace("/, $/", " {", $smallrow)
+echo "\n", preg_replace("/, $/", " {", $smallboxrow)
 . "\n  font-size: x-small;\n  text-align: left;\n}\n";
 
-// storage types aren't left-aligned. Just coloured and small
-
-foreach(colours::$stor_cols as $name=>$hex) {
-	echo "\ntd.small$name {\n  background: ${hex};",
-	"\n  font-size: x-small\n}\n";
-}
+*/
 
 ?>
 

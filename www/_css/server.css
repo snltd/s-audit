@@ -1,0 +1,35 @@
+
+/*--------------------------------------------------------------------------*/
+/* classes for individual server views */
+
+td.sclh { /* headings for audit types */
+	padding-top: 20px;
+	text-size: 15px;
+	font-weight: bold;
+	border-bottom: 1px solid #ccc;
+}
+
+td.scompl { /* "audit completed" line */
+	text-align: right;
+	text-size: x-small;
+	border-top: 1px solid #ccc;
+}
+
+td.svhn, td.osvhn { /* global zone/server hostnames */
+	font-weight: bold;
+	text-align: right;
+	padding: 4px;
+}
+
+td.zhn, td.ozhn { /* local zone hostnames */
+	color: black;
+	padding: 4px;
+}
+
+td.osvhn { /* obsolete global zones */
+	background: #CA90A4
+}
+
+td.ozhn { /* obsolete local zones */
+	background: #CAB0B0
+}
