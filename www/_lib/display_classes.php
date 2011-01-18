@@ -39,10 +39,9 @@ class HostGrid {
 		// A numbered list, starting at 0, of the fields we will print,
 		// pulled out of a global zone audit file
 
-	protected $audit_dir;
+	protected $audit_dir = LIVE_DIR;
 		// The top level audit directory. This holds a directory for every
-		// known server, and can currently be "live" or "obsolete". Set by
-		// the set_audit_dir() method
+		// known server
 
 	protected $hidden_fields = array("zone status");
 		// This field is never shown in its own column. It's handled
@@ -53,6 +52,13 @@ class HostGrid {
 		// another, put the two of them in the $adj_fields[] array, in the
 		// order you wish them to appear.
 		
+	protected $key_filename = false;
+		// Can be used to override the default key filename
+
+	protected $grid_key = false;
+	protected $grid_notes = false;
+		// Data for keys and notes, at the foot of the page
+
 	protected $show_zones = true;
 
 	//------------------------------------------------------------------------
@@ -66,18 +72,41 @@ class HostGrid {
 		$this->fields = $this->get_fields();
 		$this->fields = $this->sort_fields("audit completed");
 		$this->map = $map;
-		$this->audit_dir = $this->set_audit_dir();
 
 		$this->show_zones = (isset($_GET["z"]) && ($_GET["z"] == "hide"))
 			? false
 			: true;
+
+		$this->get_key();
 	}
 
-	protected function set_audit_dir()
+	protected function get_key()
 	{
-		// Moved to a method so it can be overriden.
+		// Each audit page has a key held in a file. Work out what that file
+		// should be called. If we have it, include it, and populate the
+		// $grid_key and $grid_notes variables with its contents. There is
+		// also a generic key file which is always included
 
-		return LIVE_DIR;
+		include_once(KEY_DIR . "/key_generic.php");
+
+		$kfn = ($this->key_filename)
+			? $this->key_filename
+			: "key_" . basename($_SERVER["SCRIPT_FILENAME"]);
+
+		$keyfile = KEY_DIR . "/" . $kfn;
+
+		if (file_exists($keyfile))
+			include_once($keyfile);
+		else
+			$grid_key = array();
+
+		$this->grid_key = array_merge($generic_key, $grid_key);
+
+		if (isset($grid_notes))
+			$this->grid_notes = $grid_notes;
+
+		unset($generic_key, $grid_key, $grid_notes);
+
 	}
 
 	protected function sort_fields($last = false)
@@ -207,7 +236,7 @@ class HostGrid {
 		$ret = "";
 
 		return $ret .  $this->grid_head($width) .  $this->grid_body() .
-		$this->grid_foot();
+		$this->grid_key() . $this->grid_foot();
 	}
 
 	public function grid_head($width)
@@ -241,6 +270,69 @@ class HostGrid {
 		}
 
 		return $ret_str;
+	}
+
+	protected function grid_key()
+	{
+		// Put in the key. The information for it is held in a file specific
+		// to the page using the class right now. It populates the same
+		// fields as the data above. 
+		
+		// There's also a generic key that goes on every page
+
+		$ret = "\n<tr><td class=\"keyhead\" colspan=\"" .
+		sizeof($this->fields) . "\">key</td></tr>";
+
+		// Loop through the grid_key data, filling in columns as we go. Each
+		// cell can have arbitrarily many key values
+
+		$ret .= "\n<tr>";
+
+		foreach($this->fields as $field) {
+
+			$ret .= (in_array($field, array_keys($this->grid_key))) 
+				? $this->grid_key_col($this->grid_key[$field])
+				: new Cell();
+		}
+
+		$ret .= "</tr>";
+		
+		/*
+		if (is_array($this->grid_notes)) {
+			$ret .= "\n<tr><td class=\"keyhead\" colspan=\"" .
+			sizeof($this->fields) . "\">notes</td></tr>\n<tr>";
+
+			foreach($this->fields as $field) {
+
+				if (in_array($field, array_keys($this->grid_notes))) {
+					$cell = $this->grid_notes[$field];
+				}
+				else
+					$cell = false;
+
+
+			$ret .= new Cell($cell);
+			}
+
+		$ret .= "</tr>";
+
+		}
+		*/
+
+		return $ret;
+	}
+	
+	protected function grid_key_col($data, $span = 1)
+	{
+		// prints columns in grid keys
+
+		$cell = multiCell::open_table();
+
+		foreach($data as $el) {
+			$cell .= "\n<tr>" . new Cell($el[0], $el[1], $el[2]) . "</tr>";
+		}
+		
+		return new Cell($cell .= "</table>", false, false, false, $span);
 	}
 
 	public function show_server($server)
@@ -605,6 +697,9 @@ class HostGrid {
 	{
 		// Print the hardware platform. Some things don't report exactly
 		// what is printed on the front.
+
+		// Put 32-bit OSes on an amber field.
+		// Outline x86
 	
 		$hwnames = array(
 			"Sun Fire T200" => "Sun T2000"
@@ -616,7 +711,15 @@ class HostGrid {
 			? $hwnames[$a[1]]
 			: $a[1];
 
-		return new Cell("${hw}<div>($a[2])</div>");
+		$class = (preg_match("/^32-bit/", $a[2]))
+			? "solidamber"
+			: false;
+
+		$frame = ($a[1] == "i86pc")
+			? false
+			: inline_col::box(colours::$plat_cols["sparc"]);
+
+		return new Cell("${hw}<div>($a[2])</div>", $class, $frame);
 	}
 
 	protected function show_virtualization($data)
@@ -967,12 +1070,17 @@ class HostGrid {
 					// "half" if it's only "h"
 		
 					if (sizeof($sa) > 1) {
-						if ($sa[1] == "f") $sa[1] = "full";
-						if ($sa[1] == "h") $sa[1] = "half";
+
+						if ($sa[1] == "f")
+							$sa[1] = "full";
+						elseif ($sa[1] == "h")
+							$sa[1] = "half";
+
 						$speed = "${sa[0]}/$sa[1]";
 					}
 
-					if (isset($sf[1])) $speed .= " $sf[1]";
+					if (isset($sf[1]))
+						$speed .= " $sf[1]";
 				}
 				
 				if (isset($speed))
@@ -1549,8 +1657,8 @@ class HostGrid {
 
 	protected function show_zpool($data)
 	{
-		// List Zpools and their sizes. Highlight ones in red which can be
-		// upgraded
+		// List Zpools and their sizes. Ones which can be upgraded are on an
+		// orange field
 
 		$c_arr = false;
 
@@ -1563,7 +1671,7 @@ class HostGrid {
 
 			if ($varr[0] != $varr[1]) {
 				$vex = "v$varr[0] (v$varr[1] available)";
-				$class = "boxred";
+				$class = "solidorange";
 			}
 			else {
 				$vex =" v$varr[0]";
@@ -1594,7 +1702,7 @@ class HostGrid {
 
 		$txt = "<div><strong>" . units::from_b($cap_b) .
 		"</strong></div>\n<div>" . units::from_b($use_b) . " (" .
-		round($a[3]) . "%) used";
+		round($a[3]) . "%) used</div>";
 
 		$class = ($a[3] > 85)
 			? "solidamber"
@@ -1606,11 +1714,11 @@ class HostGrid {
 	protected function show_root_fs($data)
 	{
 		// Colour code the root FS coloumn, the same as the fs column. You
-		// need a td.$fstyp in the stylesheet for each filesystem
+		// need a td.box$fstyp in the stylesheet for each filesystem
 
 		$fstyp = (preg_replace("/ .*$/", "", $data[0]));
 
-		return new Cell($data[0], "solid$fstyp");
+		return new Cell($data[0], "box$fstyp");
 	}
 
 	protected function show_fs($data)
@@ -1618,7 +1726,7 @@ class HostGrid {
 		// Put the mountpoint in bold, followed by the FS type in brackets.
 		// On a second line put extra info. Device, NFS path, ZFS dataset
 		// etc.
-		// Red boxes are used for upgradeable ZFS filesystems, and NFS
+		// Orange fields are used for upgradeable ZFS filesystems, red for NFS
 		// filesystems not in the vfstab.
 		// All on a field given by the "known" array at the top of the class
 		// input is of the form
@@ -1630,6 +1738,7 @@ class HostGrid {
 		$c_arr = array();
 
 		foreach($data as $row) {
+
 			// Break up the string. rarr[0] is the mountpoint, earr[] is the
 			// "extra" data. fstype:opt:more
 
@@ -1642,7 +1751,7 @@ class HostGrid {
 			$row2 = $earr[2];
 
 			// We report the versions of ZFS filesystems, and inline colour
-			// the cell with a red border if it can be upgraded
+			// the cell with an orange field if it can be upgraded
 
 			if ($fstyp == "zfs") {
 				// earr[1] is the fs options
@@ -1657,7 +1766,7 @@ class HostGrid {
 					$row2 .= ", v$varr[0]";
 
 					if ($varr[0] != $varr[1]) {
-						$exstyle = inline_col::box("red");
+						$exstyle = inline_col::solid("orange");
 						$row2 .= " <strong>upgradeable to $varr[1]</strong>";
 					}
 
@@ -1669,14 +1778,14 @@ class HostGrid {
 			}
 			elseif ($fstyp == "nfs") {
 				
-				// NFS need the export path tagging on, and will border the
-				// box in red if the FS isn't in the vfstab.
+				// NFS need the export path tagging on, and will put on a
+				// red field if the FS isn't in the vfstab.
 
 				$row2 .= ":" . $earr[3];
 
 				if (!isset($earr[4]) || $earr[4] != "in_vfstab") {
 					$row2 .= " (not in vfstab)";
-					$exstyle = inline_col::box("red");
+					$exstyle = inline_col::solid("red");
 				}
 
 			}
@@ -1696,13 +1805,13 @@ class HostGrid {
 
 			if ($earr[2] == "ro") {
 				$out .= " [read only]";
-				$exstyle = inline_col::box("amber");
+				$exstyle = inline_col::solid("grey");
 			}
 
 			if (isset($row2))
 				$out .= "\n<div class=\"indent\">$row2</div>";
 
-			$c_arr[] = new Cell($out, "small$fstyp", $exstyle);
+			$c_arr[] = new Cell($out, "smallbox$fstyp", $exstyle);
 		}
 
 		return $this->show_parsed_list($c_arr);
@@ -1751,7 +1860,7 @@ class HostGrid {
 
 					if ($mnts == 0) {
 						$mntinfo = " (0 known mounts)";
-						$col = inline_col::box("red");
+						$col = inline_col::solid("amber");
 					}
 					elseif ($mnts == 1)
 						$mntinfo = " (1 known mount)";
@@ -1764,7 +1873,7 @@ class HostGrid {
 			elseif ($fstyp == "smb")
 				$str .= "<div class=\"indent\">&quot;$earr[2]&quot;</div>";
 
-			$c_arr[] = new Cell($str, "small$fstyp", $col);
+			$c_arr[] = new Cell($str, "smallbox$fstyp", $col);
 		}
 
 		return $this->show_parsed_list($c_arr);
@@ -2267,7 +2376,7 @@ class HostGrid {
 		else {
 			$qs = (empty($_SERVER["QUERY_STRING"]))
 				? "?no_zones"
-				: "?" . $_SERVER["QUERY_STRING"] . "&no_zones";
+				: "?" . $_SERVER["QUERY_STRING"] . "&amp;no_zones";
 
 			$txt = "hide";
 		}
@@ -2362,6 +2471,9 @@ class PlatformGrid extends HostGrid
 	protected $latest_aloms = array();
 		// An array of "hardware" => "alom"
 
+	protected $key_filename = "key_platform.php";
+		// Helps us include they key file automatically
+
 	public function __construct($map, $servers)
 	{
 		// The constructor is the standard HostGrid one, but it also
@@ -2387,6 +2499,7 @@ class OSGrid extends PlatformGrid
 		// opensolaris5.11x => 129
 		// where "s" denotes SPARC and "x" x86/amd64
 
+	protected $key_filename = false;
     public function __construct($map, $servers)
 	{
 		// The constructor is the standard HostGrid one, but it also
@@ -2560,6 +2673,8 @@ class SoftwareGrid extends HostGrid
 		"apache so" => "mod_php",
 		"mod_php" => "Sun Web Server"
 		);
+
+	protected $key_filename = "key_application.php";
 
 	public function __construct($map, $servers)
 	{
@@ -2818,6 +2933,24 @@ class SoftwareGrid extends HostGrid
 		}
 
 		return $ret;
+	}
+
+	protected function grid_key()
+	{
+		// Put in the key. This is a special method for tools and apps,
+		// because we can never really be sure what fields we have, and
+		// because the same key applies to every column.
+		
+		$nf = sizeof($this->fields);
+
+		$ret = "\n<tr><td class=\"keyhead\" colspan=\"${nf}\">key</td>"
+		. "</tr>\n<tr>";
+
+		$ret .= $this->grid_key_col($this->grid_key["hostname"])
+		. $this->grid_key_col($this->grid_key["general"], ($nf - 2))
+		. $this->grid_key_col($this->grid_key["audit completed"]);
+
+		return $ret . "</tr>";
 	}
 
 }
@@ -3353,13 +3486,9 @@ class Page {
 	{
 		// Print the XHTML DOCTYPE and whatnot
 
-		return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" '
-		. '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">'
+		return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional'
+		. '//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
 		. "\n\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n";
-
-		//return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional"
-		//. "//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-		//. ">\n\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n";
 	}
 
 	private function add_styles()
@@ -3389,8 +3518,7 @@ class Page {
 
 	public function close_page()
 	{
-		return "</div>" . Page::add_footer() . "\n</div> <!-- end of wrapper"
-		. " -->\n\n</body>\n</html>";
+		echo "</div>" . Page::add_footer() . "\n</body>\n</html>";
 	}
 
 	protected function add_footer()
@@ -3420,7 +3548,7 @@ class audPage extends Page {
 
 	// Generates audit grid pages
 
-	protected $styles = array("basic.css", "audit.css", "dynamic_css.php");
+	protected $styles = array("basic.css", "audit.css");
 		// Stylesheets to apply
 
 	protected $s_count = false;
@@ -3430,6 +3558,8 @@ class audPage extends Page {
 		// the "show zones" string in the header
 
 	public function __construct($title, $s_count, $z_tog) {
+		$this->styles[] = "dynamic_css.php?" .
+		basename($_SERVER["PHP_SELF"]);
 		$this->s_count = $s_count;
 		$this->z_tog = $z_tog;
 		parent::__construct($title);

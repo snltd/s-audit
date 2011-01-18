@@ -36,11 +36,11 @@ class colours {
 	// $fs_cols is a list of colours used in the filesystem audit page
 
 	static $fs_cols = array(
-		"lofs" => "#e6e9c9",
-		"nfs" => "#dfdc9b",
-		"zfs" => "#c7a49c",
 		"ufs" => "#bfcde0",
+		"zfs" => "#c7a49c",
+		"nfs" => "#dfdc9b",
 		"hsfs" => "#80d4a0",
+		"lofs" => "#e6e9c9",
 		"vboxfs" => "#b86bae",
 		"smb" => "#7b7a94",		// keep "smb" and "smbsf" the same
 		"smbfs" => "#7b7a94",
@@ -65,11 +65,22 @@ class colours {
 		"postgres" => "#dfdc9b"
 		);
 
+	// $stor_cols is a list of colours used to identify different storage
+	// devices
+	
 	static $stor_cols = array(
 		"disk" => "#bfcde0",	// disks
 		"cd" => "#ccc",	// optical drives
 		"fc" => "#7b7a94", 		// fibre arrays
 		"tp" => "#c7a49c");		// tape drives
+
+	// $plat_cols is a list of colours used to identify different hardware
+	// types
+	
+	static $plat_cols = array(
+		"x86" => "#7b7a94",
+		"sparc" => "#c7a49c"
+	);
 
 	public function get_col($colour)
 	{
