@@ -5,12 +5,10 @@
 // tools.php
 // ---------
 //
-// Show software.
+// Application software audit base page.
 //
-// R Fisher
-//
-// v1.0
-// Please record changes below.
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
 //
 //============================================================================
 
@@ -28,10 +26,6 @@ $grid = new SoftwareGrid($map, $s->get_array());
 $pg = new audPage("software tool audit", $grid->server_count(),
 $grid->zone_toggle());
 
-echo $grid->show_grid();
-
-require_once(ROOT . "/_keys/software_key.php");
-
-$pg->close_page();
+echo $grid->show_grid(), $pg->close_page();
 
 ?>

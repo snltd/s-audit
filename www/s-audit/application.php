@@ -5,14 +5,10 @@
 // application.php
 // ---------------
 //
-// Show application software.
+// Application software audit base page.
 //
-// R Fisher
-//
-// v1.0
-// Please record changes below.
-//
-// v1.1 Updated to use new AuditKey class. RDF 20/10/09
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
 //
 //============================================================================
 
@@ -30,10 +26,6 @@ $grid = new SoftwareGrid($map, $s->get_array());
 $pg = new audPage("application software audit", $grid->server_count(),
 $grid->zone_toggle());
 
-echo $grid->show_grid();
-
-require_once(ROOT . "/_keys/software_key.php");
-
-$pg->close_page();
+echo $grid->show_grid(), $pg->close_page();
 
 ?>
