@@ -25,7 +25,7 @@
 // We need a couple of defines, so load up the site config, then get the
 // colours file, which has the arrays in it which define our colours.
 
-require_once("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
+require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/colours.php");
 
 // Set a couple of variables
