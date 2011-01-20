@@ -17,17 +17,35 @@ $pg = new docPage("the s-audit web interface");
 parseable by a specially written web interface.</p>
 
 <p>This interface produces a page for each class of audit, with each server
-or zone having its own row.</p>
+or zone having its own row. Those pages are:</p>
 
-<h1>Requirements</h1>
+<ul>
+	<li><a href="class_platform.php">platform audits</a> - the virtual or
+	physical environment</li>
 
-<p>The interface requires <a href="http://php.net">PHP</a> verson 5.1 or
-greater. Following the design methodology behind the s-audit client, the
-interface is written simply, and requires no non-core PHP functionality.</p>
+	<li><a href="class_os.php">O/S audits</a> - the configuration of
+	Solaris</li>
 
-<p>Theoretically the s-audit interface can run on any web server with a
-suitable installation of PHP, but it is only officially tested with <a
-href="http://httpd.apache.org">Apache</a> 2.2.</p>
+	<li><a href="class_fs.php">filesystem audits</a> - mounted and exported
+	filesystems, and disk usage</li>
+
+	<li><a href="class_application.php">software application audits</a> -
+	versions and states of various software applications</li>
+
+	<li><a href="class_tools.php">software tool audits</a> - versions of
+	various software tools</li>
+
+	<li><a href="class_hosted.php">hosted services audits</a> - databases
+	and websites</li>
+
+	<li><a href="class_platform.php">security audits</a> - issues in some
+	way related to host security</li>
+</ul>
+
+<p>The interface tabulates the data in an easy-to-read form, and colours
+information which it believes may be useful. This may be to draw the user's
+attention to obsolete software versions, missing patches, or unused
+databases.</p>
 
 <?php
 
