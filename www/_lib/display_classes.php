@@ -2399,11 +2399,17 @@ class HostGrid {
 
 		$call = false;
 
-		if ($this->map->is_global($data["hostname"][0])) {
-			$ip = gethostbyname($data["hostname"][0] . ALOM_SFX);
+		if (defined("ALOM_SFX")) {
 
-			if (preg_match("/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/", $ip))
-				$call = array($ip);
+			if ($this->map->is_global($data["hostname"][0])) {
+				$ip = gethostbyname($data["hostname"][0] . ALOM_SFX);
+
+				if (preg_match("/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/",
+					$ip))
+					$call = array($ip);
+			}
+			else
+				$call = false;
 		}
 		
 		return $this->show_ALOM_IP($call, true);
