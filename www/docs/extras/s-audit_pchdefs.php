@@ -1,6 +1,6 @@
 <?php
 
-include("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
+include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
@@ -74,7 +74,7 @@ $ s-audit_pchdefs.sh [-k] [-d dir] <-x|patchdiag>
 
 <p>In the following examples, we will assume the interface looks for patch
 hover files in <tt>/www/s-audit/_lib/pch_defs</tt>. This path is defined in
-the <tt>_conf/site_config.php</tt> file.</p>
+the <tt>_conf/s-audit_config.php</tt> file.</p>
 
 <p>To generate a new batch of hover files from an existing
 <tt>patchdiag.xref</tt> file:</p>
