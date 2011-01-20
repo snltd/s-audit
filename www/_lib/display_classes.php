@@ -717,7 +717,7 @@ class HostGrid {
 
 		$frame = ($a[1] == "i86pc")
 			? false
-			: inline_col::box(colours::$plat_cols["sparc"]);
+			: inlineCol::box(colours::$plat_cols["sparc"]);
 
 		return new Cell("${hw}<div>($a[2])</div>", $class, $frame);
 	}
@@ -761,7 +761,7 @@ class HostGrid {
 				// already used the class doing a box
 				
 				if ($za[1] != "native") {
-					$col = inline_col::solid("amber");
+					$col = inlineCol::solid("amber");
 					$str .= " (<strong>$za[1]</strong> brand)";
 				}
 				
@@ -850,7 +850,7 @@ class HostGrid {
 
 			$col = colours::$nic_cols[$sn];
 
-			$c = new Cell($data[0], false, inline_col::$colfn($col));
+			$c = new Cell($data[0], false, inlineCol::$colfn($col));
 		}
 		else
 			$c = new Cell();
@@ -926,9 +926,9 @@ class HostGrid {
 					$class = "smallcd";
 
 					if (preg_match("/\(loaded\)/", $datum))
-						$ic = inline_col::box("amber");
+						$ic = inlineCol::box("amber");
 					elseif (preg_match("/\(mounted\)/", $datum))
-						$ic = inline_col::box("green");
+						$ic = inlineCol::box("green");
 					break;
 				
 				case "tape":
@@ -1172,11 +1172,11 @@ class HostGrid {
 			// colour
 
 			$lcol = (!preg_match("/:/", $na[0]) && $col && $na[5] != "vlan")
-				? inline_col::solid($col)
+				? inlineCol::solid($col)
 				: false;
 
 			$rcol = ($col) 
-				? inline_col::box($col)
+				? inlineCol::box($col)
 				: false;
 
 			// Now we can make the cell
@@ -1391,7 +1391,7 @@ class HostGrid {
 		$col = ($this->map->is_global($zn) || $data[0] ==
 		$this->map->get_parent_prop($zn, "kernel", "os"))
 			? false
-			: inline_col::box("amber");
+			: inlineCol::box("amber");
 
 		return new Cell($data[0], $class, $col);
 	}
@@ -1428,7 +1428,7 @@ class HostGrid {
 				$z_type = false;
 			else {
 				$z_type = "<div>[$rarr[1] brand]</div>";
-				$col = inline_col::box("amber");
+				$col = inlineCol::box("amber");
 			}
 
 			$ret .= "\n<tr class=\"multicellsmall\">" . new Cell("<strong>"
@@ -1580,7 +1580,7 @@ class HostGrid {
 				$mod = preg_replace("/ .*$/", "", $mod);
 
 			$col = (preg_match("/(mod_ssl.so|ssl_module)/", $mod))
-				? inline_col::solid("yellow")
+				? inlineCol::solid("yellow")
 				: false;
 
 			$c_arr[] = new Cell(preg_replace("/\.so/", "", $mod), false,
@@ -1766,7 +1766,7 @@ class HostGrid {
 					$row2 .= ", v$varr[0]";
 
 					if ($varr[0] != $varr[1]) {
-						$exstyle = inline_col::solid("orange");
+						$exstyle = inlineCol::solid("orange");
 						$row2 .= " <strong>upgradeable to $varr[1]</strong>";
 					}
 
@@ -1785,7 +1785,7 @@ class HostGrid {
 
 				if (!isset($earr[4]) || $earr[4] != "in_vfstab") {
 					$row2 .= " (not in vfstab)";
-					$exstyle = inline_col::solid("red");
+					$exstyle = inlineCol::solid("red");
 				}
 
 			}
@@ -1805,7 +1805,7 @@ class HostGrid {
 
 			if ($earr[2] == "ro") {
 				$out .= " [read only]";
-				$exstyle = inline_col::solid("grey");
+				$exstyle = inlineCol::solid("grey");
 			}
 
 			if (isset($row2))
@@ -1860,7 +1860,7 @@ class HostGrid {
 
 					if ($mnts == 0) {
 						$mntinfo = " (0 known mounts)";
-						$col = inline_col::solid("amber");
+						$col = inlineCol::solid("amber");
 					}
 					elseif ($mnts == 1)
 						$mntinfo = " (1 known mount)";
@@ -1990,7 +1990,7 @@ class HostGrid {
 						$col = "amber";
 
 					if (isset($col)) {
-						$row2 .= " style=\"" . inline_col::solid($col) . "\"";
+						$row2 .= " style=\"" . inlineCol::solid($col) . "\"";
 						break;
 					}
 
@@ -2010,7 +2010,7 @@ class HostGrid {
 			else {
 
 				if (!preg_match("|\.conf$|", $cf))
-					$row3 .= " style=\"" . inline_col::solid("amber") .
+					$row3 .= " style=\"" . inlineCol::solid("amber") .
 					"\"";
 
 				$row3 .= ">config: $cf</div>";
@@ -2029,8 +2029,8 @@ class HostGrid {
 		//  db_server:db_name:size:extra
 		//
 		// For MySQL, extra is the time of last db update, if > 30 days. We
-		// colour each cell according to the type of DB server, and box it
-		// in yellow if it's not been updated in the last 30 days.
+		// colour each cell according to the type of DB server, and put it
+		// on a yellow field if it's not been updated in the last 30 days.
 
 		$c_arr = array();
 
@@ -2042,7 +2042,7 @@ class HostGrid {
 			if ($arr[3]) {
 				$str .= "<div class=\"indent\">last updated: 
 				$arr[3]</div>";
-				$col = inline_col::box("amber");
+				$col = inlineCol::solid("amber");
 			}
 				
 			$c_arr[] = new Cell($str, "small$arr[0]", $col);
@@ -2175,7 +2175,7 @@ class HostGrid {
 				: "solidamber";
 
 			$col = ($arr[2] == "inetd")
-				? inline_col::box("red")
+				? inlineCol::box("red")
 				: false;
 
 			$extra = ($arr[1] != "")
@@ -2733,9 +2733,9 @@ class SoftwareGrid extends HostGrid
 			// audits
 
 			if (preg_match("/not running/", $call))
-				$col = inline_col::box("red");
+				$col = inlineCol::box("red");
 			elseif (preg_match("/unknown/", $call))
-				$col = inline_col::solid("red");
+				$col = inlineCol::solid("red");
 
 			// and, if we can,  change the background colour depending on
 			// the version number. Can't do this in a single server audit
@@ -3387,7 +3387,7 @@ class singlePlist extends singleGeneric
 				// Highlight partially installed packages with a red border
 
 				if (preg_match("/ \(/", $p)) {
-					$bcol = inline_col::box("red");
+					$bcol = inlineCol::box("red");
 					$p = preg_replace("/ .*$/", "", $p);
 				}
 				else
@@ -3453,14 +3453,16 @@ class Page {
 		// Stylesheets to apply
 
 	private $metas = array(
-						"Content-Type" => "text/html; charset=utf-8",
-						"pragma" => "no-cache");
-			// HTTP meta tags. Key/value pairs
+		"Content-Type" => "text/html; charset=utf-8",
+		"pragma" => "no-cache");
+		// HTTP meta tags. Key/value pairs
 
 	public function __construct($title)
 	{
 		$this->type = $title;
 		$this->title = SITE_NAME . " :: $title";
+		$this->styles[] = "dynamic_css.php?" .
+		basename($_SERVER["PHP_SELF"]);
 		echo $this-> open_page();
 	}
 
@@ -3558,8 +3560,6 @@ class audPage extends Page {
 		// the "show zones" string in the header
 
 	public function __construct($title, $s_count, $z_tog) {
-		$this->styles[] = "dynamic_css.php?" .
-		basename($_SERVER["PHP_SELF"]);
 		$this->s_count = $s_count;
 		$this->z_tog = $z_tog;
 		parent::__construct($title);
@@ -3632,7 +3632,8 @@ class ssPage extends audPage {
 
 class docPage extends Page {
 
-	protected $styles = array("basic.css", "doc.css", "script.css");
+	protected $styles = array("basic.css", "audit.css", "doc.css",
+	"script.css");
 		// Stylesheets to apply
 
 	public function __construct($title)
@@ -3640,6 +3641,8 @@ class docPage extends Page {
 		require_once(ROOT . "/_lib/filesystem_classes.php");
 		require_once(ROOT . "/_lib/doc_classes.php");
 		$this->title = "s-audit documentation :: $title";
+		$this->styles[] = "dynamic_css.php?" .
+		basename($_SERVER["PHP_SELF"]);
 		echo $this-> open_page();
 	}
 
@@ -3796,7 +3799,7 @@ class NavigationStaticHoriz {
 		// Make an unordered list of everything in the $links array. CSS
 		// will do the rest
 
-		$ret = "\n<ul id=\"navlist\">";
+		$ret = "\n<ul class=\"navlist\" id=\"navlist\">";
 		$here = basename($_SERVER["SCRIPT_FILENAME"]);
 
 		foreach($this->links as $pg => $txt) {
