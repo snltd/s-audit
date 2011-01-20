@@ -43,7 +43,7 @@ $dh->doc_class_start();
 	set architecture is displayed. That is, 32- or 64-bit, SPARC or
 	x86. No information is displayed for local zones.</dd>
 
-	<dd>The following colour-coding is used:
+	<dd>The following colour-coding is used:</dd>
 
 <?php
 	echo $dh->colour_key($grid_key["hardware"]);
@@ -55,7 +55,8 @@ $dh->doc_class_start();
 	virtualized environments, the nature of that virtualization is given,
 	which may be LDOM, VirtualBox or VMWare.</dd>
 	
-	<dd>The following colour-coding is used:
+	<dd>The following colour-coding is used:</dd>
+
 <?php
 	echo $dh->colour_key(
 	array(
@@ -64,40 +65,38 @@ $dh->doc_class_start();
 		false), array("non-native local zone are on amber fields",
 		"solidamber", false)));
 ?>
-	</dd>
 	
-	<dd>
-	For non-global zones, the nature of the zone (whole or sparse root) is
-	listed, along with the brand, if it is not native.</dd>
+	<dd>For non-global zones, the nature of the zone (whole or sparse root)
+	is listed, along with the brand, if it is not native.</dd>
 	
 	<dt>CPU</dt>
 	<dd>Shows the number of CPUs along with their clock speed and number of
 	cores. Note that for the primary domain of a machine with LDOMs, this
-	will only show the number of CPUs available to that domain, not
-	to the server as a whole. For VirtualBox and VMWare environments, the
-	number of CPUs available to the operating system is displayed - it may
-	not have exclusive use of those CPUs.  No information is displayed for
-	local zones.</dd>
+	will only show the number of CPUs available to that domain, not to the
+	server as a whole. For VirtualBox and VMWare environments, the number of
+	CPUs available to the operating system is displayed - it may not have
+	exclusive use of those CPUs.  No information is displayed for local
+	zones.</dd>
 
 	<dt>memory</dt>
-	<dd>Shows the physical and virtual memory in an environment.
-	Note that this is the total memory, not the &quot;free&quot; or
-	&quot;available&quot; memory at the time of the audit.
-	If a machine has no swap space, it will be highlighted by an amber
-	field. In the primary domain of a machine with LDOMs, this will show the
-	amount of physical RAM available to that domain, not installed in the
-	server as a whole. For VirtualBox and VMWare environments, the memory
-	given over to the system - it may not have exclusive use of it.  No
-	information is displayed for local zones.</dd>
+	<dd>Shows the physical and virtual memory in an environment.  Note that
+	this is the total memory, not the &quot;free&quot; or
+	&quot;available&quot; memory at the time of the audit.  If a machine has
+	no swap space, it will be highlighted by an amber field. In the primary
+	domain of a machine with LDOMs, this will show the amount of physical
+	RAM available to that domain, not installed in the server as a whole.
+	For VirtualBox and VMWare environments, the memory given over to the
+	system - it may not have exclusive use of it.  No information is
+	displayed for local zones.</dd>
 
-	<dd>The following colour-coding is used:
+	<dd>The following colour-coding is used:</dd>
+
 <?php
 	echo $dh->colour_key(
 	array(
 		array("systems with no swap space are on amber fields",
 		"solidamber", false)));
 ?>
-	</dd>
 
 	<dt>serial number</dt>
 	<dd>If Sun Sneep has been used to put a machine's serial number in the
@@ -118,20 +117,19 @@ $dh->doc_class_start();
 	<tt>s-audit.sh</tt> does this if it can, and such results are presented
 	in this column on a solid coloured field. (The default colour is orange,
 	but it can be changed in <tt>_conf/nic_colours.php</tt>. Please see
-	below for the current colour on this system.)
-	</dd>
+	below for the current colour on this system.)</dd>
 	
 	<dd>However, on some machines, such as T2000s, the lack of a
 	<tt>scadm</tt> binary makes it impossible for <tt>s-audit.sh</tt> to get
 	the ALOM IP address. When I was developing s-audit, my site's naming
 	convention was to have system ALOMs in DNS, using hostnames formed by
 	appending <tt>-lom</tt> to the system hostname. So, for instance, the
-	ALOM on <tt>cs-db-02</tt> would be <tt>cs-db-02-lom</tt>. If you use
-	a similar convention, the s-audit interface will try to
-	&quot;guess&quot; ALOM addresses by appending your suffix to the
-	hostname of the server it is looking at, then seeing if the name it has
-	created resolves in DNS. If it does, then the address to which it
-	resolves is displayed. You can set your own ALOM suffix by changing the</dd>
+	ALOM on <tt>cs-db-02</tt> would be <tt>cs-db-02-lom</tt>. If you use a
+	similar convention, the s-audit interface will try to &quot;guess&quot;
+	ALOM addresses by appending your suffix to the hostname of the server it
+	is looking at, then seeing if the name it has created resolves in DNS.
+	If it does, then the address to which it resolves is displayed. You can
+	set your own ALOM suffix by changing the</dd>
 
 	<dd>
 	<pre>
@@ -139,7 +137,7 @@ $dh->doc_class_start();
 	</pre>
 	</dd>
 	
-	<dd>line in <tt>_conf/site_config.php</tt>. If you have a standard
+	<dd>line in <tt>_conf/s-audit_config.php</tt>. If you have a standard
 	colour of cable you use to connect your ALOMs, you can also set this
 	with the</dd>
 
@@ -154,11 +152,9 @@ $dh->doc_class_start();
 	system colour codes authoritative and &quot;guessed&quot; ALOM addresses
 	as follows:</dd>
 
-	<dd>
 <?php
 	echo $dh->colour_key($grid_key["ALOM IP"]);
 ?>
-	</dd>
 
 	<dt>storage</dt>
 	<dd>This field shows all storage to which a host has access. The
@@ -168,8 +164,6 @@ $dh->doc_class_start();
 <?php
 	echo $dh->colour_key($grid_key["storage"]);
 ?>
-	</dd>
-
 
 	<dd>Disks, on a pale blue field, are grouped by size and bus type, for
 	instance, SCSI, VBOX, IDE (note that SATA disks are shown as
@@ -187,11 +181,11 @@ $dh->doc_class_start();
 	listed AS WELL AS the array itself.</dd>
 
 	<dt>PCI card</dt>
-	<dd>Lists PCI cards. The type of card, e.g. network, SCSI, etc, is
-	shown in <strong>bold face</strong>, with roughly human-readable details
-	of the card following it in parentheses. For instance,
-	&quot;SUNW,pci-qfe PCI0@33MHz&quot; can be interpreted as a Sun PCI Quad
-	Fast Ethernet card in PCI slot 0, which has a 33MHz bus speed.</dd>
+	<dd>Lists PCI cards. The type of card, e.g. network, SCSI, etc, is shown
+	in <strong>bold face</strong>, with roughly human-readable details of
+	the card following it in parentheses. For instance, &quot;SUNW,pci-qfe
+	PCI0@33MHz&quot; can be interpreted as a Sun PCI Quad Fast Ethernet card
+	in PCI slot 0, which has a 33MHz bus speed.</dd>
 
 	<dd>This information can only be reliably retrieved on SPARC systems
 	running Solaris 10 or later. If you see information for older, or x86
@@ -226,7 +220,7 @@ $dh->doc_class_start();
 
 	<dd>NIC lines are colour-coded according to the contents of the
 	<tt>_conf/nic_colours.php</tt> file. This system is currently using the
-	following colours:
+	following colours:</dd>
 
 <?php
 	echo $dh->colour_key($grid_key["NIC"]), $dh->doc_class_end(),
