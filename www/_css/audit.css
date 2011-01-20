@@ -51,7 +51,7 @@ a.strongr, a.strongg { /* bold face links */
 /*--------------------------------------------------------------------------*/
 /* page navigation */
 
-ul {
+ul.navlist {
 	clear: both;
 	text-align: right;
 	background: #eee;
