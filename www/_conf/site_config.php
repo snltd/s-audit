@@ -15,6 +15,9 @@
 define("ROOT", $_SERVER["DOCUMENT_ROOT"]);
 	// Site root. Usually document root
 
+define("LIB", ROOT . "/_lib");
+	// path to _lib/ directory. Lots of things are in there
+
 define("SITE_NAME", "s-audit");
 	// Site name, displayed on all page titles
 
@@ -53,7 +56,7 @@ define("SHOW_SERVER_INFO", true);
 define("DOC_URL", "/docs");
 	// URL to top of document tree
 
-define("KEY_DIR", ROOT . "/_lib/keys");
+define("KEY_DIR", LIB . "/keys");
 	// Keys for grids. Also used in documentation
 
 define("CB_URL", DOC_URL . "/_files");
@@ -63,15 +66,15 @@ define("CB_DIR", ROOT . "/docs/_files");
 	// Where the codeBlock class finds syntax coloured script files. (Path,
 	// not URL.)
 
-define("PKG_DEF_DIR", ROOT . "/_lib/pkg_defs");
+define("PKG_DEF_DIR", LIB . "/pkg_defs");
 	// Where to find package definition files
 
-define("PCH_DEF_DIR", ROOT . "/_lib/pch_defs");
+define("PCH_DEF_DIR", LIB . "/pch_defs");
 	// Where to find patch definition files
 
 // We always need our basic classes
 
-require_once(ROOT . "/_lib/display_classes.php");
-require_once(ROOT . "/_lib/colours.php");
+require_once(LIB . "/display_classes.php");
+require_once(LIB . "/colours.php");
 
 ?>
