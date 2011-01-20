@@ -124,3 +124,22 @@ ul.vmf {
 	line-height: 200%;
 }
 
+ul.dockey {
+
+	/* used in documentation when talking about grid keys */
+
+	line-height: 180%;
+	text-align: center;
+	list-style: none;
+	font-size: 100%;
+}
+
+#doccontent li {
+		padding-top: 2px;
+		margin: 0 5em 0 5em
+}
+
+span {
+		padding: 0 3px 2px 3px;
+		border: 1px solid #444;
+}
