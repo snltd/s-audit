@@ -17,9 +17,9 @@
 define("HOST_COLS", 5);
 	// How many columns of host names on the default page
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
-require_once(ROOT . "/_lib/reader_file_classes.php");
-require_once(ROOT . "/_lib/display_classes.php");
-require_once(ROOT . "/_lib/server_view_classes.php");
+require_once(LIB . "/reader_file_classes.php");
+require_once(LIB . "/display_classes.php");
+require_once(LIB . "/server_view_classes.php");
 
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE

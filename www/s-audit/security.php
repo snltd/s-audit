@@ -17,8 +17,8 @@
 //============================================================================
 
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
-require_once(ROOT . "/_lib/reader_file_classes.php");
-require_once(ROOT . "/_lib/display_classes.php");
+require_once(LIB . "/reader_file_classes.php");
+require_once(LIB . "/display_classes.php");
 require_once(ROOT . "/_conf/omitted_data.php");
 
 //------------------------------------------------------------------------------

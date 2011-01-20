@@ -22,14 +22,14 @@
 // Hardware class, so we need the hardware classess too.
 
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
-require_once(ROOT . "/_lib/reader_file_classes.php");
-require_once(ROOT . "/_lib/display_classes.php");
-require_once(ROOT . "/_lib/compare_classes.php");
+require_once(LIB . "/reader_file_classes.php");
+require_once(LIB . "/display_classes.php");
+require_once(LIB . "/compare_classes.php");
 
 // If we have a package definition file, load its definitions
 
-if (file_exists(ROOT . "/_lib/pkg_defs.php"))
-	include(ROOT . "/_lib/pkg_defs.php");
+if (file_exists(LIB . "/pkg_defs.php"))
+	include(LIB . "/pkg_defs.php");
 
 //-----------------------------------------------------------------------------
 // SCRIPT STARTS HERE

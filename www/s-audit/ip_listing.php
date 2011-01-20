@@ -30,9 +30,9 @@
 //============================================================================
 
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
-require_once(ROOT . "/_lib/reader_file_classes.php");
-require_once(ROOT . "/_lib/display_classes.php");
-require_once(ROOT . "/_lib/ip_listing_classes.php");
+require_once(LIB . "/reader_file_classes.php");
+require_once(LIB . "/display_classes.php");
+require_once(LIB . "/ip_listing_classes.php");
 
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
