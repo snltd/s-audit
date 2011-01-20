@@ -427,9 +427,9 @@ class IPGrid extends HostGrid{
 		// it a red border, and colour the cell accordingly.
 
 		if (in_array($addr, $this->p_list))
-			$border = inline_col::box("green");
+			$border = inlineCol::box("green");
 		else {
-			$border = inline_col::box("red");
+			$border = inlineCol::box("red");
 
 			if ($class == "resolved")
 				$class = "onlyresolve";
