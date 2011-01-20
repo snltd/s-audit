@@ -22,16 +22,18 @@
 //
 //============================================================================
 
-// Get the colours file, which has the arrays in it which define our
-// colours.
+// We need a couple of defines, so load up the site config, then get the
+// colours file, which has the arrays in it which define our colours.
 
-require_once("../_lib/colours.php");
+require_once("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
+require_once(LIB . "/colours.php");
 
 // Set a couple of variables
 
-$col_grp = $fscol_grp = $storcol_grp = "";
+$col_grp = $fscol_grp = $storcol_grp = $hscol_grp = "";
 
 $qs = preg_replace("/\?.*$/", "", $_SERVER["QUERY_STRING"]);
+$qs = str_replace("class_", "", $qs);
 
 // Tell the browser what's coming, and open the stylesheet with a comment.
 
@@ -40,24 +42,23 @@ header("Content-Type: text/css");
 echo "/* Dynamically generated stylesheet */\n/* begin \"cols\" */\n";
 
 //----------------------------------------------------------------------------
-// colours::cols array
+// all pages - colours::cols array
 
 // These are used all over the place, so they're always present. Work
 // through the cols array, producing a td.boxcol and td.solidcol for each.
 // Store up the names to do a group padding setting
 
 foreach(colours::$cols as $name=>$hex) {
-	echo "\ntd.solid$name { background: ${hex} }"
-	. "\ntd.box$name { border: 2px solid ${hex} }\n";
-	$col_grp .= "td.box$name, ";
+	echo "\n.solid$name { background: ${hex} }"
+	. "\n.box$name { border: 2px solid ${hex} }\n";
+	$col_grp .= ".box$name, ";
 }
-
 
 echo "\n" . preg_replace("/, $/", " { padding: 0px }", $col_grp) . 
 "\n\n/* end cols */\n";
 
 //----------------------------------------------------------------------------
-// colours::fs_cols
+// filesystem audits - colours::fs_cols
 
 // These colours are for filesystem audits. There are two class types,
 // boxcol and smallboxcol, where "col" is the filesystem type, such as ufs
@@ -79,35 +80,43 @@ if ($qs == "fs.php") {
 }
 
 //----------------------------------------------------------------------------
-// colours::stor_cols
+// platform audits - colours::stor_cols
 
 // storage types aren't left-aligned. Just coloured and small
 
-if ($qs == "index.php") {
+if ($qs == "index.php" || $qs == "platform.php") {
 
 	echo "\n/* begin storcols */\n";
 
 	foreach(colours::$stor_cols as $name=>$hex) {
-		echo "\ntd.small$name { background: ${hex} }";
-		$storcol_grp .= "td.small$name, ";
+		echo "\n.small$name { background: ${hex} }";
+		echo "\n.$name { background: ${hex} }";
+		$storcol_grp .= ".small$name, ";
 	}
 
 	echo "\n" . preg_replace("/, $/", " { font-size: x-small }" ,
 	$storcol_grp) . "\n\n/* end storcols */\n";
 }
-	/*
+
+//----------------------------------------------------------------------------
+// hosted services audits - colours::ws_cols and ::db_cols
 
 // Web server and DB server colours only come in small
 
-foreach(array_merge(colours::$db_cols, colours::$ws_cols) as $name=>$hex) {
-	echo "\ntd.small$name {\n  background: ${hex}\n}\n";
-	$smallboxrow .= "td.small${name}, ";
+if ($qs == "hosted.php") {
+
+	echo "\n/* begin hscols */\n";
+
+	foreach(array_merge(colours::$db_cols, colours::$ws_cols) as
+	$name=>$hex) {
+
+		echo "\ntd.small$name { border: 2px solid $hex }";
+		$hscol_grp .= "td.small${name}, ";
+	}
+
+	echo "\n\n" . preg_replace("/, $/", " {\n font-size: x-small;\n "
+	. "text-align: left\n}" , $hscol_grp) . "\n\n/* end hscols */\n";
 }
-
-echo "\n", preg_replace("/, $/", " {", $smallboxrow)
-. "\n  font-size: x-small;\n  text-align: left;\n}\n";
-
-*/
 
 ?>
 
