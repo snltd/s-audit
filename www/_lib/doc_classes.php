@@ -99,16 +99,18 @@ class docHelper {
 
 			// We may be given a class or an inline style. Some of the
 			// styles are "small", for the grid. We don't want them small
-			// right now
+			// right now. Also, some of the keys have line breaks in them.
+			// We don't need those either.
 
 			$class = str_replace("small", "", $arr[1]);
+			$txt = str_replace("<br/>", " ", $arr[0]);
 
 			$il = ($arr[2] == false)
 				? "class=\"$class\""
 				: "style=\"$arr[2]\"";
 
 
-			$ret .= "\n  <li><div ${il}>$arr[0]</div></li>";
+			$ret .= "\n  <li><div ${il}>$txt</div></li>";
 		}
 
 		return $ret . "\n</ul>\n</dd>";

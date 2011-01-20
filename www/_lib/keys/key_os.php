@@ -29,7 +29,7 @@ $grid_key = array(
 	"local zone" => array(
 		array("running zone", "solidgreen", false),
 		array("installed zone", "solidamber", false),
-		array("configured zone", "solidred", false),
+		array("zone in other state", "solidred", false),
 		array("non-native zone", "boxamber", false)
 	),
 
