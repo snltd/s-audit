@@ -51,16 +51,16 @@ foreach (colours::$fs_cols as $f=>$col) {
 	if ($f == "ufs" || $f == "zfs" || $f == "hsfs" || $f == "zfs" || $f ==
 	"lofs" || $f == "vboxfs" || $f == "smbfs" || $f == "nfs")
 		$grid_key["fs"][] = array("$txt filesystem", false,
-		inline_col::box($col));
+		inlineCol::box($col));
 	else
 		$grid_key["export"][] = array("$txt export", false,
-		inline_col::box($col));
+		inlineCol::box($col));
 	
 	// NFS is in both
 
 	if ($f == "nfs")
 		$grid_key["export"][] = array("$txt export", false,
-		inline_col::box($col));
+		inlineCol::box($col));
 
 }
 

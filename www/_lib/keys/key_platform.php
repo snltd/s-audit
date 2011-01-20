@@ -20,7 +20,7 @@ $grid_key = array(
 
 	"hardware" => array(
 		array("SPARC hardware", false,
-			inline_col::box(colours::$plat_cols["sparc"])),
+			inlineCol::box(colours::$plat_cols["sparc"])),
 		array("32-bit O/S", "solidamber", false)
 	),
 
@@ -62,7 +62,7 @@ foreach(colours::$nic_cols as $net=>$col) {
 	elseif (preg_match("/^\d{1,3}.\d{1,3}.\d{1,3}$/", $net))
 		$net = "${net}.0 network";
 
-	$grid_key["NIC"][] = array($net, false, inline_col::solid($col));
+	$grid_key["NIC"][] = array($net, false, inlineCol::solid($col));
 }
 
 /*
