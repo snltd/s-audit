@@ -70,8 +70,8 @@ if ($qs == "fs.php") {
 	echo "\n/* begin fscols */\n";
 
 	foreach(colours::$fs_cols as $name=>$hex) {
-		echo "\ntd.box${name}, td.smallbox${name} { border: 2px solid $hex }\n";
-		$fscol_grp .= "td.smallbox$name, ";
+		echo "\n.box${name}, .smallbox${name} { border: 2px solid $hex }\n";
+		$fscol_grp .= ".smallbox$name, ";
 	}
 
 	echo "\n" . preg_replace("/, $/", " {\n  font-size: x-small;\n  "
@@ -89,8 +89,8 @@ if ($qs == "index.php" || $qs == "platform.php") {
 	echo "\n/* begin storcols */\n";
 
 	foreach(colours::$stor_cols as $name=>$hex) {
-		echo "\n.small$name { background: ${hex} }";
-		echo "\n.$name { background: ${hex} }";
+		echo "\n.small$name { background: ${hex} }\n.$name { background: ",
+		"${hex} }";
 		$storcol_grp .= ".small$name, ";
 	}
 
