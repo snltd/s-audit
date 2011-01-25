@@ -148,6 +148,9 @@ $dh->doc_class_start();
 	amount of packages, but a different number of patches to
 	its global parent, it is highlighted on an amber field.</dd>
 
+	<dd>This field is blank on systems which use other packaging
+	methods.</dd>
+
 	<?php
 		echo $dh->colour_key($grid_key["patches"]);
 	?>

@@ -1,6 +1,6 @@
 <?php
 
-include("$_SERVER[DOCUMENT_ROOT]/_conf/site_config.php");
+require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
