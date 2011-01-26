@@ -17,14 +17,13 @@
 //============================================================================
 
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
-require_once(LIB . "/reader_file_classes.php");
 require_once(LIB . "/display_classes.php");
 require_once(ROOT . "/_conf/omitted_data.php");
 
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$map = new ZoneFileMap(LIVE_DIR);
+$map = new ZoneMap(LIVE_DIR);
 $s = new GetServersSecurity($map);
 $grid = new SecurityGrid($map, $s->get_array());
 
