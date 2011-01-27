@@ -216,7 +216,8 @@ class IPGrid extends HostGrid{
 				// If we have the IP_DNS array, we can look to see if things
 				// were up or not on the last sweep
 
-				if (($styl != "empty") && (sizeof($this->l["IP_DNS"] > 0))) {
+				if (($styl != "empty") && (sizeof($this->l["IP_DNS"] > 0))
+					&& file_exists(IP_LIST_FILE)) {
 
 					$ic = (in_array($a, array_keys($this->l["IP_DNS"]))) 
 						? inlineCol::box("green")
