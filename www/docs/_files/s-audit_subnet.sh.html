@@ -1,0 +1,152 @@
+<span class="Comment">#!/bin/ksh</span>
+
+<span class="Comment">#=============================================================================</span>
+<span class="Comment">#</span>
+<span class="Comment"># s-audit_subnet.sh</span>
+<span class="Comment"># -----------------</span>
+<span class="Comment">#</span>
+<span class="Comment"># This script audits subnets, producing a list which contains information on</span>
+<span class="Comment"># DNS records and pingable machines. Currently it produces information which</span>
+<span class="Comment"># is vaguely human-readable, but is designed to be understood by s-audit's</span>
+<span class="Comment"># PHP audit interface.</span>
+<span class="Comment">#</span>
+<span class="Comment"># This was written for a specific environment, and may or may not be of use</span>
+<span class="Comment"># to you. It works by pinging all addresses on given subnets, and by sending</span>
+<span class="Comment"># a batch query to a DNS server.</span>
+<span class="Comment"># </span>
+<span class="Comment"># The end result is a file with three whitespace separated fields. Look at</span>
+<span class="Comment"># the comments near the bottom for the format. It's trivial to produce a</span>
+<span class="Comment"># similar file with NMAP and sed.</span>
+<span class="Comment">#</span>
+<span class="Comment"># So, why not use NMAP? First, it's a bit chunk of C++ that only compiles</span>
+<span class="Comment"># with GCC, so needs extra libraries and stuff, and s-audit is designed to</span>
+<span class="Comment"># be ultra-portable. Second, doing an nmap -sP scan with t &lt; 3 missed</span>
+<span class="Comment"># certain things on the network I wanted to audit, and  didn't give</span>
+<span class="Comment"># consistent results over multiple runs. Doing a slow scan was consistent,</span>
+<span class="Comment"># but took hours. (Literally.)</span>
+<span class="Comment">#</span>
+<span class="Comment"># Usage</span>
+<span class="Comment"># </span>
+<span class="Comment">#   s-audit_subnet.sh subnet ...</span>
+<span class="Comment">#</span>
+<span class="Comment"># where &quot;subnet&quot; is a network address. e.g. 10.10.8.0</span>
+<span class="Comment"># </span>
+<span class="Comment"># Requirements</span>
+<span class="Comment">#</span>
+<span class="Comment"># A DNS server which knows about the network you wish to audit and accepts</span>
+<span class="Comment"># batch requests (i.e. BIND 9), pingable hosts, and a dig(1) executable.</span>
+<span class="Comment">#</span>
+<span class="Comment"># Part of s-audit. (c) 2011 SearchNet Ltd</span>
+<span class="Comment">#   see <a href="http://snltd.co.uk/s-audit">http://snltd.co.uk/s-audit</a> for licensing and documentation</span>
+<span class="Comment">#</span>
+<span class="Comment">#=============================================================================</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># VARIABLES</span>
+
+<span class="Identifier">PATH</span>=/usr/bin:/usr/sbin
+    <span class="Comment"># Always set your PATH</span>
+
+<span class="Identifier">DIG</span>=<span class="Statement">&quot;</span><span class="Constant">/opt/bin/dig</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Path to dig binary</span>
+
+<span class="Identifier">DNS_SRV</span>=<span class="Statement">&quot;</span><span class="Constant">cs-infra-01z-dns-i</span><span class="Statement">&quot;</span>
+    <span class="Comment"># DNS server to use for lookups</span>
+
+<span class="Identifier">PARL_PINGS</span>=<span class="Constant">25</span>
+    <span class="Comment"># How many pings to do in parallel. Shouldn't cause any kind of load on</span>
+    <span class="Comment"># the system, just depends on how badly you want to flood your process</span>
+    <span class="Comment"># table</span>
+
+<span class="Identifier">TMPFILE</span>=<span class="Statement">&quot;</span><span class="Constant">/tmp/</span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant">.</span><span class="PreProc">$$</span><span class="Constant">.</span><span class="PreProc">$RANDOM</span><span class="Statement">&quot;</span>
+    <span class="Comment"># Temp file location</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># FUNCTIONS</span>
+
+<span class="Identifier">ping_subnet()</span>
+<span class="Identifier">{</span>
+    <span class="Comment"># Ping every address on the given subnet, running as many parallel pings</span>
+    <span class="Comment"># as are defined by the PARL_PINGS variable.</span>
+
+    <span class="Comment"># $1 is the subnet, of the form a.b.c </span>
+
+    <span class="Statement">typeset</span><span class="Identifier"> </span><span class="Special">-i</span><span class="Identifier"> i=1</span>
+
+    <span class="Statement">while </span><span class="Special">[[</span> <span class="PreProc">$i</span> <span class="Statement">-lt</span> <span class="Constant">256</span> <span class="Special">]]</span>
+<span class="Statement">    </span><span class="Statement">do</span>
+
+        <span class="Statement">if </span><span class="Special">[[</span> <span class="PreProc">$(</span><span class="Statement">jobs</span><span class="Special"> -p </span><span class="Statement">|</span><span class="Special"> wc -l</span><span class="PreProc">)</span> <span class="Statement">-lt</span> <span class="PreProc">$PARL_PINGS</span> <span class="Special">]]</span>
+        <span class="Statement">then</span>
+            ping <span class="PreProc">${</span><span class="PreProc">1</span><span class="PreProc">}</span>.<span class="PreProc">$i</span> <span class="Constant">1</span>  <span class="Statement">&amp;</span>
+            <span class="Special">((</span> i <span class="Statement">=</span> <span class="PreProc">$i</span> + <span class="Constant">1</span> <span class="Special">))</span>
+        <span class="Statement">fi</span>
+
+    <span class="Statement">done</span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">resolve_subnet()</span>
+<span class="Identifier">{</span>
+    <span class="Comment"># Send a batch query to a DNS server, trying to reverse lookup every</span>
+    <span class="Comment"># address.</span>
+
+    <span class="Comment"># $1 is the subnet, of the form a.b.c</span>
+
+    <span class="Statement">typeset</span><span class="Identifier"> </span><span class="Special">-i</span><span class="Identifier"> i=1</span>
+
+    <span class="Statement">while </span><span class="Special">[[</span> <span class="PreProc">$i</span> <span class="Statement">-lt</span> <span class="Constant">256</span> <span class="Special">]]</span>
+<span class="Statement">    </span><span class="Statement">do</span>
+        <span class="Statement">print</span><span class="Constant"> -- -x </span><span class="PreProc">${</span><span class="PreProc">1</span><span class="PreProc">}</span><span class="Constant">.</span><span class="PreProc">$i</span>
+        <span class="Statement">((</span> i <span class="Statement">=</span> <span class="PreProc">$i</span> + <span class="Constant">1</span><span class="Statement">))</span>
+    <span class="Statement">done</span> <span class="Statement">|</span> <span class="PreProc">$DIG</span> @<span class="PreProc">$DNS_SRV</span> <span class="Special">+nocmd</span>  <span class="Special">+noall</span> <span class="Special">+answer</span> <span class="Special">-f</span> - <span class="Special">\ </span><span class="Statement">|</span> <span class="Statement">sed</span> \
+    <span class="Statement">'</span><span class="Constant">s/^\([0-9]*\).\([0-9]*\).\([0-9]*\).\([0-9]*\).*PTR   \(.*\).$/\4.\3.\2.\1 \5/</span><span class="Statement">'</span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">die()</span>
+<span class="Identifier">{</span>
+    <span class="Statement">print</span><span class="Constant"> -u2 </span><span class="Statement">&quot;</span><span class="Constant">ERROR: </span><span class="PreProc">$1</span><span class="Statement">&quot;</span>
+    <span class="Statement">exit</span> <span class="PreProc">${</span><span class="PreProc">2</span><span class="Statement">:-</span>1<span class="PreProc">}</span>
+<span class="Identifier">}</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># SCRIPT STARTS HERE</span>
+
+<span class="Comment"># A few checks.</span>
+
+<span class="Statement">if </span><span class="Special">[[</span> <span class="PreProc">$#</span> <span class="Statement">==</span> <span class="Constant">0</span> <span class="Special">]]</span>
+<span class="Statement">then</span>
+    <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">usage: </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> subnet...</span><span class="Statement">&quot;</span><span class="Constant"> </span>
+    <span class="Statement">exit</span> <span class="Constant">2</span>
+<span class="Statement">fi</span>
+
+<span class="Special">[[</span> <span class="Statement">-x</span> <span class="PreProc">$DIG</span> <span class="Special">]]</span> || die <span class="Statement">&quot;</span><span class="Constant">can't execute dig.</span><span class="Statement">&quot;</span>
+
+<span class="Comment"># For all given subnets, do a reverse DNS lookup on all addresses, and put</span>
+<span class="Comment"># the results of that query  in a temporary file. Then ping every address on</span>
+<span class="Comment"># the subnet, and join the results with the temp file. This produces output</span>
+<span class="Comment"># of the following form:</span>
+
+<span class="Comment"># pingable_address hostname dns_address</span>
+
+<span class="Comment"># So, if the first field exists, but the others don't, we have a live</span>
+<span class="Comment"># address that's not in DNS. If the first field is blank but two and three</span>
+<span class="Comment"># aren't, field 2 is a DNS name which resolves to field 3, but doesn't</span>
+<span class="Comment"># respond to a ping. Note. Both lists have to be sorted in the same way, or</span>
+<span class="Comment"># the join will fail</span>
+
+<span class="Statement">for </span>subnet <span class="Statement">in</span> <span class="PreProc">$@</span>
+<span class="Statement">do</span>
+    <span class="Identifier">net</span>=<span class="PreProc">${</span><span class="PreProc">subnet</span><span class="Statement">%</span>.0<span class="PreProc">}</span>
+
+    <span class="Statement">print</span><span class="Constant"> </span><span class="PreProc">$net</span><span class="Constant"> </span><span class="Statement">|</span> <span class="Statement">egrep</span> <span class="Statement">-s</span> <span class="Statement">'</span><span class="Constant">^[0-9]+\.[0-9]+\.[0-9]$</span><span class="Statement">'</span> \
+        <span class="Statement">||</span> die <span class="Statement">&quot;</span><span class="PreProc">$subnet</span><span class="Constant"> is not a valid subnet address.</span><span class="Statement">&quot;</span>
+
+    resolve_subnet <span class="PreProc">$net</span> <span class="Statement">|</span> <span class="Statement">sort</span> <span class="Statement">&gt;</span><span class="PreProc">$TMPFILE</span>
+    ping_subnet <span class="PreProc">$net</span> <span class="Statement">|</span> <span class="Statement">sed</span> <span class="Statement">-n</span> <span class="Statement">'</span><span class="Constant">/is alive$/s/ .*$//p</span><span class="Statement">'</span> <span class="Statement">|</span> <span class="Statement">sort</span> <span class="Statement">|</span> \
+    join <span class="Statement">-e</span> - -a1 -a2 -o1.<span class="Constant">1</span>,<span class="Constant">2</span>.<span class="Constant">2</span>,<span class="Constant">2</span>.<span class="Constant">1</span> - <span class="PreProc">$TMPFILE</span>
+<span class="Statement">done</span>
+
+<span class="Statement">rm</span> <span class="Special">-f</span> <span class="PreProc">$TMPFILE</span>
+
+<span class="Statement">exit</span>
+
