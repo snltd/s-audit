@@ -19,7 +19,8 @@ $generic_key = array(
 		array("local zone", "zone", false),
 		array("VirtualBox", "vb", false),
 		array("primary LDOM", "ldmp", false),
-		array("guest LDOM", "ldm", false)
+		array("guest LDOM", "ldm", false),
+		array("global zone", false, "font-weight: bold")
 	),
 
 	"audit completed" => array(
