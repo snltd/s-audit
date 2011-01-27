@@ -3552,6 +3552,38 @@ class Page {
 
 }
 
+class ipPage extends Page {
+
+	// Generates the IP listing page
+
+	protected $styles = array("basic.css", "audit.css", "ip_listing.css");
+		// Stylesheets to apply
+
+	protected function add_header()
+	{
+		$nav = new NavigationStaticHoriz;
+
+		$fn = basename($_SERVER["PHP_SELF"]);
+
+		return "\n
+		<div id=\"header\">
+			<div id=\"headerl\">
+				<div id=\"logo\">s-audit</div>
+				<div id=\"sublogo\">IP address listing</div>
+			</div>
+			<div id=\"headerr\">
+				<div>documentation ::
+				<a href=\"" . DOC_URL . "/index.php\">main</a> /
+				<a href=\"" . DOC_URL
+				. "/interface/${fn}\">this page</a>
+				</div>
+			</div>
+		</div>"
+		. $nav->display_navbar() . "\n<div id=\"content\">";
+	}
+
+}
+
 class audPage extends Page {
 
 	// Generates audit grid pages
@@ -3639,7 +3671,7 @@ class ssPage extends audPage {
 class docPage extends Page {
 
 	protected $styles = array("basic.css", "audit.css", "doc.css",
-	"script.css");
+	"script.css", "ip_listing.css");
 		// Stylesheets to apply
 
 	public function __construct($title)
