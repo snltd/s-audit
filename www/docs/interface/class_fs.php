@@ -117,6 +117,13 @@ $dh->doc_class_start();
 	the export options. For SMB it shows the name of the export. No extra
 	information is currently displayed for ISCSI or VDISKs.</dd>
 
+	<dd>Hostnames in NFS exports are typically fully qualified, which can
+	make the export field difficult to read. If you set a domain name in the
+	<tt>STRIP_DOMAIN</tt> definition in <tt>_conf/site_config.php</tt> then
+	that domain name will be stripped off all hostnames in this field. If
+	this has been done, you will see a note telling you so at the bottom of
+	the key.</p>
+
 	<dd>The following colour-coding is used.</dd>
 
 	<?php
