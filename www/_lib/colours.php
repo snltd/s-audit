@@ -34,7 +34,7 @@ class colours {
 	// These are just named colours we use all over.
 
 	static $cols = array(
-		"green" => "#89BF84",
+		"green" => "#89bf84",
 		"red" => "#ca6a5b",
 		"amber" => "#e9c243",
 		"blue" => "#2a1ad6",
@@ -65,16 +65,13 @@ class colours {
 
 	static $ws_cols = array(
 		"apache" => "#bfcde0",
-		"iPlanet" => "#c7a49c",
-		"nginx" => "#dfdc9b"
+		"iPlanet" => "#c7a49c"
 	);
 	
 	// $db_cols is a list of colours used to identify different databases
 
 	static $db_cols = array(
-		"mysql" => "#BFCDE0",
-		"oracle" => "#c7a49c",
-		"postgres" => "#dfdc9b"
+		"mysql" => "#bfcde0"
 	);
 
 	// $stor_cols is a list of colours used to identify different storage
