@@ -16,3 +16,7 @@
 .reserved { /* addresses in the reserved file */
 	background: #df8439;	/* orange colour from general_classes.php */
 }
+
+.empty {	/* free addresses */
+	color: #aaa;
+}

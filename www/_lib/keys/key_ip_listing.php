@@ -17,8 +17,9 @@ $grid_key = array(
 	// Just one "general" key type that stretches right across the table
 
 	"general" => array(
+		array("addresses not known to be in use", "empty", false),
+		array("audited servers", false, "font-weight: bold"),
 		array("addresses taken from audit files", "onlylive", false),
-
 		array("pingable on last subnet audit", "boxgreen", false),
 		array("not pingable on last subnet audit", "boxred", false)
 	)

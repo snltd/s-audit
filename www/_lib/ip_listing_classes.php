@@ -191,7 +191,8 @@ class IPGrid extends HostGrid{
 			// Working along the colunmns -- i.e. the subnets
 
 			foreach($this->fields as $n) {
-				$styl = $ic = $et = false;
+				$ic = $et = false;
+				$styl = "empty";
 
 				// Make the address, then see if it's in any of the arrays
 
@@ -215,7 +216,7 @@ class IPGrid extends HostGrid{
 				// If we have the IP_DNS array, we can look to see if things
 				// were up or not on the last sweep
 
-				if ($styl && sizeof($this->l["IP_DNS"] > 0)) {
+				if (($styl != "empty") && (sizeof($this->l["IP_DNS"] > 0))) {
 
 					$ic = (in_array($a, array_keys($this->l["IP_DNS"]))) 
 						? inlineCol::box("green")

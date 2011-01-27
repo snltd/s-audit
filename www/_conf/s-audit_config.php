@@ -69,4 +69,8 @@ require_once(LIB . "/colours.php");
 
 require_once(ROOT . "/_conf/site_config.php");
 
+// Finally, we need classes which get audit data
+
+require_once(LIB . "/reader_classes.php");
+
 ?>
