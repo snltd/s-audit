@@ -7,12 +7,13 @@ include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
 $menu_entry = "IP_RES_FILE";
 $pg = new docPage("The IP_RES_FILE");
+$dh = new docHelper();
 
 ?>
 
 <h1>The IP_RES_FILE</h1>
 <p>This flat text file lets you add addresses to the <a
-href="../interface/ip_listing.txt">IP listing page</a>. It can be used for
+href="../interface/ip_listing.php">IP listing page</a>. It can be used for
 things s-audit cannot audit, for instance routers or non-Solaris machines,
 or for addresses reserver for DHCP pools, or transient machines like
 laptops.</p>
@@ -44,7 +45,10 @@ be prefixed with a <tt>#</tt>.</p>
 10.10.8.123 reserved
 </pre>
 
+<h2>Location</h2>
+
 <?php
+$dh->file_on_sys("URI map file", "URI_MAP_FILE");
 $pg->close_page();
 ?>
 

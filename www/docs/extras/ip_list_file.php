@@ -7,6 +7,7 @@ include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
 $menu_entry = "IP_LIST_FILE";
 $pg = new docPage("The IP_LIST_FILE");
+$dh = new docHelper();
 
 ?>
 
@@ -65,7 +66,10 @@ hostname found by performing a lookup on <tt>IP_address_1</tt>, and
 10.10.4.255 - -
 </pre>
 
+<h2>Location</h2>
+
 <?php
+$dh->file_on_sys("URI map file", "URI_MAP_FILE");
 $pg->close_page();
 ?>
 

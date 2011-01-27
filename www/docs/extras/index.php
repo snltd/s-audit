@@ -29,9 +29,15 @@ interface.</p>
 
 	<dt><a href="ip_list_file.php">the <tt>IP_LIST_FILE</tt></a></dt>
 	<dd>File created by <a
-	href="s-audit_subnet_wrapper.php"><tt>s-audit_subnet_wrapper.sh</tt></a> which adds
-	non-audited machines and DNS information to the 
-	<a href="../interface/ip_listing.php">IP listing page</a>.</dd>
+	href="s-audit_subnet_wrapper.php"><tt>s-audit_subnet_wrapper.sh</tt></a>
+	which adds non-audited machines and DNS information to the <a
+	href="../interface/ip_listing.php">IP listing page</a>.</dd>
+
+	<dt><a href="uri_map_file.php">the <tt>URI_MAP_FILE</tt></a></dt>
+	<dd>A file created by <a
+	href="s-audit_dns_resolver.php"><tt>s-audit_dns_resolver.sh</tt></a>
+	which helps the interface point out websites with no DNS entries.</dd>
+
 </dl>
 
 <h2>Support Scripts</h2>

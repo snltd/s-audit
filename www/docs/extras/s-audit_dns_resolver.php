@@ -25,6 +25,10 @@ obsolete websites. If you wish to use it, you must use
 server, and you may have to change <tt>DIG</tt>, which defines the path to
 the dig binary.</p>
 
+<p>Also be sure that the path of <tt>OUTFILE</tt> in the script matches the
+path defined as <tt>URI_MAP_FILE</tt> in <tt>_conf/s-audit_config.php</tt>.
+The default values match.</p>
+
 <h2>Automated Usage</h2>
 
 <p>It is recommended to run <tt>s-audit_dns_resolver.sh</tt> as often as you
