@@ -64,9 +64,9 @@ foreach (colours::$fs_cols as $f=>$col) {
 
 }
 
-$grid_notes = array("exports" => "the <tt>" . STRIP_DOMAIN . "</tt>  domain
-name has been removed from hostnames for legibility. Remember that hostnames
-in NFS share options (or ZFS <tt>sharenfs</tt> settings) must be fully
-qualified.");
+if (defined("STRIP_DOMAIN"))
+	$grid_key["export"][] = array("NOTE: The domain name &quot;" .
+	STRIP_DOMAIN .  "&quot; has been removed<br/>from hostnames for
+	legibility.", false, false);
 
 ?>

@@ -65,22 +65,4 @@ foreach(colours::$nic_cols as $net=>$col) {
 	$grid_key["NIC"][] = array($net, false, inlineCol::solid($col));
 }
 
-/*
-$grid_notes = array(
-	"ALOM IP" => "The absence of ALOM information does not necessarily mean
-	that server has no ALOM configuration. It is not possible to query the
-	LOMs on T200 platform machines from Solaris. The firmware version
-	currently has to remain unknown, but the interface tries to guess
-	missing ALOM IP addresses.  A &quot;guessed&quot; IP address in the ALOM
-	IP field is denoted by an orange border, and is acquired by doing a DNS
-	lookup on hostname-lom. It may not be correct.",
-
-	"NIC" => "Solid colours in the NIC  and ALOM columns identify the colour
-	of the cable that is (or should be) plugged into the corresponding port.
-	A grey background means the interface was not able to work out what
-	colour the cable should be. (It's probably brown.)"
-
-);
-
-*/
 ?>
