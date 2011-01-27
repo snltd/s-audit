@@ -29,6 +29,18 @@ $grid = new HostedGrid($map, $s->get_array());
 $pg = new audPage("hosted services", $grid->server_count(),
 $grid->zone_toggle());
 
-echo $grid->show_grid(), $pg->close_page();
+$um = "<a href=\"" . DOC_URL . "/extras/uri_map_file.php" .
+"\">URI map file</a>";
+
+echo "\n<p class=\"center\">";
+
+echo (file_exists(URI_MAP_FILE))
+	? "This table incorporates data from a $um generated at "
+	. date("H:i D d/m/Y", filemtime(URI_MAP_FILE))
+	: "<p class=\"center\">You do not have a $um";
+
+echo ".</p>", $grid->show_grid();
+
+$pg->close_page();
 
 ?>

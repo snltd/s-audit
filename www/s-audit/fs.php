@@ -25,6 +25,8 @@ $grid = new FSGrid($map, $s->get_array());
 $pg = new audPage("filesystem audit", $grid->server_count(),
 $grid->zone_toggle());
 
-echo $grid->show_grid(), $pg->close_page();
+echo $grid->show_grid();
+
+$pg->close_page();
 
 ?>

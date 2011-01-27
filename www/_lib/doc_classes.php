@@ -81,7 +81,7 @@ class docHelper {
 	private $generic_key;
 		// where we hold a copy of the generic_key
 
-	function __construct($cname, $generic_key)
+	function __construct($cname = false, $generic_key = false)
 	{
 		$this->cname = $cname;
 		$this->generic_key = $generic_key;
@@ -168,6 +168,26 @@ field.</dd>
 	<?php
 		echo $this->colour_key($this->generic_key["audit completed"]),
 		"\n\n</dl>";
+	}
+
+	public function file_on_sys($name, $def)
+	{
+		echo "<p>On this system";
+
+		if (defined($def)) {
+			$path = constant($def);
+			echo " the $name file ";
+
+			echo (file_exists($path))
+				? "can be found at <tt>$path</tt>"
+				: "is expected to be at <tt>$path</tt>, but does not exist";
+		}
+		else {
+			echo ", no path is set for the $name file. Please define
+			<tt>$def</tt> in the configuration files";
+		}
+
+		echo ".</p>";
 	}
 
 }

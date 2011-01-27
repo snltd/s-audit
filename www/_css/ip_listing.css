@@ -20,3 +20,7 @@
 .empty {	/* free addresses */
 	color: #aaa;
 }
+
+.resolved, .onlylive, .onlyping, .reserved, .empty {
+	font-size: 8pt;
+}

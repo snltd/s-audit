@@ -2680,7 +2680,6 @@ class SoftwareGrid extends HostGrid
 		"mod_php" => "Sun Web Server"
 		);
 
-	protected $key_filename = "key_application.php";
 
 	public function __construct($map, $servers)
 	{
@@ -3014,7 +3013,7 @@ class HostedGrid extends HostGrid
 
 	protected function get_ip_list()
 	{
-		// The s-audit_resolver.sh should have left us a file which maps
+		// The s-audit_dns_resolver.sh should have left us a file which maps
 		// site names to their external IP addresses. It's not easy to have
 		// dig produce that file exactly how we'd like it, so we manipulate
 		// a little here.
@@ -3034,10 +3033,10 @@ class HostedGrid extends HostGrid
 		// addresses only, so we'll change anything  in $ip_map[] that looks
 		// like a CNAME into its IP address.
 
-		// We know that the sort command in the becta_audit_resolver.sh
-		// script puts IP addresses are at top of the audit file and CNAMES
-		// at the bottom. Thus we can keep a running array of resolved_name
-		// => IP_address, and use it to look up CNAMES
+		// We know that the sort command in the script puts IP addresses are
+		// at top of the audit file and CNAMES at the bottom. Thus we can
+		// keep a running array of resolved_name => IP_address, and use it
+		// to look up CNAMES
 
 		foreach($t_arr as $ip_line) {
 

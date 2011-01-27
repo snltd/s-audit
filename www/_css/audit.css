@@ -36,17 +36,16 @@ div.indent { /* intented divs, e.g. on hosted services */
 	margin-left: 10px;
 }
 
-a.strongr { /* links for unresolved sites on the hosted services page */
+.strongr { /* links for unresolved sites on the hosted services page */
 	color: #94112D
 }
 
-a.strongg { /* links for resolved sites on the hosted services page */
+.strongg { /* links for resolved sites on the hosted services page */
 	color: #355F26;
 }
 
-a.strongr, a.strongg { /* bold face links */
+.strongr, .strongg { /* bold face links */
 	font-weight: bold;	
-	color: #000022;
 }
 /*--------------------------------------------------------------------------*/
 /* page navigation */
