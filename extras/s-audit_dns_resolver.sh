@@ -57,18 +57,19 @@ die()
 	|| die "can't write to output directory [${OUTFILE%/*}]" 2
 
 # Pull URIs out of all the audit files. They're on lines beginning "site=".
-# We are only interested in URIs with dots in them. Run the whole lot into a
-# batch lookup job with dig (only works with 9.4+), and filter the results
-# through sed to produce lines of the form www.uri.com=1.2.3.4. Some sites
-# just can't be resolved, and dig drops a line into the output informing you
-# of this. These lines are prefixed by a semicolon, and we don't want them.
-# We also don't want trailing dots on CNAMES. Run everything through uniq to
-# get rid of all the duplicate references to things which are CNAME aliases.
-# Why you can't just stick a -u in with the sort flags is left as an
-# exercise for the reader
+# We are only interested in URIs with dots in them - ones without will take
+# an age to time out. Run the whole lot into a batch lookup job with dig
+# (only works with 9.4+), and filter the results through sed to produce
+# lines of the form www.uri.com=1.2.3.4. Some sites just can't be resolved,
+# and dig drops a line into the output informing you of this. These lines
+# are prefixed by a semicolon, and we don't want them.  We also don't want
+# trailing dots on CNAMES. Run everything through uniq to get rid of all the
+# duplicate references to things which are CNAME aliases.  Why you can't
+# just stick a -u in with the sort flags is left as an exercise for the
+# reader
 
 find $AUDIT_DIR -name audit.\*.hosted 2>/dev/null \
-	| xargs sed -n '/site=[^ ]*\./s/site=\([^ ]*\) .*/\1/p' | sort -u \
+	| xargs grep "^website=" | cut -d\  -f2  | grep '\.' | sort -u \
 	| $DIG +noall +answer @$DNS_SRV -f - \
 	| sed '/^;/d;s/\.[ 	].*[ 	]/=/;s/\.$//' \
 	| sort -t= -k2 \
