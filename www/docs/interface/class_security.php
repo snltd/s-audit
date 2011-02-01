@@ -36,6 +36,27 @@ $dh->doc_class_start();
 
 ?>
 
+<dt>user</dt>
+<dd>This column pairs users with UIDs. Standard Solaris users, which exist
+by default on all systems, are not shown. The list of standard users is
+kept in the <a
+href="../extras/omitted_data.php"><tt>omitted_data.php</tt></a> file.</dd>
+
+<dd>As the interface produces this column, it keeps track of usernames and
+UIDs it has seen before. If it comes across a username which it has
+previously seen paired with a different UID, it highlights that username
+with a solid red field. If it sees a UID that has already been paired with a
+different username, then that username is highlighted with a red box. This
+can help you find username/UID clashes across your system.</dd>
+
+<dt>authorized key</dt>
+<dd>Lists users with authorized keys. The 
+
+<dt>SSH root</dt>
+<dd>This field tells you whether <tt>sshd_config</tt> permits root
+logins. Please refer to the <a href="../client/class_security.php">client
+security class page</a> for limitations on this information.</dd>
+
 <?php
 
 $dh->doc_class_end();

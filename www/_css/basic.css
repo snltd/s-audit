@@ -14,8 +14,7 @@
 /* General HTML elements */
 
 body { /* main style for whole page */
-	font-family: "Gill Sans MT", "Lucida Grande", "Lucida Sans Unicode",
-	Verdana, Lucida, Helvetica, sans-serif;
+	font-family: sans-serif;
 	font-size: 10pt;
 	margin: 0;
 	padding: 0;

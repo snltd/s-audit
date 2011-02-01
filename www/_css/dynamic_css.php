@@ -45,7 +45,7 @@ echo "/* Dynamically generated stylesheet */\n/* begin \"cols\" */\n";
 // all pages - colours::cols array
 
 // These are used all over the place, so they're always present. Work
-// through the cols array, producing a td.boxcol and td.solidcol for each.
+// through the cols array, producing a .boxcol and .solidcol for each.
 // Store up the names to do a group padding setting
 
 foreach(colours::$cols as $name=>$hex) {
@@ -110,8 +110,10 @@ if ($qs == "hosted.php") {
 	foreach(array_merge(colours::$db_cols, colours::$ws_cols) as
 	$name=>$hex) {
 
-		echo "\ntd.small$name { border: 2px solid $hex }";
-		$hscol_grp .= "td.small${name}, ";
+		// Have to do td and dot because of style priority problems
+
+		echo "\ntd.small$name, .small$name { border: 2px solid $hex }";
+		$hscol_grp .= "td.small${name}, .small${name}, ";
 	}
 
 	echo "\n\n" . preg_replace("/, $/", " {\n font-size: x-small;\n "

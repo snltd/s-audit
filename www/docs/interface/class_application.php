@@ -56,7 +56,7 @@ means it is the most recent you have on all your audited systems. Older
 versions are put on a pale red field. This helps you find out-of-date
 software, and helps you synchronize versions across machines. If
 <tt>s-audit.sh</tt> was not able to find the version of an application, it
-will say &quot;unkown&quot; and use a dark red field.</dd>
+will say &quot;unkown&quot; and use a dark orange field.</dd>
 
 <dd>The applications presented on this page typically run as daemons. If
 <tt>s-audit.sh</tt> thought that a piece of software should be running, but
@@ -64,6 +64,10 @@ found it wasn't, the interface will highlight this by putting a red box
 around that installation, and appending &quot;not running&quot; to the
 version string. Of course, you may not <em>want</em> some software to be
 running, for instance an X server, or an MTA.</dd>
+
+<dt>X-Server</dt>
+<dd>Because XSun, which was used on older versions of Solaris, doesn't
+report a version, XSun fields are not coloured.</dd>
 
 <?php
 

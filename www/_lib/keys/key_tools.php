@@ -19,7 +19,7 @@ $grid_key = array(
 	"general" => array(
 		array("most recent installed version", "sw_latest", false),
 		array("older installed version", "sw_old", false),
-		array("version unobtainable", "solidred", false),
+		array("version unobtainable", "solidorange", false)
 	)
 
 );

@@ -16,6 +16,11 @@
 	background-color: #fff;
 }
 
+.audit td { /* normal table cells */
+	text-align: center;
+	vertical-align: top;
+}
+
 .lalign { /* left-aligned text */
 	text-align: left
 }
@@ -159,6 +164,27 @@ td.serverhn { /* hostname for global zones/physical servers */
 
 .sw_old { /* old versions of software */
 	background: #cea596
+}
+
+/* embedded lists */
+
+.audit ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.audit li {
+	margin-bottom: 1px;
+	padding: 1px;
+}
+
+.selist li {
+	font-size: 7pt;
+}
+
+tr.keyrow { /* the row at the bottom of audit tables, for keys */
+	vertical-align: top;
 }
 
 /*--------------------------------------------------------------------------*/

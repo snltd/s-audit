@@ -115,12 +115,12 @@ class inlineCol {
 
 	static function box($colour)
 	{
-		return "padding: 0px; border: 2px solid " . colours::get_col($colour);
+		return "border: 2px solid " . colours::get_col($colour);
 	}
 
 	static function solid($colour)
 	{
-		return "padding: 1px; background: ". colours::get_col($colour);
+		return "background: ". colours::get_col($colour);
 	}
 
 }

@@ -243,7 +243,7 @@ class HostGrid {
 	{
 		// Open the table which holds the main grid
 
-		return "\n<table width=\"$width\" cellpadding=\"1\" "
+		return "\n<table class=\"audit\" width=\"$width\" cellpadding=\"1\" "
 		. "cellspacing=\"1\" align=\"center\">" . $this->grid_header();
 	}
 
@@ -280,13 +280,13 @@ class HostGrid {
 		
 		// There's also a generic key that goes on every page
 
-		$ret = "\n<tr><td class=\"keyhead\" colspan=\"" .
-		sizeof($this->fields) . "\">key</td></tr>";
+		$ret = "\n\n<tr><td class=\"keyhead\" colspan=\"" .
+		sizeof($this->fields) . "\">key</td></tr>\n";
 
 		// Loop through the grid_key data, filling in columns as we go. Each
 		// cell can have arbitrarily many key values
 
-		$ret .= "\n<tr>";
+		$ret .= "\n<tr class=\"keyrow\">";
 
 		foreach($this->fields as $field) {
 
@@ -294,45 +294,15 @@ class HostGrid {
 				? $this->grid_key_col($this->grid_key[$field])
 				: new Cell();
 		}
-
-		$ret .= "</tr>";
 		
-		/*
-		if (is_array($this->grid_notes)) {
-			$ret .= "\n<tr><td class=\"keyhead\" colspan=\"" .
-			sizeof($this->fields) . "\">notes</td></tr>\n<tr>";
-
-			foreach($this->fields as $field) {
-
-				if (in_array($field, array_keys($this->grid_notes))) {
-					$cell = $this->grid_notes[$field];
-				}
-				else
-					$cell = false;
-
-
-			$ret .= new Cell($cell);
-			}
-
-		$ret .= "</tr>";
-
-		}
-		*/
-
-		return $ret;
+		return $ret . "</tr>";
 	}
 	
 	protected function grid_key_col($data, $span = 1)
 	{
 		// prints columns in grid keys
 
-		$cell = multiCell::open_table();
-
-		foreach($data as $el) {
-			$cell .= "\n<tr>" . new Cell($el[0], $el[1], $el[2]) . "</tr>";
-		}
-		
-		return new Cell($cell .= "</table>", false, false, false, $span);
+		return new listCell($data, false, $span, true);
 	}
 
 	public function show_server($server)
@@ -522,7 +492,7 @@ class HostGrid {
 			if (sizeof($data) == 1)
 				$ret_str = new Cell($data[0]);
 			elseif(sizeof($data) > 1)
-				$ret_str = new multiCell($data);
+				$ret_str = new listCell($data);
 			else
 				$ret_str = new Cell();
 		}
@@ -530,7 +500,7 @@ class HostGrid {
 		return $ret_str;
 	}
 
-	protected function show_parsed_list($arr, $extra = 0)
+	protected function embedded_table($arr, $extra = 0)
 	{
 		// This function works with show_ functions which manipulate the
 		// contents of the array they are fed, rather than just colouring
@@ -672,12 +642,11 @@ class HostGrid {
 				$class = false;
 			}
 
-
-			$c_arr[] = new cell($txt, $class);
+			$c_arr[] = array($txt, $class);
 
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 	
 	protected function show_serial_number($data)
@@ -944,23 +913,17 @@ class HostGrid {
 
 			}
 
-			$c_arr[] = new Cell(preg_replace("/^(.*):/",
+			$c_arr[] = array(preg_replace("/^(.*):/",
 			"<strong>\\1</strong>:", $datum), $class, $ic);
 		}
 
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($c_arr);
 	}
 
 	protected function show_pci_card($data)
 	{
-		$c_arr = array();
-
-		foreach (preg_replace("/^(\S+) /", "<strong>\\1</strong> ", $data)
-		as $datum) {
-			$c_arr[] = new Cell($datum);
-		}
-		
-		return $this->show_parsed_list($c_arr, 1);
+		return $this->show_generic(preg_replace("/^(\S+) /",
+		"<strong>\\1</strong> ", $data));
 	}
 
 	protected function show_sbus_card($data) {
@@ -969,15 +932,8 @@ class HostGrid {
 
 	protected function show_mac($data)
 	{
-		$c_arr = array();
-
-		foreach($data as $datum) {
-			$a = explode(" ", $datum);
-			$c_arr[] = new Cell("<strong>$a[0]</strong>", false, false,
-			"40%") . new Cell($a[1], "mac_addr");
-		}
-
-		return $this->show_parsed_list($c_arr, 1);
+		return $this->show_generic(preg_replace("/^([^\s]+)/",
+		"<strong>$1:</strong>", $data));
 	}
 
 	public function show_NIC($nic_arr)
@@ -1185,7 +1141,7 @@ class HostGrid {
 			false, $rcol) ;
 		}
 
-		return $this->show_parsed_list($c_arr, 3);
+		return $this->embedded_table($c_arr, 3);
 	}
 
 	//-- o/s -----------------------------------------------------------------
@@ -1404,8 +1360,6 @@ class HostGrid {
 		// red highlighting on the zone name means "other" and the status is
 		// displayed
 
-		$ret = multiCellSmall::open_table();
-
 		foreach($data as $row) {
 			$col = false;
 			$rarr = preg_split("/[ :]/", preg_replace("/[\(\[\]\)]/", "",
@@ -1431,12 +1385,11 @@ class HostGrid {
 				$col = inlineCol::box("amber");
 			}
 
-			$ret .= "\n<tr class=\"multicellsmall\">" . new Cell("<strong>"
-			.  $rarr[0] . "</strong> ($rarr[3])$z_type", $class, $col)  .
-			"</tr>";
+			$call[] = array("<strong>$rarr[0]</strong> ($rarr[3])$z_type",
+			$class, $col);
 		}
 
-		return new Cell($ret . "</table>");
+		return new listCell($call);
 	}
 
 	protected function show_packages($data)
@@ -1511,8 +1464,7 @@ class HostGrid {
 	protected function show_sun_cc($data)
 	{
 		// Parse a list of Sun CC versions, make them more human-readable,
-		// and colour them. Display is done through the show_parsed_list()
-		// function
+		// and colour them.
 
 		// Make Sun CC versions more understandable
 
@@ -1548,11 +1500,11 @@ class HostGrid {
 					$sccarr[1])
 				: $sccarr[1];
 
-			$c_arr[] = new Cell($new_data, $bg_class, false, false, false,
+			$c_arr[] = array($new_data, $bg_class, false, false, false,
 			$sccarr[2]);
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 
 	protected function show_apache_so($data, $extra)
@@ -1560,54 +1512,40 @@ class HostGrid {
 		// Print a list of Apache shared modules. The module lists contain
 		// the version number of the Apache to which they belong. If there's
 		// only one Apache on this box, strip that extraneous information
-		// out. SSL modules are highlighted in yellow, just to make it
-		// easier to see an SSL enabled Apache.
+		// out
 
-		$strip_ver = (sizeof($extra["Apache"]) == 1)
-			? true
-			: false;
-	
-		$c_arr = array();
+		if (sizeof($extra["Apache"]) == 1)
+			$data = preg_replace("/ .*$/", "", $data);
 
-		foreach($data as $mod) {
+		// If the parent apache is of an unknown version, the auditor just
+		// puts () after the module. Change that to (unknown)
 
-			// If the parent apache is of an unknown version, the auditor
-			// just puts () after the module. Change that to (unknown)
-
-			$mod = preg_replace("/\(\)/", "(unknown)", $mod);
+		$data = preg_replace("/\(\)/", "(unknown)", $data);
 				
-			if ($strip_ver)
-				$mod = preg_replace("/ .*$/", "", $mod);
+		// Strip off the .so if we have it
 
-			$col = (preg_match("/(mod_ssl.so|ssl_module)/", $mod))
-				? inlineCol::solid("yellow")
-				: false;
+		$data = preg_replace("/\.so/", "", $data);
 
-			$c_arr[] = new Cell(preg_replace("/\.so/", "", $mod), false,
-			$col);
-		}
-
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($data);
 	}
 
 	protected function show_mod_php($data, $extra)
 	{
-		// Parse PHP modules. Display is done through show_parsed_list()
+		// Parse PHP modules. 
 
-		$c_arr = array();
+		$data = preg_replace("/\(\)/", "(unknown)", $data);
 
-		foreach($data as $datum)
-		{
-			$datum = str_replace("()","(unknown)", $datum);
+		$data = (sizeof($extra["Apache"]) == 1)
+			? preg_replace("/\(apache.*$/", "(apache)", $data)
+			: preg_replace("/module\) \(/", "", $data);
 
-			$str = (sizeof($extra["Apache"]) == 1)
-				? preg_replace("/\(apache.*$/", "(apache)", $datum)
-				: preg_replace("/module\) \(/", "", $datum);
-
-			$c_arr[] = $this->show_generic($str, "mod_php");
+		foreach($data as $datum) {
+			$ver = preg_replace("/ .*$/", "", $datum);
+			$vc = $this->ver_cols($ver, "mod_php", false);
+			$c_arr[] = array($vc[0], $vc[1], $vc[2]);
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 
 	protected function show_sshd($data)
@@ -1623,21 +1561,19 @@ class HostGrid {
 			$sshver = preg_replace("/^.*_/", "", $datum);
 
 			if (preg_match("/OpenSSH/", $datum))
-				$call = $sshvend = "OpenSSH";
+				$subname = $sshvend = "OpenSSH";
 			elseif (preg_match("/Sun_SSH/", $datum)) {
 				$sshvend = "Sun";
-				$call = "Sun_SSH";
+				$subname = "Sun_SSH";
 			}
 			else
 				$sshvend = preg_replace("/_[\d].*$/", "", $datum);
 
-			$newdata[] = "$sshvend $sshver";
-
-			$ret .= $this->show_generic($newdata, "sshd", $call);
-
+			$vc = $this->ver_cols("$sshvend $sshver", "sshd", $subname);
+			$c_arr[] = array($vc[0], $vc[1], $vc[2]);
 		}
 
-		return $ret;
+		return new listCell($c_arr);
 	}
 
 	protected function show_x_server($data)
@@ -1678,11 +1614,11 @@ class HostGrid {
 				$class = false;
 			}
 
-			$c_arr[] = new Cell("<strong>$rarr[0]</strong> $rarr[1]"
+			$c_arr[] = array("<strong>$rarr[0]</strong> $rarr[1]"
 			. "<div>$vex</div>", $class);
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 
 	protected function show_capacity($data)
@@ -1736,6 +1672,7 @@ class HostGrid {
 		// /home/robertf (nfs:opt:cs-fs-01:/export/home/robertf)
 
 		$c_arr = array();
+		$style = false;
 
 		foreach($data as $row) {
 
@@ -1766,7 +1703,7 @@ class HostGrid {
 					$row2 .= ", v$varr[0]";
 
 					if ($varr[0] != $varr[1]) {
-						$exstyle = inlineCol::solid("orange");
+						$style = inlineCol::solid("orange");
 						$row2 .= " <strong>upgradeable to $varr[1]</strong>";
 					}
 
@@ -1785,7 +1722,7 @@ class HostGrid {
 
 				if (!isset($earr[4]) || $earr[4] != "in_vfstab") {
 					$row2 .= " (not in vfstab)";
-					$exstyle = inlineCol::solid("red");
+					$style = inlineCol::solid("red");
 				}
 
 			}
@@ -1809,12 +1746,12 @@ class HostGrid {
 			}
 
 			if (isset($row2))
-				$out .= "\n<div class=\"indent\">$row2</div>";
+				$out .= "\n  <div class=\"indent\">$row2</div>";
 
-			$c_arr[] = new Cell($out, "smallbox$fstyp", $exstyle);
+			$c_arr[] = array($out, "smallbox$fstyp", $style);
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 
 	protected function show_export($data, $extra)
@@ -1873,10 +1810,10 @@ class HostGrid {
 			elseif ($fstyp == "smb")
 				$str .= "<div class=\"indent\">&quot;$earr[2]&quot;</div>";
 
-			$c_arr[] = new Cell($str, "smallbox$fstyp", $col);
+			$c_arr[] = array($str, "smallbox$fstyp", $col);
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 
 	//-- hosted services -----------------------------------------------------
@@ -2016,10 +1953,10 @@ class HostGrid {
 				$row3 .= ">config: $cf</div>";
 			}
 
-			$c_arr[] = new Cell($row1 . $row2 . $row3, "small$ws");
+			$c_arr[] = array($row1 . $row2 . $row3, "small$ws");
 		}
 
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($c_arr);
 	}
 
 	protected function show_database($data)
@@ -2045,10 +1982,10 @@ class HostGrid {
 				$col = inlineCol::solid("amber");
 			}
 				
-			$c_arr[] = new Cell($str, "small$arr[0]", $col);
+			$c_arr[] = array($str, "small$arr[0]", $col);
 		}
 
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($c_arr);
 	}
 
 	//-- security ------------------------------------------------------------
@@ -2102,7 +2039,7 @@ class HostGrid {
 
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return $this->embedded_table($c_arr);
 	}
 
 	protected function show_authorized_key($data)
@@ -2110,8 +2047,6 @@ class HostGrid {
 		// Display authorized key data. Not much processing to do here. Root
 		// keys are highlighted in amber, everything else just goes in a
 		// list with the username in bold.
-
-		$c_arr = array();
 
 		foreach($data as $row) {
 			$a = explode(" ", $row);
@@ -2121,20 +2056,22 @@ class HostGrid {
 				? "solidamber"
 				: false;
 
-			$c_arr[] = new Cell("<strong>$user</strong>:</div>$a[0]",
-			$class);
+			$c_arr[] = array("<strong>$user</strong>:</div>$a[0]", $class);
 		}
 
-		return $this->show_parsed_list($c_arr, true);
+		return new listCell($c_arr);
 	}
 
 	protected function show_ssh_root($data)
 	{
 		// Highlight the box in red if root can SSH in
 
-		$class = ($data[0] == "yes")
-			? "solidred"
-			: false;
+		if ($data[0] == "yes")
+			$class = "solidred";
+		elseif($data[0] == "unknown")
+			$class = "solidorange";
+		else
+			$class = false;
 
 		return new Cell($data[0], $class);
 	}
@@ -2151,12 +2088,12 @@ class HostGrid {
 		$c_arr = array();
 
 		foreach($data as $attr)
-			$c_arr[] =  new Cell(preg_replace("/^([^:]*)/",
+			$c_arr[] =  array(preg_replace("/^([^:]*)/",
 			"<strong>\\1</strong>",
 			$this->fold_line(htmlentities($attr),
 			30)), "lalign");
 
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($c_arr);
 	}
 
 	protected function show_port($data)
@@ -2186,11 +2123,11 @@ class HostGrid {
 				? " ($arr[2])"
 				: false;
 
-			$c_arr[] = new Cell($arr[0], $class, $col) . new Cell($extra,
+			$c_arr[] = array($arr[0], $class, $col) . new Cell($extra,
 			$class, $col);
 		}
 
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($c_arr);
 	}
 
 	protected function show_cron_job($data)
@@ -2203,11 +2140,11 @@ class HostGrid {
 		$c_arr = array();
 
 		foreach($data as $attr)
-			$c_arr[] =  new Cell(preg_replace("/^([^:]*):/",
+			$c_arr[] =  array(preg_replace("/^([^:]*):/",
 			"<strong>\\1</strong> ", $this->fold_line(htmlentities($attr),
 			30)), "lalign");
 
-		return $this->show_parsed_list($c_arr, 1);
+		return new listCell($c_arr); 
 	}
 
 	protected function show_empty_password($data)
@@ -2249,12 +2186,12 @@ class HostGrid {
 				? "boxred"
 				: "solidamber";
 
-			$c_arr[] = new Cell($ta[0], $class, false, false, false, $path);
+			$c_arr[] = array($ta[0], $class, false, false, false, $path);
 
 
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 	//------------------------------------------------------------------------
 	// other display functions
@@ -2690,6 +2627,49 @@ class SoftwareGrid extends HostGrid
 		$this->latest = $this->get_latest();
 	}
 
+	protected function ver_cols($data, $field, $subname = false)
+	{
+		// Prep all the class and inline style info for the show_generic()
+		// function
+
+		$class = $style = $path =false;
+		$ta = preg_split("/@=/", $data);
+
+		$path = (isset($ta[1]))
+			? $ta[1] 
+			: false;
+
+		// If we can, set the cell background colour depending on the
+		// version number. Can't do this in a single server audit
+
+		if (method_exists($this, "strip_out_version")) {
+
+			$sw_ver = $this->strip_out_version($data);
+			$recent = $this->how_recent($field, $sw_ver, $subname);
+
+			if ($sw_ver && $recent && $subname != "NOBG") {
+			
+				if ($recent == 2)
+					$class = "sw_latest";
+				elseif($recent == 1)
+					$class = "sw_old";
+			}
+
+		}
+
+		// If the version is unknown, use a solid orange field
+
+		if (preg_match("/unknown/", $ta[0]))
+			$class = "solidorange";
+
+		// And box the cell in red if something's not running
+
+		if (preg_match("/not running/", $ta[0]))
+			$style = inlineCol::box("red");
+
+		return array($ta[0], $class, $style, false, false, $path);
+	}
+
 	public function show_generic($data, $field, $subname = false)
 	{
 		// This is a replacement show_generic() only used on the application
@@ -2700,72 +2680,22 @@ class SoftwareGrid extends HostGrid
 
 		$call = $col = $ret_str = false;
 
-		if (is_string($data))
-			$call = $data;
+		if (is_string($data)) {
+			$vc = $this->ver_cols($data, $field, $subname);
+			$ret = new Cell($vc[0], $vc[1], $vc[2]);
+		}
 		else {
+			$c_arr = array();
 
-			if (sizeof($data) == 1)
-				$call = $data[0];
-			elseif(sizeof($data) > 1) {
-
-				$ret_str = multiCell::open_table();
-
-				foreach($data as $datum) {
-					$ret_str .= "\n<tr class=\"multicell\">" .
-					$this->show_generic($datum, $field) . "</tr>";
-				}
-
-				$ret_str = new Cell($ret_str . "\n</table>");
-			}
-			else
-				$call = false;
-
-		}
-
-		if ($call) {
-			$ta = preg_split("/@=/", $call);
-
-			$path = (isset($ta[1]))
-				? $ta[1] 
-				: false;
-
-			$call = $ta[0];
-
-			// Colour the cell depending on certain words that it will
-			// contain. Latest version is green, old version pale red, no
-			// version dark red. Version numbers can also be boxed in red if
-			// the software is "not running". This generally applies to app
-			// audits
-
-			if (preg_match("/not running/", $call))
-				$col = inlineCol::box("red");
-			elseif (preg_match("/unknown/", $call))
-				$col = inlineCol::solid("red");
-
-			// and, if we can,  change the background colour depending on
-			// the version number. Can't do this in a single server audit
-
-			$bg_class = false;
-
-			if (method_exists($this, "strip_out_version")) {
-
-				$sw_ver = $this->strip_out_version($call);
-				$recent = $this->how_recent($field, $sw_ver, $subname);
-
-				if ($sw_ver && $recent && $subname != "NOBG") {
-				
-					if ($recent == 2)
-						$bg_class = "sw_latest";
-					elseif($recent == 1)
-						$bg_class = "sw_old";
-				}
-
+			foreach($data as $datum) {
+				$vc = $this->ver_cols($datum, $field, $subname);
+				$c_arr[] = array($vc[0], $vc[1], $vc[2]);
 			}
 
-			$ret_str = new Cell($call, $bg_class, $col, false, false, $path);
+			$ret = new listCell($c_arr);
 		}
 
-		return $ret_str;
+		return $ret;
 	}
 
 	//-- sorting -------------------------------------------------------------
@@ -4033,7 +3963,7 @@ class Cell {
 		if ($this->width)
 			$str .= " width=\"$this->width\"";
 	
-		if ($this->span)
+		if ($this->span && $this->span > 1)
 			$str .= " colspan=\"$this->span\"";
 
 		if ($this->mouseover)
@@ -4049,7 +3979,8 @@ class Cell {
 	
 	public function open_el()
 	{
-		return "\n<td align=\"center\" valign=\"top\"";
+		return "\n<td";
+		//return "\n<td align=\"center\" valign=\"top\"";
 	}
 
 	protected function add_content($content)
@@ -4148,4 +4079,91 @@ class tableCell extends multiCell {
 		
 }
 
+class listCell {
+
+	// put lists in cells for multiples
+
+	private $html;
+	protected $list_tag = "ul";
+	protected $item_tag = "li";
+
+	public function __construct($data, $lclass = false, $span = 1, $nofill
+	= false)
+	{
+		// Args are:
+
+		// $data     - array containing data in the same form Cell:: expects
+		//             it
+		// $lclass   - the class for the list itself (the <ul> element)
+		// $span     - colspan passed to Cell::
+		// $noexpand - if this is true, a single element will still be put
+		//             into a list (that is, it won't be expanded to fill
+		//             the entire cell)
+
+		//echo "<pre>", print_r($data), "</pre>";
+
+		// If there's only one element in the $data class and $noexpand
+		// isn't set, just do a plain cell
+
+		if (sizeof($data) == 1 && !$nofill) {
+			$a = array();
+
+			if (is_string($data[0])) $data[0] = array($data[0]);
+
+			for ($i = 0; $i < 7; $i++) {
+
+				$a[$i] = isset($data[0][$i])
+					? $data[0][$i]
+					: false;
+			}
+
+			$this->html = new Cell($a[0], $a[1], $a[2], $a[3], $a[4], $a[5],
+			$a[6]);
+		}
+
+		else {
+
+			$h = "\n\n<$this->list_tag";
+
+			if ($lclass) $h .= " class=\"$lclass\"";
+
+			$h .= ">";
+
+			if (is_array($data[0])) {
+
+				foreach($data as $arr) {
+					$h .= "\n  <$this->item_tag";
+
+					if ($arr[1]) $h.= " class=\"$arr[1]\"";
+
+					if (isset($arr[2]) && $arr[2])
+						$h .= " style=\"$arr[2]\"";
+
+					$h .= ">$arr[0]</$this->item_tag>";
+				}
+			}
+			else {
+				foreach($data as $txt) $h .= "\n  <li>$txt</li>";
+			}
+
+			$this->html = new Cell($h . "\n</$this->list_tag>\n", false,
+			false, false, $span);
+		}
+
+	}
+
+	public function __toString()
+	{
+		return (string) $this->html;
+	}
+
+}
+
+class deflistCell extends listCell {
+
+	// put lists in cells for multiples
+
+	protected $list_tag = "dl";
+	protected $item_tag = "dd";
+}
 ?>

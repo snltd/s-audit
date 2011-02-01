@@ -26,8 +26,8 @@ $grid_key = array(
 
 	"virtualization" => array(
 		array("global zone", "boxblue", false),
-		array("non-native zone", "solidamber", false),
-		array("whole-root zone", "boxred", false)
+		array("whole-root zone", "boxred", false),
+		array("non-native zone", "solidamber", false)
 	),
 
 	"memory" => array(
