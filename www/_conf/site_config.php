@@ -13,7 +13,7 @@
 //
 //============================================================================
 
-define("SITE_NAME", "s-audit");
+define("SITE_NAME", "development");
 	// Site name, displayed on all page titles
 
 define("STRIP_DOMAIN", "localnet");

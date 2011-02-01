@@ -47,6 +47,22 @@ information which it believes may be useful. This may be to draw the user's
 attention to obsolete software versions, missing patches, or unused
 databases.</p>
 
+<p>Each environment has its own row, the background colour being determined
+by the type of environment. &quot;Global&quot; hosts, be they physical
+servers, logical domains or VirtualBoxes are sorted alphabetically, with
+their child local zones underneath them. By default the interface presents
+20 global zones per page, though this value can be changed by editing the
+<tt>PER_PAGE</tt> definition in <tt>_conf/s-audit_config.php</tt>.</p>
+
+<p>If you have more hosts than can be shown on a single page, you will see
+&quot;previous&quot; and &quot;next&quot; links at the top of the page. The
+top segment of the page also has a link which allows you to toggle the
+display of local zones.</p>
+
+<p>The interface also provides <a href="ip_listing.php">an IP listing
+page</a>, which helps to display the IP address allocation on your
+network.</p>
+
 <?php
 
 $pg->close_page();
