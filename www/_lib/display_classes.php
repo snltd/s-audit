@@ -1548,6 +1548,27 @@ class HostGrid {
 		return new listCell($c_arr);
 	}
 
+	protected function show_svn_server($data)
+	{
+		// Display Subversion server. Do versioning for svnserve, but NOT
+		// for Apache
+
+		foreach($data as $datum) {
+			$vc = $this->ver_cols($datum, "svn server");
+
+			// We don't have the version of the apache module, so colour it
+			// orange
+
+			if (preg_match("/^apache/", $vc[0]))
+				$vc[1] = "solidorange";
+
+			$c_arr[] = array($vc[0], $vc[1]);
+		}
+
+		return new listCell($c_arr);
+
+	}
+
 	protected function show_sshd($data)
 	{
 		// Display SSH info in a nicer way than the auditor normally
@@ -2705,7 +2726,7 @@ class SoftwareGrid extends HostGrid
 		// Get the latest version of each piece of software, ignoring
 		// software in the ignore_version array. Produces an array like
 		// this:
-		//  [svnserve] => 1.6.5
+		// [samba] => 3.0.28
 		// [exim] => 4.69
 		// [sshd] => Array
 		//	(
@@ -2740,7 +2761,8 @@ class SoftwareGrid extends HostGrid
 			// a lot of work in this loop, and we want to minimize it as
 			// much as we can.
 
-			if (in_array($sw, $this->ignore_version))
+			if (in_array($sw, $this->ignore_version) ||
+				$sw == "audit completed")
 				continue;
 
 			// Minimize the array by removing duplicate keys, then use a
@@ -2753,7 +2775,7 @@ class SoftwareGrid extends HostGrid
 			// every element in an array simultaneously, then unique the
 			// array again
 
-			$ver_arr = array_unique(preg_replace("/(@=| ).*$/", "",
+			$ver_arr = array_unique(preg_replace("/(@=| \().*$/", "",
 			$ver_arr));
 
 			// Some software has its own special version of get_latest which
@@ -2790,6 +2812,26 @@ class SoftwareGrid extends HostGrid
 		// They both take the form Name_x.y.z
 
 		return $this->get_latest_multi($ver_arr, '(^.*SSH)_(.*)$');
+	}
+
+	private function get_latest_svn_server($ver_arr)
+	{
+		// Subversion can say "apache module", or "svnserve x.y.z". We just
+		// want the latest x.y.z. First strip out the "svnserve" string to
+		// just get the version numbers, like we get with everything else
+
+		$ret = preg_replace("/^svnserve /", "", $ver_arr);
+
+		// Lose the apache line, if there is one, otherwise it would come
+		// last in the sort and be the latest version
+
+		if ($idx = array_search("apache module", $ret)) 
+			unset($ret[$idx]);
+
+		natsort($ret);
+		end($ret);
+
+		return current($ret);
 	}
 
 	private function get_latest_multi($ver_arr, $regex)
@@ -4100,7 +4142,6 @@ class listCell {
 		//             into a list (that is, it won't be expanded to fill
 		//             the entire cell)
 
-		//echo "<pre>", print_r($data), "</pre>";
 
 		// If there's only one element in the $data class and $noexpand
 		// isn't set, just do a plain cell
