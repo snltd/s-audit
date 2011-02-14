@@ -168,13 +168,19 @@ fi
 # are user invoked.
 
 G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks \
-	optical lux_enclosures tape_drives pci_cards sbus_cards printers mac nic" 
-L_PLATFORM_TESTS="virtualization printers mac nic"
+	optical lux_enclosures tape_drives pci_cards sbus_cards printers" 
+L_PLATFORM_TESTS="virtualization printers"
 
-G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms uptime \
-	package_count patch_count"
-L_OS_TESTS="os_dist os_ver os_rel kernel hostid uptime package_count \
-	patch_count"
+G_NET_TESTS="mac ports snmp nic"
+L_NET_TESTS="mac ports snmp nic"
+
+G_NET_TESTS="ntp name_server dns_serv name_service routes nfs_domain"
+L_NET_TESTS=$G_NET_TESTS
+
+G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms \
+	scheduler package_count patch_count uptime "
+L_OS_TESTS="os_dist os_ver os_rel kernel hostid scheduler \
+	package_count patch_count uptime"
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s \
 	ora_s svnserve sendmail exim cronolog mailman splunk sshd named ssp \
@@ -192,7 +198,7 @@ G_PATCH_TESTS="patch_list package_list"
 L_PATCH_TESTS=$G_PATCH_TESTS
 
 G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root \
-	user_attr ports root_shell snmp dtlogin cron"
+	user_attr root_shell dtlogin cron"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
 L_FS_TESTS="root_fs fs exports"
@@ -273,6 +279,37 @@ function find_bins
 		ls -i $tgt | \
 		sed "s|^\(.\)[ 	]*\([0-9]*\)[ 	]*\($tgt\)$|${#pth} $pth \2|"
 	done | sort -n -k 3 | uniq -f2 | cut -d\  -f2
+}
+
+function find_config
+{
+	# This function helps you find configuration files which may be in
+	# different places. It will report back the first file it finds
+
+	# $1 is the filename to find
+	# $2 is a list of directories to try - QUOTE IT! /etc is always searched
+	# $3 is an optional process name
+	
+	for d in /etc $2
+	do
+
+		if [[ -f "${2}/$1" ]]
+		then
+			print ${2}/$1
+			return
+		fi
+
+	done
+
+	# Can't see it in any directories. If we've got $3, look for it in the
+	# process table. Only root can do this, and then only if we've got the
+	# ptools
+
+	if [[ -n $3 ]] && is_root && can_has pargs && pgrep -x $3>/dev/null
+	then
+		F=$(pargs $(pgrep -x $3) | sed -n "1d;/$1$/s/^.* //p")
+		[[ -f $F ]] && print $F
+	fi
 }
 
 function separator
@@ -367,7 +404,7 @@ function usage
 
 	    ${0##*/} [-f dir] [-z all|zone] [-qpPM] [-D secs] 
 		[-o test,test,...,test] [-R user@host:dir ] [-e file]
-	    app|fs|platform|hosted|os|plist|security|tool|machine|all
+	    app|fs|hosted|os|platform|plist|net|security|tool|machine|all
 
 	    ${0##*/} -l
 
@@ -397,6 +434,7 @@ function usage
 	The final argument tells the script what kind of audit to perform.
 
 	           platform : looks at the box and things attached to it
+	           net      : looks at network connections and configuration
 	           os       : looks at the OS and virtualizations
 	           app      : examines installed versions of a range of
 	                      application software
@@ -981,6 +1019,231 @@ function get_printers
 
 }
 
+function get_lux_enclosures
+{
+	# Prints a string of the form "Vendor Product-ID (fw REV)" where REV is
+	# the firmware revision, for each FC attached device that luxadm can
+	# find.
+
+	# Get unique node WWNs, which should identify each attached device.
+
+	luxadm probe 2>/dev/null \
+		| sed -n '/Node /s/^.*WWN:\([^ ]*\).*$/\1/p' | sort -u \
+		| while read node
+	do
+
+		if luxadm display $node | $EGS Vendor:
+		then
+			luxadm display $node | sed -n -e "/Vendor/s/^.*:[ 	]*//p" \
+				-e "/Product/s/^.*:[	 ]*//p" \
+				-e "/Revision/{s/^.*:[ 	]*\(.*\)/(fw \1)/p;q;}" \
+				| tr '\n' ' ' | tr -s ' '
+			print
+		else
+			print "unidentified (WWN ${node})"
+		fi
+
+	done | sort | uniq -c | while read COUNT LUX
+	do
+		disp "storage" "FC array: $COUNT x $LUX"
+	done
+
+}
+
+function get_tape_drives
+{
+	# Report on connected tape drives as best we can. We count them through
+	# cfgadm, then try to query them with mt(1). Note, this isn't 100%
+	# bullet proof. I've seen "phantom" tape drives reappear on Solaris
+	# systems long after they've been swapped for new ones.
+
+	# There's a rough fallback to scanning /dev/rmt for machines without
+	# cfgadm. The cfgadm check is necessary for LDOMs - you can't run it in
+	# those. (Currently.)
+
+	if can_has cfgadm && cfgadm >/dev/null 2>&1
+	then
+		TPLST=$(cfgadm -al | \
+		sed -n "/tape.*connected/s/^.*\(rmt\/[^ ]\).*$/\/dev\/\1/p")
+	else
+		TPLST=$(ls /dev/rmt/* 2>/dev/null | sed 's/[a-z]*$//' | sort -u)
+	fi
+
+	for dev in $TPLST
+	do
+		mt -f $dev config 2>/dev/null || print '"", "unknown tape drive"'
+	done | egrep "^\"" | cut -d\" -f4 \
+	| sort | uniq -c | while read COUNT DRIVE
+	do
+		disp "storage" "tape: $COUNT x $DRIVE"
+	done
+}
+
+
+function get_pci_cards
+{
+	# Have a go at finding PCI cards. This is not very reliable. It seems to
+	# work well enough on SPARC Solaris 10, but it's a dead loss on 8, and
+	# doesn't work on x86.
+
+	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
+	then
+
+		$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
+		while read pci hz slot name desc extra
+		do
+			desc=${desc#\(}
+			desc=${desc%\)}
+			disp "PCI card" "$desc ($extra $slot@${hz}MHz)"
+		done
+
+	fi
+
+}
+
+function get_sbus_cards
+{
+	# Have a go at finding SBUS cards. Works on the Ultra 2 with Solaris
+	# 2.6. Beyond that, I don't know. I'm not very confident about only
+	# checking below slot 14
+
+	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
+	then
+		$PRTDIAG | awk \
+			'{ if ($2 == "SBus" && $4 < 14)
+				print $4,$5
+			}' \
+		| sort -u | while read slot type
+		do
+			disp "SBUS card" "$type (slot $slot)"
+		done
+
+	fi
+	
+}
+
+
+function get_virtualization
+{
+	# Get the virtualization, if any, that's going on here. First we do the
+	# "machine level" virtualization -- xVM, VirtualBox, LDOM etc. Almost
+	# none of this can be done without being root so we'll skip the check if
+	# we aren't
+
+	is_root || return
+	typeset VIRT="none"
+
+	if is_global
+	then
+
+		if [[ $HW_HW == "i86pc" ]]
+		then
+
+			# Prtdiag is not supported on x86 Solaris < 10. At the moment I
+			# can't work out a bulletproof way to tell whether those old
+			# OSes are running on a physical machine or in a virtualbox
+			
+			if (( $OSVERCMP > 59 ))
+			then
+				sysconf=$($PRTDIAG | sed 1q)
+
+				if [[ $sysconf == *VirtualBox* ]]
+				then
+					VIRT="VirtualBox"
+				elif [[ $sysconf == *VMware* ]]
+				then
+					VIRT="VMware"
+				fi
+
+			else
+				# Running out of options now. Look to see if the string VBOX
+				# is in the iostat output. It will be if there's a CD-ROM
+				# device. You can do the same trick for VMWare
+
+				if iostat -E | $EGS VBOX
+				then
+					VIRT="VirtualBox"
+				elif iostat -E | $EGS VMware
+				then
+					VIRT="VMware"
+				else
+					VIRT="undetermined"
+				fi
+
+			fi
+
+			if [[ $VIRT == "VirtualBox" ]]
+			then
+				VBGVER=$(pkginfo -l SUNWvboxguest 2>/dev/null | sed -n \
+				'/VERSION/s/VERSION:.* \([^,]*\).*$/\1/p')
+				
+				[[ -n $VBGVER ]] && VIRT="${VIRT} (guest add. $VBGVER)" 
+			fi
+				
+		elif [[ $HW_PLAT == "sun4v" ]] 
+		then
+
+			# Now we look at logical domains. There's only any point doing
+			# this if we're on sun4v hardware. If we have the ldm binary,
+			# and that can list the primary, then we must be in the primary
+			# domain. If we can't run ldm (must be root), look to see if
+			# ldmd is running. Finally, ask prtpicl what it can see. In a
+			# guest domain it should be able to see the OBP, but not an LED.
+			# I do this +ve/-ve test because prtpicl can hang on T2000s.
+			# That's why it's run through timeout_job(). If the prtpicl job
+			# times out, we play safe and guess that we're in a normal
+			# domain. We need a [=] test here.
+
+			if can_has ldm 
+			then
+				ldm ls primary >/dev/null && VIRT="primary LDOM"
+			elif my_pgrep ldmd >/dev/null
+			then
+				VIRT="primary LDOM"
+			elif my_pgrep picld >/dev/null && [ $(timeout_job prtpicl \
+			| egrep -c "led \(|obp \(" ) = 1 ]
+			then
+				VIRT="guest LDOM"
+			fi
+
+		fi
+
+		can_has zonename && VIRT="$VIRT (global zone)"
+	else
+		# We're not a global zone. We could be in a branded zone. They have
+		# to be whole root
+
+		if (( $OSVERCMP == 58 ))
+		then
+			VIRT="zone (whole root/solaris8)"
+		elif (( $OSVERCMP == 59 ))
+		then
+			VIRT="zone (whole root/solaris9)"
+		else
+
+			# Find out whether the zone is whole root or sparse
+
+			TFILE="/usr/tfile$$"
+			touch $TFILE 2>/dev/null \
+				&& ZI="whole root" || ZI="sparse"
+
+			rm -f $TFILE
+
+			# See if we're a brand other than native. If we don't have
+			# zoneadm, go with the OS revision
+
+			can_has zoneadm \
+				&& VIRT="zone (${ZI}/$(zoneadm list -cp | cut -d: -f6))" \
+				|| VIRT="zone (${ZI}/$OSVER)"
+		fi
+
+	fi
+
+	disp "virtualization" $VIRT 
+}
+
+#-- NETWORK AUDITING FUNCTIONS -----------------------------------------------
+
 function mk_nic_devlist
 {
 	# Create a list of all network devices on the box. Used by get_nic()
@@ -1248,228 +1511,104 @@ function get_nic
 
 	done
 }
-	
-function get_lux_enclosures
+
+function get_dns_serv
 {
-	# Prints a string of the form "Vendor Product-ID (fw REV)" where REV is
-	# the firmware revision, for each FC attached device that luxadm can
-	# find.
+	# If we are using DNS for name resolution, get the server addresses
 
-	# Get unique node WWNs, which should identify each attached device.
-
-	luxadm probe 2>/dev/null \
-		| sed -n '/Node /s/^.*WWN:\([^ ]*\).*$/\1/p' | sort -u \
-		| while read node
+	[[ -f /etc/resolv.conf ]] && \
+	grep -w nameserver /etc/resolv.conf | while read a b
 	do
-
-		if luxadm display $node | $EGS Vendor:
-		then
-			luxadm display $node | sed -n -e "/Vendor/s/^.*:[ 	]*//p" \
-				-e "/Product/s/^.*:[	 ]*//p" \
-				-e "/Revision/{s/^.*:[ 	]*\(.*\)/(fw \1)/p;q;}" \
-				| tr '\n' ' ' | tr -s ' '
-			print
-		else
-			print "unidentified (WWN ${node})"
-		fi
-
-	done | sort | uniq -c | while read COUNT LUX
-	do
-		disp "storage" "FC array: $COUNT x $LUX"
-	done
-
-}
-
-function get_tape_drives
-{
-	# Report on connected tape drives as best we can. We count them through
-	# cfgadm, then try to query them with mt(1). Note, this isn't 100%
-	# bullet proof. I've seen "phantom" tape drives reappear on Solaris
-	# systems long after they've been swapped for new ones.
-
-	# There's a rough fallback to scanning /dev/rmt for machines without
-	# cfgadm. The cfgadm check is necessary for LDOMs - you can't run it in
-	# those. (Currently.)
-
-	if can_has cfgadm && cfgadm >/dev/null 2>&1
-	then
-		TPLST=$(cfgadm -al | \
-		sed -n "/tape.*connected/s/^.*\(rmt\/[^ ]\).*$/\/dev\/\1/p")
-	else
-		TPLST=$(ls /dev/rmt/* 2>/dev/null | sed 's/[a-z]*$//' | sort -u)
-	fi
-
-	for dev in $TPLST
-	do
-		mt -f $dev config 2>/dev/null || print '"", "unknown tape drive"'
-	done | egrep "^\"" | cut -d\" -f4 \
-	| sort | uniq -c | while read COUNT DRIVE
-	do
-		disp "storage" "tape: $COUNT x $DRIVE"
+		disp "DNS server" $b
 	done
 }
 
-
-function get_pci_cards
+function get_name_service
 {
-	# Have a go at finding PCI cards. This is not very reliable. It seems to
-	# work well enough on SPARC Solaris 10, but it's a dead loss on 8, and
-	# doesn't work on x86.
+	# What are we using to look up users and hosts?
 
-	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
+	egrep "^hosts|^passwd" /etc/nsswitch.conf | while read a
+	do
+		disp "name service" $a
+	done
+}
+
+function get_routes
+{
+	# Routing table. Flag up default routes not in defaultrouters and non
+	# .0 routes which are persistent
+
+	route -p show 2>&1 >/dev/null && HAS_PER=1
+
+	netstat -nr | egrep -v '127.0.0.1|224.0.0.0' | \
+	while read dest gw fl ref use int
+	do
+		unset X I
+		[[ $gw == [0-9]* ]] || continue
+
+		if [[ $dest == "default" ]]
+		then
+			$EGS "$gw" /etc/defaultrouter 2>/dev/null \
+				|| X="(not in defaultrouter)"
+		fi
+
+		[[ -n $int ]] && I="($int) "
+
+		[[ -n $HAS_PER ]] \
+			&& route -p show | $EGS "$dest $gw$" && X="(persistent)"
+
+		disp "route" "$dest $gw ${I}$X"
+
+	done
+}
+
+function get_name_server
+{
+	# Find out what name services (DNS, NIS, LDAP etc) we're serving up
+
+	# first, DNS
+
+	CF=$(find_config named.conf "/var/named/etc /usr/local/bin/etc" named)
+
+	if [[ -n $CF ]]
 	then
-
-		$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
-		while read pci hz slot name desc extra
+		egrep "^[ 	]*zone[ 	]|type" /var/named/etc/named.conf | sed -e :a \
+			-e 's/zone[ 	]*\"//;s/\".*$//;$!N;s/\n.*type/ /;ta' \
+			-e 's/;//' -e 'P;D' |  grep -v 'in-addr.arpa' | sort -k2 | \
+		while read a b 
 		do
-			desc=${desc#\(}
-			desc=${desc%\)}
-			disp "PCI card" "$desc ($extra $slot@${hz}MHz)"
+			[[ $b == "hint" ]] || disp "name server" "DNS ($b) $a"
 		done
-
 	fi
 
 }
 
-function get_sbus_cards
+function get_ntp
 {
-	# Have a go at finding SBUS cards. Works on the Ultra 2 with Solaris
-	# 2.6. Beyond that, I don't know. I'm not very confident about only
-	# checking below slot 14
+	# NTP servers we're using. Also say if we appear to be broadcasting NTP
 
-	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
+	F="/etc/inet/ntp.conf"
+
+	if [[ -f $F ]]
 	then
-		$PRTDIAG | awk \
-			'{ if ($2 == "SBus" && $4 < 14)
-				print $4,$5
-			}' \
-		| sort -u | while read slot type
+		is_running xntpd || X=" (not running)"
+
+		grep ^server $F | while read a b c
 		do
-			disp "SBUS card" "$type (slot $slot)"
+			[[ $c == "prefer" ]] && P="preferred " || P=""
+			disp "NTP" "$b (${P}server)$X"
 		done
 
+		$EGS "broadcast" $F && disp "NTP" "broadcasting as server"
 	fi
-	
 }
 
-
-function get_virtualization
+function get_nfs_domain
 {
-	# Get the virtualization, if any, that's going on here. First we do the
-	# "machine level" virtualization -- xVM, VirtualBox, LDOM etc. Almost
-	# none of this can be done without being root so we'll skip the check if
-	# we aren't
+	# If it's been changed (and is supported) get the NFSv4 domain name
 
-	is_root || return
-	typeset VIRT="none"
-
-	if is_global
-	then
-
-		if [[ $HW_HW == "i86pc" ]]
-		then
-
-			# Prtdiag is not supported on x86 Solaris < 10. At the moment I
-			# can't work out a bulletproof way to tell whether those old
-			# OSes are running on a physical machine or in a virtualbox
-			
-			if (( $OSVERCMP > 59 ))
-			then
-				sysconf=$($PRTDIAG | sed 1q)
-
-				if [[ $sysconf == *VirtualBox* ]]
-				then
-					VIRT="VirtualBox"
-				elif [[ $sysconf == *VMware* ]]
-				then
-					VIRT="VMware"
-				fi
-
-			else
-				# Running out of options now. Look to see if the string VBOX
-				# is in the iostat output. It will be if there's a CD-ROM
-				# device. You can do the same trick for VMWare
-
-				if iostat -E | $EGS VBOX
-				then
-					VIRT="VirtualBox"
-				elif iostat -E | $EGS VMware
-				then
-					VIRT="VMware"
-				else
-					VIRT="undetermined"
-				fi
-
-			fi
-
-			if [[ $VIRT == "VirtualBox" ]]
-			then
-				VBGVER=$(pkginfo -l SUNWvboxguest 2>/dev/null | sed -n \
-				'/VERSION/s/VERSION:.* \([^,]*\).*$/\1/p')
-				
-				[[ -n $VBGVER ]] && VIRT="${VIRT} (guest add. $VBGVER)" 
-			fi
-				
-		elif [[ $HW_PLAT == "sun4v" ]] 
-		then
-
-			# Now we look at logical domains. There's only any point doing
-			# this if we're on sun4v hardware. If we have the ldm binary,
-			# and that can list the primary, then we must be in the primary
-			# domain. If we can't run ldm (must be root), look to see if
-			# ldmd is running. Finally, ask prtpicl what it can see. In a
-			# guest domain it should be able to see the OBP, but not an LED.
-			# I do this +ve/-ve test because prtpicl can hang on T2000s.
-			# That's why it's run through timeout_job(). If the prtpicl job
-			# times out, we play safe and guess that we're in a normal
-			# domain. We need a [=] test here.
-
-			if can_has ldm 
-			then
-				ldm ls primary >/dev/null && VIRT="primary LDOM"
-			elif my_pgrep ldmd >/dev/null
-			then
-				VIRT="primary LDOM"
-			elif my_pgrep picld >/dev/null && [ $(timeout_job prtpicl \
-			| egrep -c "led \(|obp \(" ) = 1 ]
-			then
-				VIRT="guest LDOM"
-			fi
-
-		fi
-
-		can_has zonename && VIRT="$VIRT (global zone)"
-	else
-		# We're not a global zone. We could be in a branded zone. They have
-		# to be whole root
-
-		if (( $OSVERCMP == 58 ))
-		then
-			VIRT="zone (whole root/solaris8)"
-		elif (( $OSVERCMP == 59 ))
-		then
-			VIRT="zone (whole root/solaris9)"
-		else
-
-			# Find out whether the zone is whole root or sparse
-
-			TFILE="/usr/tfile$$"
-			touch $TFILE 2>/dev/null \
-				&& ZI="whole root" || ZI="sparse"
-
-			rm -f $TFILE
-
-			# See if we're a brand other than native. If we don't have
-			# zoneadm, go with the OS revision
-
-			can_has zoneadm \
-				&& VIRT="zone (${ZI}/$(zoneadm list -cp | cut -d: -f6))" \
-				|| VIRT="zone (${ZI}/$OSVER)"
-		fi
-
-	fi
-
-	disp "virtualization" $VIRT 
+	disp "NFS domain" $(sed -n '/^[	 ]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p' \
+	/etc/default/nfs)
 }
 
 #-- O/S AUDITING FUNCTIONS ---------------------------------------------------
@@ -1492,6 +1631,17 @@ function get_uptime
 	[[ $ut == *user* ]] && ut="unknown"
 
 	disp uptime $ut
+}
+
+function get_scheduler
+{
+	# Get the scheduling class being used
+
+	if can_has dispadmin
+	then
+		SCL=$(dispadmin -d 2>&1)
+		[[ $SCL != *"class is not set"* ]]  && disp "scheduler"  $SCL
+	fi
 }
 
 function get_package_count
@@ -2845,11 +2995,11 @@ function get_ssh_root
 
 	if is_running sshd
 	then
-		CONF="/etc/ssh/sshd_config"
+		CF=$(find_config sshd_config "/etc/ssh /usr/local/openssh/etc" sshd)
 
-		if [[ -r $CONF ]]
+		if [[ -n $CF ]]
 		then
-			egrep -i permitrootlogin $CONF | egrep -v "#" \
+			egrep -i permitrootlogin $CF | egrep -v "#" \
 			| $EGS yes && SSHRL="yes" || SSHRL="no"
 		else
 			SSHRL="unknown"
@@ -3152,7 +3302,7 @@ then
 	is_root || die "only root can perform full machine audits"
 	can_has zoneadm && ZONE=all || unset ZONE
 
-	CLASSES="platform os fs app tool hosted security"
+	CLASSES="platform os net fs app tool hosted security"
 	DO_THIS=true
 	MACHINE=true
 
@@ -3161,7 +3311,7 @@ then
 	[[ -n $OUTBASE ]] && CLASSES="$CLASSES plist"
 elif [[ $1 == "all" ]]
 then
-	CLASSES="platform os fs app tool hosted security"
+	CLASSES="platform os net fs app tool hosted security"
 else
 	CLASSES=$1
 fi
@@ -3243,8 +3393,11 @@ do
 
 		"platform"|"hardware")
 			RWARN="Many tests, including ALOM, FC enclosure,
-			virtualization will not be run, and NIC information will be
-			limited"
+			virtualization will not be run"
+			;;
+
+		"net")
+			RWARN="NIC information will be limited"
 			;;
 
 		"os")
@@ -3301,7 +3454,7 @@ do
 ------------------------------------------------------------------------------
 
 		WARNING: running this script as an unprivileged user may not produce
-		a full audit. ${WARN}.
+		a full audit. ${RWARN}.
 
 ------------------------------------------------------------------------------
 	EOWARN
