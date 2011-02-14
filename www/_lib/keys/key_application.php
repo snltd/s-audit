@@ -17,8 +17,8 @@ $grid_key = array(
 	// Just one "general" key type that stretches right across the table
 
 	"general" => array(
-		array("most recent installed version", "sw_latest", false),
-		array("older installed version", "sw_old", false),
+		array("most recent installed version", "ver_l", false),
+		array("older installed version", "ver_o", false),
 		array("version unobtainable", "solidorange", false),
 		array("not running (but expected to be)", "boxred", false)
 	)

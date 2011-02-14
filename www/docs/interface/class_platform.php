@@ -107,9 +107,27 @@ $dh->doc_class_start();
 	displayed for x86 machines, but will be of limited value. Blank in local
 	zones.</dd>
 
+	<dd>The version number will be on a green or red field depending on
+	whether or not it is the highest version number for <em>the hardware
+	shown in the &quot;hardware&quot; field</em>. Therefore multiple green
+	boxes may be seen with different contents. In that case each shows the
+	highest currently installed OBP version for that particular server
+	type.</dd>
+
+<?php
+	echo $dh->colour_key($grid_key["OBP"]);
+?>
+
 	<dt>ALOM f/w</dt>
 	<dd>On supported SPARC servers, shows the version of the ALOM firmware.
 	Blank in local zones.</dd>
+
+	<dd>As with the OBP version, boxes are colour coded to show the highest
+	installed version numbers for each hardware type.</dd>
+
+<?php
+	echo $dh->colour_key($grid_key["ALOM f/w"]);
+?>
 
 	<dt>ALOM IP</dt>
 	<dd>On some SPARC servers, for instance v210s, it is possible to get the
@@ -148,9 +166,9 @@ $dh->doc_class_start();
 	</dd>
 
 	<dd>line in <tt>_conf/nic_colours.php</tt>. The default is orange,
-	because we cabled our ALOMs with orange cable at my old site. This
-	system colour codes authoritative and &quot;guessed&quot; ALOM addresses
-	as follows:</dd>
+	because the site for which s-audit was originally developed connected
+	ALOMs with orange cable. This system colour codes authoritative and
+	&quot;guessed&quot; ALOM addresses as follows:</dd>
 
 <?php
 	echo $dh->colour_key($grid_key["ALOM IP"]);

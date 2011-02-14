@@ -33,6 +33,11 @@ $grid_key = array(
 	"memory" => array(
 		array("no swap space", "solidamber", false)
 	),
+
+	"OBP" => array(
+		array("latest installed version", "ver_l", false),
+		array("old version", "ver_o", false),
+	),
 		
 	"ALOM IP" => array(
 		array("address reported by server", "solidorange", false),
@@ -48,6 +53,8 @@ $grid_key = array(
 	),
 
 );
+
+$grid_key["ALOM f/w"] = $grid_key["OBP"];
 
 // Generate the NIC key automatically
 

@@ -765,8 +765,8 @@ class HostGrid {
 			$lobp = $this->latest_obps[$hw];
 
 			$class = ($data[0] == $lobp)
-				? "sw_latest"
-				: "sw_old";
+				? "ver_l"
+				: "ver_o";
 		}
 		else
 			$class = false;
@@ -787,8 +787,8 @@ class HostGrid {
 			$lalom = $this->latest_aloms[$hw];
 
 			$class = ($data[0] == $lalom)
-				? "sw_latest"
-				: "sw_old";
+				? "ver_l"
+				: "ver_o";
 		}
 		else
 			$class = false;
@@ -1337,8 +1337,8 @@ class HostGrid {
 		elseif (in_array($osver, array_keys($this->latest_kerns)))
 
 			$class = ($kr == $this->latest_kerns[$osver])
-				? "sw_latest"
-				: "sw_old";
+				? "ver_l"
+				: "ver_o";
 		else
 			$class = "solidamber";
 
@@ -1488,8 +1488,8 @@ class HostGrid {
 			if (isset($this->latest["Sun CC"])) {
 
 				$bg_class =  ($sccver == $this->latest["Sun CC"])
-					? "sw_latest"
-					: "sw_old";
+					? "ver_l"
+					: "ver_o";
 
 			}
 			else
@@ -2444,8 +2444,8 @@ class PlatformGrid extends HostGrid
 		// generates the $latest[] OBP and ALOM arrays
 	
 		parent::__construct($map, $servers);
-		$this->latest_obps = $this->get_paired_list("platform", "OBP");
-		$this->latest_aloms = $this->get_paired_list("platform", "ALOM f/w");
+		$this->latest_obps = $this->get_paired_list("hardware", "OBP");
+		$this->latest_aloms = $this->get_paired_list("hardware", "ALOM f/w");
 	}
 
 }
@@ -2671,9 +2671,9 @@ class SoftwareGrid extends HostGrid
 			if ($sw_ver && $recent && $subname != "NOBG") {
 			
 				if ($recent == 2)
-					$class = "sw_latest";
+					$class = "ver_l";
 				elseif($recent == 1)
-					$class = "sw_old";
+					$class = "ver_o";
 			}
 
 		}

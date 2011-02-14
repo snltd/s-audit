@@ -156,13 +156,11 @@ td.serverhn { /* hostname for global zones/physical servers */
 	text-align: right;
 }
 
-/* classes for warnings in the tools and applications grids */
-
-.sw_latest { /* latest software */
+.ver_l { /* latest version of somethin */
 	background: #acce9a
 }
 
-.sw_old { /* old versions of software */
+.ver_o { /* old versions of soeething */
 	background: #cea596
 }
 
