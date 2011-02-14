@@ -471,8 +471,8 @@ class HostGrid {
 		// other than running. 
 
 		return $this->show_hostname($data["hostname"], $data) 
-		. new Cell("no information :: zone is in &quot;"
-		. $data["zone status"][0] .  "&quot; state", "solidamber", false,
+		. new Cell("No information. Zone is in &quot;"
+		. $data["zone status"][0] .  "&quot; state.", "solidamber", false,
 		false, (sizeof($this->fields) - 2))
 		. $this->show_audit_completed($data["audit completed"]);
 	}
