@@ -27,12 +27,16 @@ require_once(LIB . "/display_classes.php");
 require_once(LIB . "/ip_listing_classes.php");
 
 //------------------------------------------------------------------------------
-// SCRIPT STARTS HERE
+// VARIABLES
 
-$list_doc = "<a href=\"" . DOC_URL ."/extras/ip_list_file.php\">network scan
-file</a>";
-$res_doc = "<a href=\"" . DOC_URL ."/extras/ip_res_file.php\">reserved IP list
-file</a>";
+$list_doc = "<a href=\"" . DOC_URL 
+	. "/extras/ip_list_file.php\">network scan file</a>";
+
+$res_doc = "<a href=\"" . DOC_URL .
+	"/extras/ip_res_file.php\">reserved IP list file</a>";
+
+//------------------------------------------------------------------------------
+// SCRIPT STARTS HERE
 
 $map = new ZoneMap(LIVE_DIR);
 $s = new GetIPList($map);
