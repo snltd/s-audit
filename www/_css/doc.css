@@ -5,45 +5,36 @@
  *
  * Styles required for documentation pages
  *
- * s-audit (c) 2010 SNLTD
+ * s-audit (c) 2011 SNLTD
  *
  *==========================================================================*/
 
 /*--------------------------------------------------------------------------*/
 /* NAMED ELEMENTS */
 
-#docwrapper {
-
-	/* holds everything between the header and footer */
-
+#docwrapper { /* holds everything between the header and footer */
 	margin: 0 auto;
 	border: 0;
 	padding: 3em 0 0 0;
 	width: 800px;
 }
 
-#doccontent {
-
-	/* main content on documenation pages */
-
+#doccontent { /* main content on documenation pages */
 	float: left;
 	width: 600px;
 	font-family: "Gill Sans MT", Verdana, Lucida, Helvetica, sans-serif;
 }
 
-#vmenu {
-
-	/* vertical page list for documentation */
-
+#vmenu { /* vertical page list for documentation */
 	font-size: 9pt;
 	width: 175px;
 	float: right;
 }
 
 /*--------------------------------------------------------------------------*/
-/* fixed width and code examples */
+/* FIXED WIDTH AND CODE EXAMPLES */
 
-tt, pre { /* embedded and inline code */
+tt, pre, ul.omitlisttt { /* embedded and inline code */
 	font-family: "Consolas";
 	/*"DejaVu Sans Mono", "Consolas", "Lucida Sans Typewriter",
 	"Bitstream Vera Sans Mono", "Monaco", monospace;*/
@@ -86,12 +77,9 @@ div.codeBlockLink {
 }
 
 /*--------------------------------------------------------------------------*/
-/* Lists */
+/* LISTS */
 
-dl {
-	
-	/* definition lists are for options and checks */
-
+dl { /* definition lists are for options and checks */
 	padding-left: 1em;
 	text-indent: 0em;
 	text-align: justify;
@@ -125,10 +113,7 @@ ul.vmf {
 	line-height: 200%;
 }
 
-ul.dockey {
-
-	/* used in documentation when talking about grid keys */
-
+ul.dockey { /* used in documentation when talking about grid keys */
 	line-height: 180%;
 	text-align: center;
 	list-style: none;
@@ -136,6 +121,18 @@ ul.dockey {
 }
 
 #doccontent li {
-		padding-top: 2px;
-		margin: 0 5em 0 5em
+	padding-top: 2px;
+	margin: 0 5em 0 5em
+}
+
+ul.omitlist, ul.omitlisttt {
+	padding-left: 0;
+	list-style: none;
+}
+
+.omitlist li, .omitlisttt li {
+	border-bottom: 1px solid #ddd;
+}
+
+ul.omitlisttt {
 }

@@ -6,7 +6,7 @@
  * General stylesheet for s-audit. Required for all audit display and
  * documentation pages.
  *
- * s-audit (c) 2010 SNLTD
+ * s-audit (c) 2011 SNLTD
  *
  *==========================================================================*/
 
@@ -54,15 +54,10 @@ h2, h3, h4 {
 	padding-top: 1em;
 }
 
-.lalign { /* left-aligned text */
-	text-align: left
-}
-
 div.spacer {
 	clear: both;
 	padding-top: 5em;
 }
-
 
 /*--------------------------------------------------------------------------*/
 /* NAMED ELEMENTS */
@@ -106,7 +101,7 @@ div.spacer {
 }
 
 /*--------------------------------------------------------------------------*/
-/* Errors and warnings */
+/* ERRORS AND WARNINGS */
 
 .error { /* error messages. Usually used in a <tr> */
 	background-color: #ca6a5b;

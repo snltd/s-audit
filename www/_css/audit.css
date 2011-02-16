@@ -3,17 +3,19 @@
  * audit.css
  * ---------
  *
- * Styles required for audit display pages
+ * Styles required for all audit display pages.
  *
- * s-audit (c) 2010 SNLTD
+ * s-audit (c) 2011 SNLTD
  *
  *==========================================================================*/
  
-.blank { 
-	/* for invisible table cells. Should be the same background colour as body
-	 */
+/*--------------------------------------------------------------------------*/
+/* GENERAL */
 
-	background-color: #fff;
+#content { /* then entire grid on audit pages */
+	border: 0;
+	margin: 0;
+	font-size: 8pt;
 }
 
 .audit td { /* normal table cells */
@@ -21,39 +23,18 @@
 	vertical-align: top;
 }
 
-.lalign { /* left-aligned text */
-	text-align: left
-}
-
-tt,pre { /* all fixed-width text */
-	font-family: "LucidaSansTypewriter", "Consolas", courier, monospace;
-	font-size: 10px;
-	line-height: 120%;
-}
-
-#content { /* all grid on audit pages */
-	border: 0;
-	margin: 0;
-	font-size: 8pt;
-}
-
 div.indent { /* intented divs, e.g. on hosted services */
-	margin-left: 10px;
+	margin-left: 20px;
 }
 
-.strongr { /* links for unresolved sites on the hosted services page */
-	color: #94112D
-}
-
-.strongg { /* links for resolved sites on the hosted services page */
-	color: #355F26;
-}
-
-.strongr, .strongg { /* bold face links */
-	font-weight: bold;	
-}
 /*--------------------------------------------------------------------------*/
-/* page navigation */
+/* PAGE NAVIGATION */
+
+#navlist li {
+	display: inline;
+	list-style-type: none;
+	padding: 0 0.5em 0 0.5em;
+}
 
 ul.navlist {
 	clear: both;
@@ -66,18 +47,12 @@ ul.navlist {
 	border-bottom: 1px solid black;
 }
 
-#navlist li {
-	display: inline;
-	list-style-type: none;
-	padding: 0 0.5em 0 0.5em;
-}
-
 li.here {
 	border-bottom: 5px solid black;
 }
 
 /*--------------------------------------------------------------------------*/
-/* General Audit Grids */
+/* GENERAL AUDIT GRIDS */
 
 th, td.comprow { /* table headings for audit grids */
 	text-align: center;
@@ -87,6 +62,8 @@ th, td.comprow { /* table headings for audit grids */
 	border-bottom: 2px solid black;
 	font-weight: bold;
 }
+
+/*-- backgrounds for rows --------------------------------------------------*/
 
 .server, td.svhn { /* global zones/servers. Used in <tr> and <td> */
 	background-color: #d0d4fe;
@@ -113,6 +90,8 @@ th, td.comprow { /* table headings for audit grids */
 	color: #333;
 }
 
+/*-- hostnames -------------------------------------------------------------*/
+
 td.ldmp, td.ldm, td.vb { /* Stop word-breaking in the hostname column */
 	white-space: nowrap;
 }
@@ -128,65 +107,46 @@ td.serverhn { /* hostname for global zones/physical servers */
 	padding-left: 3px;
 }
 
-.smallrow,.smallrowbar { /* small rows for lists embedded in cells */
-    font: 9px normal helvetica, sans-serif;
-}
+/*-- versioning ------------------------------------------------------------*/
 
-.rowbar,.smallrowbar {
-	/* separator bars for small lists embedded in cells */
-	border-bottom: 1px solid #fcfcfc;
-}
-
-.multicell, .multicellsmall, .multicellnb, .multicellsmallnb {
-	/* multicell nested tables */
-	padding: 0px;
-	margin: 0px;
-}
-
-.multicell, .multicellsmall {
-	border-collapse: collapse;
-	border-bottom: 1px #f3f3f3 solid;
-}
-
-.multicellsmall, .multicellsmallnb {
-	font-size: xx-small;
-}
-
-.mac_addr { /* MAC addresses */
-	text-align: right;
-}
-
-.ver_l { /* latest version of somethin */
+.ver_l { /* latest version of something */
 	background: #acce9a
 }
 
-.ver_o { /* old versions of soeething */
+.ver_o { /* old versions of something */
 	background: #cea596
 }
 
-/* embedded lists */
+/*-- embedded lists --------------------------------------------------------*/
 
-.audit ul {
+.audit ul, ul.smallaudit, ul.smallauditl {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-.audit li {
+.audit li, ul.smallaudit, ul.smallauditl {
 	margin-bottom: 1px;
 	padding: 1px;
 }
 
-.selist li {
+ul.smallaudit, ul.smallauditl {
+	
+	/* smallaudit and smallauditl are centred and left-aligned lists with
+	 * small writing */
+
 	font-size: 7pt;
 }
 
-tr.keyrow { /* the row at the bottom of audit tables, for keys */
-	vertical-align: top;
+ul.smallindent { /* used for user_attr and cron */
+	text-align: left;
+	font-size: 6pt;
+	padding-left: 20px;
+	text-indent: -20px;
 }
 
 /*--------------------------------------------------------------------------*/
-/* Key stuff */
+/* KEY ROW */
 
 td.keyhead { /* table row which separtes the data from the key */
 	text-align: center;
@@ -196,4 +156,8 @@ td.keyhead { /* table row which separtes the data from the key */
 	margin-bottom: 10px;
 	font-size: 13px;
 	font-weight: bold;
+}
+
+tr.keyrow { /* the row at the bottom of audit tables, for keys */
+	vertical-align: top;
 }
