@@ -171,15 +171,13 @@ G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks \
 	optical lux_enclosures tape_drives pci_cards sbus_cards printers" 
 L_PLATFORM_TESTS="virtualization printers"
 
-G_NET_TESTS="mac ports snmp nic"
-L_NET_TESTS="mac ports snmp nic"
-
-G_NET_TESTS="ntp name_server dns_serv name_service routes nfs_domain"
+G_NET_TESTS="ntp name_service dns_serv nis_domain name_server \
+	nfs_domain snmp ports routes nic"
 L_NET_TESTS=$G_NET_TESTS
 
 G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms \
 	scheduler package_count patch_count uptime "
-L_OS_TESTS="os_dist os_ver os_rel kernel hostid scheduler \
+L_OS_TESTS="os_dist os_ver os_rel kernel hostid \
 	package_count patch_count uptime"
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s \
@@ -293,9 +291,9 @@ function find_config
 	for d in /etc $2
 	do
 
-		if [[ -f "${2}/$1" ]]
+		if [[ -f "${d}/$1" ]]
 		then
-			print ${2}/$1
+			print ${d}/$1
 			return
 		fi
 
@@ -417,7 +415,7 @@ function usage
 	           may be used to audit all running zones. The output from "-z
 	           all" can be confusing, and it is intended to be run with the
 	           -f flag
-	  -M :     in platform audits, plumb and unplumb uncabled NICs to obtain
+	  -M :     in network audits, plumb and unplumb uncabled NICs to obtain
 	           their MAC address
 	  -o :     omit these tests, comma separated
 	  -p :     write machine-parseable output. By default output is
@@ -463,7 +461,7 @@ function show_checks
 
 	typeset -u cn
 
-	for cl in platform os app tool hosted fs patch security
+	for cl in platform os net app tool hosted fs patch security
 	do
 		cn=$cl
 		print "\nGlobal zone '$cl' audit tests"
@@ -1246,8 +1244,9 @@ function get_virtualization
 
 function mk_nic_devlist
 {
-	# Create a list of all network devices on the box. Used by get_nic()
-	# and get_mac()
+	# Create a list of all network devices on the box. Used by get_nic().
+	# Used to be used by get_mac() which no longer exists. Could be
+	# reincorporated into get_nic() at some point
 
 	# Get the plumbed interfaces. This'll work on anything, even a zone.
 
@@ -1274,40 +1273,6 @@ function mk_nic_devlist
 	done | sort -u
 }
 
-function get_mac
-{
-	# Get MAC addresses for every interface, plumbed or not. 
-
-	is_root || return
-
-	mk_nic_devlist | grep -v : | while read d
-	do
-		mac=$(ifconfig $d 2>/dev/null | sed -n "/ether/s/^.*r //p")
-
-		# If the interface is down, we can quickly plumb it to get its MAC.
-		# This is a "destructive" action, and is only done if the DO_PLUMB
-		# variable is defined
-
-		if [[ -n $DO_PLUMB && -z $mac ]]
-		then
-		
-			# ifconfig exits 0 even if it can't plumb and interface. But it
-			# does complain in that case
-
-			tstr=$(ifconfig $d plumb 2>&1)
-
-			if [[ -z $tstr ]]
-			then
-				mac=$(ifconfig $d 2>/dev/null | sed -n "/ether/s/^.*r //p")
-				ifconfig $d unplumb
-			fi
-
-		fi
-
-		disp "MAC" "$d ${mac:-unknown}"
-	done
-}
-
 function get_nic
 {
 	# Get information on all the network interfaces, whether they're cabled,
@@ -1326,14 +1291,11 @@ function get_nic
 
 	DEVLIST=$(mk_nic_devlist)
 
-	# There are bound to be duplicates in the DEVLIST, so run it through
-	# sort -u, then examine each interface in turn.
-
 	# We assemble a groups of strings S1....Sn
 
 	for S0 in $DEVLIST
 	do
-		unset HNAME S2 S3 S4 S5 SD
+		unset HNAME S2 S3 S4 S5 S6 SD mac
 
 		# Ask ifconfig for the IP address of this device
 
@@ -1356,7 +1318,7 @@ function get_nic
 
 			if ifconfig $S0 | $EGS zone
 			then
-				S2=$(ifconfig $S0 | sed -n 's/^.*zone \([^ ]*\).*$/\1/p')
+				S3=$(ifconfig $S0 | sed -n 's/^.*zone \([^ ]*\).*$/\1/p')
 			else
 				[[ $S1 == "0.0.0.0" ]] && S1="unconfigured in global"
 			fi
@@ -1365,15 +1327,15 @@ function get_nic
 
 			IPMP=$(ifconfig $S0 | grep -w groupname)
 
-			[[ -n $IPMP ]] && S4=${IPMP##* }
+			[[ -n $IPMP ]] && S5=${IPMP##* }
 
 			# Is this address under the control of DHCP?
 
-			ifconfig $S0 | $EGS DHCP && S4="DHCP"
+			ifconfig $S0 | $EGS DHCP && S5="DHCP"
 
 			# Denote VLANned interfaces
 
-			[[ $nic_type == "vlan" ]] && S5="vlan"
+			[[ $nic_type == "vlan" ]] && S6="vlan"
 
 			# Finally, record the hostname, if we can. DHCP connected
 			# interfaces may not have a proper hostname.dev file, so we'll
@@ -1383,7 +1345,7 @@ function get_nic
 			if [[ -s /etc/hostname.$S0 ]]
 			then
 				HNAME=$(sed '1!d;s/[  ].*$//' /etc/hostname.$S0)
-				S2=${HNAME:-$HOSTNAME}
+				S3=${HNAME:-$HOSTNAME}
 			fi
 
 		else
@@ -1427,7 +1389,7 @@ function get_nic
 					if [[ -n $IPZONE ]]
 					then
 						S1="exclusive IP"
-						S2=$IPZONE
+						S3=$IPZONE
 					else
 						# It's not a zone exclusive IP, and it's not an LDOM
 						# switch. Let's just call it "unconfigured".
@@ -1445,20 +1407,20 @@ function get_nic
 			fi
 
 			[[ $nic_type == "vnic" ]] \
-				&& S5="vnic over $(dladm show-link -poover $S0)"
+				&& S6="vnic over $(dladm show-link -poover $S0)"
 
 		fi
 
 		# Did the interface have a vswitch on it?
 
-		[[ $VSW_IF_LIST == *" $S0 "* ]] && S5="+vsw"
+		[[ $VSW_IF_LIST == *" $S0 "* ]] && S6="+vsw"
 
 		# So long as the interface isn't "uncabled", and is a physical port,
 		# we can probably get its speed. Some interfaces, we can't
 
 		if [[ $S0 == *"pcn"* ]]
 		then
-			S3="unknown"
+			S4="unknown"
 		elif [[ $nic_type == "vnic" || $nic_type == "etherstub" ]]
 		then
 			:
@@ -1469,7 +1431,7 @@ function get_nic
 
 			if [[ -n $HAS_DL ]] && eval $DL_DEVLIST_CMD | $EGS "^$S0"
 			then
-				S3=$(eval $DL_SPEED_CMD)
+				S4=$(eval $DL_SPEED_CMD)
 			elif can_has kstat
 			then
 				KDEV=${S0%[0-9]*}
@@ -1482,7 +1444,7 @@ function get_nic
 
 					[[ $DUP == 2 ]] && SD="full" || SD="half"
 
-					S3="$(kstat -m $KDEV -i $KI \
+					S4="$(kstat -m $KDEV -i $KI \
 					| sed -n '/ifspeed/s/^.* //p')-$SD"
 				fi
 
@@ -1494,19 +1456,50 @@ function get_nic
 		# and the message makes it look a bit like there's no connection.
 		# So...
 
-		[[ $S3 == *"unknown"* ]] && S3="unknown"
+		[[ $S4 == *"unknown"* ]] && S4="unknown"
+
+		# S2 going to be the MAC address
+
+		if is_root
+		then
+			mac=$(ifconfig $S0 2>/dev/null | sed -n "/ether/s/^.*r //p")
+
+			# If the interface is down, we can quickly plumb it to get its
+			# MAC.  This is a "destructive" action, and is only done if the
+			# DO_PLUMB variable is defined
+
+			if [[ -n $DO_PLUMB && -z $mac ]]
+			then
+		
+				# ifconfig exits 0 even if it can't plumb an interface. But
+				# it does complain in that case
+
+				tstr=$(ifconfig $S0 plumb 2>&1)
+
+				if [[ -z $tstr ]]
+				then
+					mac=$(ifconfig $S0 2>/dev/null | \
+					sed -n "/ether/s/^.*r //p")
+					ifconfig $S0 unplumb
+				fi
+
+			fi
+
+		fi
+
+		S2=${mac:-unknown}
 
 		# Now, depending the kind of output we're producing, we either trim
 		# up the S variables, or pass a string to disp
 
 		if [[ -n $PARSEABLE ]]
 		then
-			disp NIC "$S0|$S1|$S2|$S3|$S4|$S5"
+			disp NIC "$S0|$S1|$S2|$S3|$S4|$S5|$S6"
 		else
-			[[ -n $S2 ]] && S2="($S2)"
-			[[ -n $S3 ]] && S3="[$S3]"
+			[[ -n $S3 ]] && S3="($S3)"
+			[[ -n $S4 ]] && S4="[$S4]"
 
-			disp NIC $S0 $S1 $S2 $S3 $S4 $S5
+			disp NIC $S0 $S1 $S2 $S3 $S4 $S5 $S6
 		fi
 
 	done
@@ -1527,10 +1520,15 @@ function get_name_service
 {
 	# What are we using to look up users and hosts?
 
-	egrep "^hosts|^passwd" /etc/nsswitch.conf | while read a
+	egrep "^hosts|^passwd|attr" /etc/nsswitch.conf | while read a
 	do
-		disp "name service" $a
+		disp "name service" $(print $a | sed 's/\[NOTFOUND=return\]//')
 	done
+}
+
+function get_nis_domain
+{
+	can_has domainname && disp "NIS domain" $(domainname)
 }
 
 function get_routes
@@ -1564,7 +1562,9 @@ function get_routes
 
 function get_name_server
 {
-	# Find out what name services (DNS, NIS, LDAP etc) we're serving up
+	# Find out what name services (DNS, NIS, LDAP etc) we're serving up.
+	# Output of the form 
+	#  service_type (master/slave) domain
 
 	# first, DNS
 
@@ -1579,6 +1579,17 @@ function get_name_server
 		do
 			[[ $b == "hint" ]] || disp "name server" "DNS ($b) $a"
 		done
+
+	fi
+
+	# NIS
+
+	if is_running ypxfrd
+	then
+		disp "name server" "NIS (master) $(domainname)"
+	elif is_running ypserv
+	then
+		disp "name server" "NIS (slave) $(domainname)"
 	fi
 
 }
@@ -1599,7 +1610,7 @@ function get_ntp
 			disp "NTP" "$b (${P}server)$X"
 		done
 
-		$EGS "broadcast" $F && disp "NTP" "broadcasting as server"
+		$EGS "broadcast" $F && disp "NTP" "acting as server" $X
 	fi
 }
 
@@ -1637,7 +1648,7 @@ function get_scheduler
 {
 	# Get the scheduling class being used
 
-	if can_has dispadmin
+	if can_has dispadmin && is_global
 	then
 		SCL=$(dispadmin -d 2>&1)
 		[[ $SCL != *"class is not set"* ]]  && disp "scheduler"  $SCL
@@ -2993,20 +3004,17 @@ function get_ssh_root
 	# Can you SSH in as root? I know those piped greps look a bit weird, but
 	# it's a decent way to remove comments and ignore case
 
-	if is_running sshd
+	CF=$(find_config sshd_config "/etc/ssh /usr/local/openssh/etc" sshd)
+
+	if [[ -n $CF ]]
 	then
-		CF=$(find_config sshd_config "/etc/ssh /usr/local/openssh/etc" sshd)
-
-		if [[ -n $CF ]]
-		then
-			egrep -i permitrootlogin $CF | egrep -v "#" \
-			| $EGS yes && SSHRL="yes" || SSHRL="no"
-		else
-			SSHRL="unknown"
-		fi
-
-		disp "SSH root" $SSHRL
+		egrep -i permitrootlogin $CF | egrep -v "#" \
+		| $EGS yes && SSHRL="yes" || SSHRL="no"
+	else
+		SSHRL="unknown"
 	fi
+
+	disp "SSH root" $SSHRL
 }
 
 function get_root_shell
