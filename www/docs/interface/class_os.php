@@ -118,6 +118,10 @@ $dh->doc_class_start();
 
 	<dd>This field is blank for local zones.</dd>
 
+	<dt>scheduler</dt>
+	<dd>Displays the process scheduler class. If none of your machines have
+	had the scheduler class changed, this column will not be displayed.</dd>
+
 	<dt>uptime</dt>
 	<dd>Displays the uptime of the machine at the point when the audit was
 	performed. Global zones which have rebooted in the last 24 hours are

@@ -59,21 +59,10 @@ than in any of the other classes.</p>
 	to all Solaris installations are filtered out by the <a
 	href="../interface">PHP interface</a>.</dd>
 
-	<dt>ports</dt>
-	<dd>Gets a list of all open ports, and attempts to work out which
-	program is using each one. Output is of the form
-	port_number:service:process. The &quot;service&quot;name comes from
-	<tt>/etc/services</tt>, and the &quot;process&quot; comes from examining
-	processes with <tt>pfiles(1)</tt>. Information is therefore limited on
-	old versions of Solaris. Requires root privileges. Because it uses
-	<tt>netstat</tt>, it's possible this test can hang.</dd>
-
 	<dt>root_shell</dt>
 	<dd>Displays the root shell if it is anything other than
 	<tt>/sbin/sh</tt>.</dd>
 
-	<dt>snmp</dt>
-	<dd>Says if <tt>snmpdx</tt> is running.</dd>
 
 	<dt>dtlogin</dt>
 	<dd>Looks for the presence of a number of desktop login daemons, and

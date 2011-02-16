@@ -214,34 +214,9 @@ $dh->doc_class_start();
 	<dt>printer</dt>
 	<dd>Lists any printers to which the host has access. They may or may not
 	be physically attached. The default printer is denoted.</dd>
-
-	<dt>MAC</dt>
-	<dd>Lists the MAC address for each discovered interface. Blank in local
-	zones, unless that zone uses a VNIC or exlusive IP instance.</dd>
-
-	<dt>NIC</dt>
-	<dd>On the left of the field are physical (in <strong>bold</strong>
-	face) or virtual NIC names. For physical NICs, the speed and duplex
-	setting, if they could be determined, are displayed below the name. On
-	the right is the IP address assigned to that NIC, with its hostname in
-	parentheses. If a NIC is not cabled, or not configured, that information
-	is displayed. In a global zone which has local zones under it, virtual
-	NICs are shown in the global zone, paired with the zone to which they
-	belong. They are also shown in the row belonging to the local zone.
-	Exclusive IP instances are denoted.</dd>
-
-	<dd>Crossbow VNICs are listed by name, and in a global zone, the
-	physical interface to which they are bound is displayed.</dd>
-
-	<dd>Interfaces assigned by DHCP say &quot;DHCP&quot; under their
-	physical name, and IPMP teamed intefaces are also denoted.</dd>
-
-	<dd>NIC lines are colour-coded according to the contents of the
-	<tt>_conf/nic_colours.php</tt> file. This system is currently using the
-	following colours:</dd>
-
+	
 <?php
-	echo $dh->colour_key($grid_key["NIC"]), $dh->doc_class_end(),
+	$dh->doc_class_end(),
 	$pg->close_page();
 
 ?>
