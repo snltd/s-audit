@@ -212,10 +212,24 @@ class GetIPFromAudit {
 	public function __construct($map)
 	{
 		// We need to look at everything to be sure we catch exclusive IP
-		// instances. Look for LOMs and NICs
+		// instances. Look for LOMs in platform and NICs in net
 
 		foreach ($map->list_all() as $zone) {
 			$df = $map->get_base($zone) . ".platform";
+		
+			//-- ALOM --------------------------------------------------------
+
+			if (!file_exists($df))
+				continue;
+
+			$alom = $this->get_value($df, "ALOM IP");
+
+			if (isset($alom[0]))
+				$this->addrs[$alom[0]] = "$zone LOM"; 
+
+			//-- NIC ---------------------------------------------------------
+
+			$df = $map->get_base($zone) . ".net";
 		
 			if (!file_exists($df))
 				continue;
@@ -238,11 +252,6 @@ class GetIPFromAudit {
 
 				$this->addrs[$a[1]] = "${zone}$if";
 			}
-
-			$alom = $this->get_value($df, "ALOM IP");
-
-			if (isset($alom[0]))
-				$this->addrs[$alom[0]] = "$zone LOM"; 
 
 		}
 
