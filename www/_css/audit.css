@@ -138,8 +138,11 @@ ul.smallaudit, ul.smallauditl {
 	font-size: 7pt;
 }
 
-ul.smallindent { /* used for user_attr and cron */
+ul.smallauditl, ul.smallindent {
 	text-align: left;
+}
+
+ul.smallindent { /* used for user_attr and cron */
 	font-size: 6pt;
 	padding-left: 20px;
 	text-indent: -20px;

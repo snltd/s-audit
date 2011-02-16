@@ -66,64 +66,51 @@ echo "\n" . preg_replace("/, $/", " { padding: 0px }", $col_grp) .
 // column. These are only created if the calling page is fs.php
 
 if ($qs == "fs.php") {
-	
 	echo "\n/* begin fscols */\n";
 
-	foreach(colours::$fs_cols as $name=>$hex) {
-		echo "\n.box${name}, .smallbox${name} { border: 2px solid $hex }\n";
-		$fscol_grp .= ".smallbox$name, ";
-	}
+	foreach(colours::$fs_cols as $name=>$hex)
+		echo "\n.$name { border: 2px solid $hex }\n";
 
-	echo "\n" . preg_replace("/, $/", " {\n  font-size: x-small;\n  "
-	. "text-align: left\n }", $fscol_grp) . 
-	"\n\n/* end fscols */\n";
+	echo "\n\n/* end fscols */\n";
 }
 
 //----------------------------------------------------------------------------
 // platform audits - colours::stor_cols
 
-// storage types aren't left-aligned. Just coloured and small
+// storage types aren't left-aligned. Just coloured
 
 if ($qs == "index.php" || $qs == "platform.php") {
-
 	echo "\n/* begin storcols */\n";
 
-	foreach(colours::$stor_cols as $name=>$hex) {
-		echo "\n.small$name { background: ${hex} }\n.$name { background: ",
-		"${hex} }";
-		$storcol_grp .= ".small$name, ";
-	}
+	foreach(colours::$stor_cols as $name=>$hex)
+		echo "\n.$name { background: ${hex} }";
 
-	echo "\n" . preg_replace("/, $/", " { font-size: x-small }" ,
-	$storcol_grp) . "\n\n/* end storcols */\n";
+	echo "\n/* end storcols */\n";
 }
 
 //----------------------------------------------------------------------------
 // hosted services audits - colours::ws_cols and ::db_cols
 
-// Web server and DB server colours only come in small
+// Web server and DB server colours 
 
 if ($qs == "hosted.php") {
-
-	echo "\n/* begin hscols */\n";
+	echo "\n/* begin hosted */\n";
 
 	foreach(array_merge(colours::$db_cols, colours::$ws_cols) as
 	$name=>$hex) {
 
 		// Have to do td and dot because of style priority problems
 
-		echo "\ntd.small$name, .small$name { border: 2px solid $hex }";
-		$hscol_grp .= "td.small${name}, .small${name}, ";
+		echo "\ntd.$name, .$name { border: 2px solid $hex }";
+		$hscol_grp .= "td.${name}, .${name}, ";
 	}
 
-	echo "\n\n" . preg_replace("/, $/", " {\n font-size: x-small;\n "
-	. "text-align: left\n}" , $hscol_grp) . "\n\n/* end hscols */\n";
 
 	// The strongr and strongg links are for the clickable domain names on
 	// the hosted services page. They're bold-face red and green
 
 	echo "\na.strongr { color: #94112D }\n\na.strongg { color: #355F26; }",
-	"\n\na.strongr, a.strongg { font-weight: bold }";
+	"\n\na.strongr, a.strongg { font-weight: bold }\n\n/* end hosted */\n";
 }
 
 
