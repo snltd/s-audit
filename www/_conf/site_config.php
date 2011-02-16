@@ -34,5 +34,7 @@ define("OMIT_PORT_THRESHOLD", 5000);
 	// If this is defined, open ports above this number will not be
 	// displayed
 
+define("SS_HOST_COLS", 6);
+    // How many columns of local zones on the single server view page
 
 ?>

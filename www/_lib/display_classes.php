@@ -102,10 +102,7 @@ class HostGrid {
 
 		$this->grid_key = array_merge($generic_key, $grid_key);
 
-		if (isset($grid_notes))
-			$this->grid_notes = $grid_notes;
-
-		unset($generic_key, $grid_key, $grid_notes);
+		unset($generic_key, $grid_key);
 
 	}
 
@@ -287,7 +284,7 @@ class HostGrid {
 		// Loop through the grid_key data, filling in columns as we go. Each
 		// cell can have arbitrarily many key values
 
-		$ret .= "\n<tr class=\"keyrow\">";
+		$ret .= "\n<tr>";
 
 		foreach($this->fields as $field) {
 
@@ -500,78 +497,6 @@ class HostGrid {
 
 		return $ret_str;
 	}
-
-/*
-	protected function embedded_table($arr, $extra = 0)
-	{
-		// This function works with show_ functions which manipulate the
-		// contents of the array they are fed, rather than just colouring
-		// them through show_generic().
-
-		// Extra can be
-		//  0 : use normal text and a border
-		//  1 : use small class
-		//  2 : no border
-		//  3 : no border, use small class
-
-		// Input is an array of Cell()s
-
-		$rows = sizeof($arr);
-
-		switch($extra) {
-			
-			case 1:
-				$ret = multiCellSmall::open_table();
-				$class = "multicellsmall";
-				break;
-
-			case 2:
-				$ret = multiCell::open_table();
-				$class = "multicellnb";
-				break;
-
-			case 3:
-				$ret = multiCellSmallnb::open_table();
-				$class = "multicellsmallnb";
-				break;
-
-			default:
-				$ret = multiCell::open_table();
-				$class = "multicell";
-		}
-
-		if ($rows == 0)
-			return new Cell();
-		elseif($rows == 1) {
-
-			// Is this a single or multiple <td> element? If it's just a
-			// single cell, return it. If it's cells concatanated together,
-			// we need to use an embedded table.
-
-			// If the cell already has a class, don't override it. If it
-			// isn't a cell, make it one.
-
-			$cells = substr_count($arr[0], "<td");
-
-			if ($cells == 0)
-				return new Cell($arr[0], $class);
-			elseif ($cells == 1) {
-
-				return (preg_match("/class=/", $arr[0]))
-					? $arr[0]
-					:  preg_replace("/<td/", "<td class=\"$class\"",
-						$arr[0]);
-			}
-
-		}
-
-		foreach($arr as $el) {
-			$ret .= "\n<tr class=\"${class}\">" . $el . "</tr>";
-		}
-
-		return new Cell($ret . "</table>");
-	}
-*/
 
 	protected function show_hostname($data, $extra)
 	{
@@ -3400,6 +3325,11 @@ class singleApp extends singleGeneric {
 		return softwareGrid::show_generic($data, false);
 	}
 
+	public function ver_cols()
+	{
+		return false;
+	}
+
 }
 
 class singleTool extends singleApp {
@@ -3751,6 +3681,8 @@ class ssPage extends audPage {
 	
 	// Special class for single server view
 
+	protected $styles = array("basic.css", "audit.css", "server.css");
+
 	public function __construct($title, $s_count) {
 		$this->s_count = $s_count;
 		parent::__construct($title, $s_count, false);
@@ -3759,6 +3691,7 @@ class ssPage extends audPage {
 	protected function add_header()
 	{
 		$nav = new NavigationStaticHoriz;
+
 
 		return "\n
 		<div id=\"header\">
