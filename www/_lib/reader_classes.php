@@ -307,6 +307,18 @@ class GetServersOS extends GetServers
 }
 
 //----------------------------------------------------------------------------
+// NET AUDIT
+
+class GetServersNet extends GetServers
+{
+	public function __construct($map, $slist = false)
+	{
+		parent::__construct($map, "net", $slist);
+	}
+
+}
+
+//----------------------------------------------------------------------------
 // APPLICATION AUDIT
 
 class GetServersApp extends GetServers

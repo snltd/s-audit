@@ -19,7 +19,8 @@ define("SITE_NAME", "development");
 define("STRIP_DOMAIN", "localnet");
 	// If this is defined, the domain name will be stripped off hostnames on
 	// the IP listing page and NFS shares on the security page. (Assuming
-	// they are fully qualified.)
+	// they are fully qualified.) This is also usually tagged on to the
+	// ALOM_SFX definition (see below).
 
 define("ALOM_SFX", "-lom." . STRIP_DOMAIN);
 	// When we try to guess ALOM IP addresses, we tag this on to the end of
@@ -29,6 +30,9 @@ define("ALOM_SFX", "-lom." . STRIP_DOMAIN);
 define("SHOW_SERVER_INFO", true);
 	// Whether or not to expose server information in the footer
 
+define("OMIT_PORT_THRESHOLD", 5000);
+	// If this is defined, open ports above this number will not be
+	// displayed
 
 
 ?>

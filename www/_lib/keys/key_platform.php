@@ -34,6 +34,10 @@ $grid_key = array(
 		array("no swap space", "solidamber", false)
 	),
 
+	"serial number" => array(
+		array("failed", "solidred", false),
+	),
+
 	"OBP" => array(
 		array("latest installed version", "ver_l", false),
 		array("old version", "ver_o", false),
@@ -46,30 +50,14 @@ $grid_key = array(
 	),
 	
 	"storage" => array(
-		array("disk drive", "smalldisk", false),
-		array("optical drive", "smalltp", false),
-		array("tape drive", "smallcd", false),
-		array("fibre array", "smallfc", false)
+		array("disk drive", "disk", false),
+		array("optical drive", "cd", false),
+		array("tape drive", "tp", false),
+		array("fibre array", "fc", false)
 	),
 
 );
 
 $grid_key["ALOM f/w"] = $grid_key["OBP"];
-
-// Generate the NIC key automatically
-
-foreach(colours::$nic_cols as $net=>$col) {
-
-	if ($net == "alom" || $net == "vlan")
-		continue;
-	elseif ($net == "unconfigured")
-		$net = "unconfigured or VLANned interface";
-	elseif ($net == "vswitch")
-		$net = "virtual switch";
-	elseif (preg_match("/^\d{1,3}.\d{1,3}.\d{1,3}$/", $net))
-		$net = "${net}.0 network";
-
-	$grid_key["NIC"][] = array($net, false, inlineCol::solid($col));
-}
 
 ?>

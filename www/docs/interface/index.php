@@ -26,7 +26,7 @@ or zone having its own row. Those pages are:</p>
 	<li><a href="class_os.php">O/S audits</a> - the configuration of
 	Solaris</li>
 
-	<li><a href="class_new.php">networking audits</a> - network
+	<li><a href="class_net.php">networking audits</a> - network
 	configuration</li>
 
 	<li><a href="class_fs.php">filesystem audits</a> - mounted and exported

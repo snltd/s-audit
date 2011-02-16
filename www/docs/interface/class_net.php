@@ -128,35 +128,43 @@ the route, in parentheses.</dd>
 	echo $dh->colour_key($grid_key["route"]);
 ?>
 
-	<dt>MAC</dt>
-	<dd>Lists the MAC address for each discovered interface. Blank in local
-	zones, unless that zone uses a VNIC or exlusive IP instance.</dd>
+<dt>NIC</dt>
+<dd>This column displays information about each physical or virtual network
+interface found on a machine. It uses a multiple-row format.</dd>
 
-	<dt>NIC</dt>
-	<dd>On the left of the field are physical (in <strong>bold</strong>
-	face) or virtual NIC names. For physical NICs, the speed and duplex
-	setting, if they could be determined, are displayed below the name. On
-	the right is the IP address assigned to that NIC, with its hostname in
-	parentheses. If a NIC is not cabled, or not configured, that information
-	is displayed. In a global zone which has local zones under it, virtual
-	NICs are shown in the global zone, paired with the zone to which they
-	belong. They are also shown in the row belonging to the local zone.
-	Exclusive IP instances are denoted.</dd>
+<dd>On the first row  physical (in <strong>bold</strong>
+face) or virtual (normal face) NIC names. In global zones, the name of the
+zone to which that NIC is assigned follows in parentheses.</dd>
 
-	<dd>Crossbow VNICs are listed by name, and in a global zone, the
-	physical interface to which they are bound is displayed.</dd>
+<dd>The second row is the interface's MAC address, if it could be
+determinted. For local zones using shared IP instances, the MAC will always
+be unknown. Refer to the parent global zone.</dd>
 
-	<dd>Interfaces assigned by DHCP say &quot;DHCP&quot; under their
-	physical name, and IPMP teamed intefaces are also denoted.</dd>
+<dd>The next row has speed and duplex information. It will not always be
+there. Local zones and logical domains are unable to determine the speed at
+which their interface runs, and some old NICs cannot report their speed to
+Solaris.</dd>
 
-	<dd>NIC lines are colour-coded according to the contents of the
-	<tt>_conf/nic_colours.php</tt> file. This system is currently using the
-	following colours:</dd>
+<dd>There may be a further row which reports if the interface was assigned
+by DHCP, or, if the NIC belongs to an IPMP group, the name of that
+group.</dd>
+
+<dd>If the NIC is a virtual switch, a further row may be added, reporting
+the physical NIC the vswitch is on.</dd>
+
+<dd>Crossbow VNICs are listed by name, and in a global zone, the
+physical interface to which they are bound is displayed.</dd>
+
+<dd>NIC lines are colour-coded according to the contents of the
+<tt>_conf/nic_colours.php</tt> file. This system is currently using the
+following colours:</dd>
 
 <?php
 	echo $dh->colour_key($grid_key["NIC"])
 ?>
 
+<dd>Solid colour fields are used for physical NICs, excludsive IP instances,
+and Crossbow VNICs. Boxes denote virtual NICs.</dd>
 
 <?php
 

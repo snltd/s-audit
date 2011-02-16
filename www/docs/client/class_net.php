@@ -83,15 +83,6 @@ $pg = new docPage($menu_entry);
 	<dt>snmp</dt>
 	<dd>Says if <tt>snmpdx</tt> is running.</dd>
 
-	<dt>mac</dt>
-	<dd>Gets MAC addresses. The script operates in one of two ways.
-	Ordinarily it will only get the MAC of plumbed interfaces. However, if
-	the <tt>-M</tt> option is supplied, <tt>s-audit.sh</tt> will temporarily
-	plumb each unplumbed interface to get the address. This is the only test
-	which is capable of changing, even temporarily, the state of the machine
-	being audited, and you may not wish to use it. Requires root
-	privileges.</dd>
-
 	<dt>nic</dt>
 	<dd>This test queries network interfaces. It reports the name of the
 	interface, along with the IP address and the zone (if any) which uses
@@ -104,14 +95,23 @@ $pg = new docPage($menu_entry);
 	zones. A full audit requires root privileges, though much useful
 	information can be obtained as a non-privileged user.</dd>
 
+	<dd>Ordinarily the script will only get the MAC of plumbed interfaces.
+	However, if invoked with the <tt>-M</tt> option, <tt>s-audit.sh</tt>
+	will temporarily plumb each unplumbed interface to get the address. This
+	is the only test which is capable of changing, even temporarily, the
+	state of the machine being audited, and you may not wish to use it.</dd>
+
 	<dd>Output is not particularly human-readable, as it has to carry a
 	lot of information, but takes the form:</dd>
 
-	<pre>device|address|hostname|speed-duplex|ipmp_group|vlan</pre>
+	<pre>device ip_addr mac_addr hostname speed-duplex ipmp_group vlan</pre>
 
 	<dd>The <tt>ipmp_group</tt> field can also hold DHCP information, and
 	the <tt>vlan</tt> field can also contain information on virtual
 	switches.</dd>
+
+	<dd>Requires root privileges for a full audit, but will produce useful
+	data as a non-privileged user.</dd>
 
 </dl>
 

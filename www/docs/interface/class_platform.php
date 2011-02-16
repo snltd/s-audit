@@ -216,7 +216,7 @@ $dh->doc_class_start();
 	be physically attached. The default printer is denoted.</dd>
 	
 <?php
-	$dh->doc_class_end(),
+	$dh->doc_class_end();
 	$pg->close_page();
 
 ?>

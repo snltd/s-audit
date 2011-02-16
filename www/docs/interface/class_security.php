@@ -47,6 +47,16 @@ in <a href="../extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>.</dd>
     echo $dh->list_omitted("omit_users");
 ?>
 
+<dt>empty password</dt>
+<dd>If any empty passwords were found on the host, they are displayed here.
+Normal users are on an amber field, root on red. Note that this only audits
+the local <tt>/etc/shadow</tt> file, not external password maps such as NIS
+or LDAP. If you have no empty passwords, this field is not displayed.</dd>
+
+<?php
+	echo $dh->colour_key($grid_key["empty password"]);
+?>
+
 <dd>As the interface produces this column, it keeps track of usernames and
 UIDs it has seen before. If it comes across a username which it has
 previously seen paired with a different UID, it highlights that username
@@ -62,7 +72,7 @@ can help you find username/UID clashes across your system.</dd>
 <dd>Lists users with authorized keys. The local username, that is the owner
 of the <tt>authorized_keys</tt> which holds the key, is shown in
 <strong>bold face</strong>, then the remote user and host are shown. If the
-local user is root, an amber field is used.</dd>
+local user is root, a red field is used.</dd>
 
 <dd>If you have no SSH key exchanges set up, this field will not be
 displayed.</dd>

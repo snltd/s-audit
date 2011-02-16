@@ -17,6 +17,9 @@
 define("ROOT", $_SERVER["DOCUMENT_ROOT"]);
 	// Site root. Usually document root
 
+define("CONF_DIR", ROOT . "/_conf");
+	// config file directory
+
 define("LIB", ROOT . "/_lib");
 	// path to _lib/ directory. Lots of things are in there
 
@@ -37,6 +40,12 @@ define("IP_LIST_FILE", BASE_DIR . "/ip_list/ip_list.txt");
 
 define("IP_RES_FILE", BASE_DIR . "/ip_list/ip_list_reserved.txt");
 	// Path to hand-made list of "reserved" IP addresses
+
+define("SITE_CONFIG", CONF_DIR . "/site_config.php");
+	// Path to omitted data file
+
+define("OMITTED_DATA_FILE", CONF_DIR . "/omitted_data.php");
+	// Path to omitted data file
 
 define("PER_PAGE", 20);
 	// How many servers to show on each page. This refers to GLOBAL zones
@@ -67,7 +76,7 @@ require_once(LIB . "/colours.php");
 
 // And the site config
 
-require_once(ROOT . "/_conf/site_config.php");
+require_once(SITE_CONFIG);
 
 // Finally, we need classes which get audit data
 

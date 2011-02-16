@@ -24,8 +24,8 @@ $grid_key = array(
 	),
 
 	"root fs" => array(
-		array("UFS root", "boxufs", false),
-		array("ZFS root", "boxzfs", false)
+		array("UFS root", "ufs", false),
+		array("ZFS root", "zfs", false)
 	),
 
 	"fs" => array(
@@ -50,17 +50,15 @@ foreach (colours::$fs_cols as $f=>$col) {
 
 	if ($f == "ufs" || $f == "zfs" || $f == "hsfs" || $f == "zfs" || $f ==
 	"lofs" || $f == "vboxfs" || $f == "smbfs" || $f == "nfs")
-		$grid_key["fs"][] = array("$txt filesystem", false,
-		inlineCol::box($col));
+		$grid_key["fs"][] = array("$txt filesystem", $f, false);
 	else
-		$grid_key["export"][] = array("$txt export", false,
-		inlineCol::box($col));
+		$grid_key["export"][] = array("$txt export", $f,false);
 	
 	// NFS is in both
 
 	if ($f == "nfs")
-		$grid_key["export"][] = array("$txt export", false,
-		inlineCol::box($col));
+		$grid_key["export"][] = array("$txt export", $f, false);
+		
 
 }
 

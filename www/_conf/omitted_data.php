@@ -82,6 +82,12 @@ class omitData {
 	public $usual_ports = array(22, 111, 4045, 13722, 13724, 13782,
 	13783);
 
+	public function get_data($index)
+	{
+		return (isset($this->$index))
+			? $this->$index
+			: false;
+	}
 }
 
 ?>

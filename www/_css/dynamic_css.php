@@ -75,6 +75,21 @@ if ($qs == "fs.php") {
 }
 
 //----------------------------------------------------------------------------
+// networking audits - colours::nic_cols
+
+if ($qs == "net.php") {
+	echo "\n/* begin nic_cols */\n";
+
+	foreach(colours::$nic_cols as $name=>$hex) {
+		$nn = "net" . preg_replace("/\./", "", $name);
+		echo "\n.$nn { background: $hex }";
+		echo "\n.box$nn { border: 2px solid $hex }";
+	}
+
+	echo "\n\n/* end nic_cols */\n";
+}
+
+//----------------------------------------------------------------------------
 // platform audits - colours::stor_cols
 
 // storage types aren't left-aligned. Just coloured

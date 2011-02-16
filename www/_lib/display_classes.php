@@ -198,7 +198,8 @@ class HostGrid {
 			: $use;
 	}
 
-	protected function fold_line($str, $width = 25)
+	protected function fold_line($str, $width = 25, $chars =
+	'[\s|\-_:;,\.]')
 	{
 		// Fold long lines on certain characters. The characters to fold on
 		// are the first part of the preg_match() call.
@@ -214,7 +215,7 @@ class HostGrid {
 		for($i = $j = 0; $i < strlen($str); $i++, $j++) {
 			$ret_str .= $str[$i];
 
-			if ($j > $width && preg_match("/[\s|\-_:;,\.]/", $str[$i])) {
+			if ($j > $width && preg_match("/$chars/", $str[$i])) {
 				$ret_str .= "\<br/>\n";
 				$j = 0;
 			}
@@ -500,6 +501,7 @@ class HostGrid {
 		return $ret_str;
 	}
 
+/*
 	protected function embedded_table($arr, $extra = 0)
 	{
 		// This function works with show_ functions which manipulate the
@@ -569,6 +571,7 @@ class HostGrid {
 
 		return new Cell($ret . "</table>");
 	}
+*/
 
 	protected function show_hostname($data, $extra)
 	{
@@ -866,7 +869,6 @@ class HostGrid {
 		$c_arr = array();
 
 		foreach($data as $datum) {
-
 			$ic = false;
 			$type = preg_replace("/: .*$/", "", $datum);
 
@@ -877,7 +879,7 @@ class HostGrid {
 
 				case "disk":
 
-					$class = "smalldisk";
+					$class = "disk";
 
 					if (!preg_match("/unknown/", $datum)) {
 						$parts = explode(" ", $datum, 5);
@@ -892,7 +894,7 @@ class HostGrid {
 
 					// CD/DVD has a coloured border indicating its state
 
-					$class = "smallcd";
+					$class = "cd";
 
 					if (preg_match("/\(loaded\)/", $datum))
 						$ic = inlineCol::box("amber");
@@ -901,11 +903,11 @@ class HostGrid {
 					break;
 				
 				case "tape":
-					$class = "smalltp";
+					$class = "tp";
 					break;
 
 				case "FC array":
-					$class = "smallfc";
+					$class = "fc";
 					break;
 
 				default:
@@ -917,231 +919,17 @@ class HostGrid {
 			"<strong>\\1</strong>:", $datum), $class, $ic);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallaudit");
 	}
 
 	protected function show_pci_card($data)
 	{
-		return $this->show_generic(preg_replace("/^(\S+) /",
-		"<strong>\\1</strong> ", $data));
+		return new listCell(preg_replace("/^(\S+) /",
+		"<strong>\\1</strong> ", $data), "smallaudit", 1, true);
 	}
 
 	protected function show_sbus_card($data) {
 		return $this->show_pci_card($data);
-	}
-
-	protected function show_mac($data)
-	{
-		return $this->show_generic(preg_replace("/^([^\s]+)/",
-		"<strong>$1:</strong>", $data));
-	}
-
-	public function show_NIC($nic_arr)
-	{
-		// $data is an array of NIC lines in parseable format. Each element
-		// is a NIC.
-
-		// The NIC info is presented in machine parseable form as a "|"
-		// delemited string which, when exploded, gives the following
-		// elements
-		//
-		//   [0] - device name 
-		//   [1] - IP address / uncabled / unconfigured in global /
-		//         vswitch on.. / exclusive IP on... / vlan
-		//   [2] - hostname / zonename
-		//   [3] - speed-duplex / speed:duplex
-		//   [4] - IPMP group / DHCP
-		//   [5] - +vsw / VLAN
-		//
-		// These line-up with the Sn variables in the auditor script
-
-		// We create a table two cells for each NIC. The LHS has the device
-		// name, and is solid-coloured according to the $subnet array. It
-		// may also contain DHCP, IPMP, and link speed information. The RHS
-		// may be frame-coloured, and contains the IP address, host/zone
-		// name, IPMP group, and other information
-
-		//  LHS        RHS
-		// $na[0]     $na[1]
-		// $na[3]     $na[2]
-		// $na[4]     $na[5]
-		//            $na[4]
-
-		// The IPMP group goes RHS, but IPMP is also flagged LHS
-
-		if (!is_array($nic_arr))
-			return new Cell("no information");
-
-		// Open the table
-
-		$c_arr = array();
-
-		foreach($nic_arr as $nic) {
-			$na = explode("|", $nic);
-			unset($speed);
-
-			// Basic info is NIC name on left, IP address on right
-
-			$lhs = ($na[1] == "uncabled" || preg_match("/:/", $na[0]))
-				? $na[0]
-				: "<strong>" . $na[0] . "</strong>";
-
-			$rhs = $na[1];
-
-			// Look for extra info to add to each side. RHS has host/zone
-			// name
-			
-			if ($na[2]) $rhs .= " ($na[2])";
-
-			// LHS can have speed
-			
-			if ($na[3]) {
-
-				// in LDOMs speed is reported as "unknown"
-
-				if ($na[3] == "unknown")
-					$speed = "unknown speed";
-				else {
-			
-					// Split the speed/duplex into two parts
-
-					$sa = preg_split("/:|-/", $na[3]);
-	
-					// Now $sa[0] is the speed, $sa[1] is the duplex. I
-					// don't want the "b" on the speed.
-	
-					$sa[0] = str_replace("b", "", $sa[0]);
-	
-					// Make the speed "1G" if it's 1000M. Also look out for
-					// long strings from kstat.
-	
-					if ($sa[0] == "1000M" || $sa[0] == "1000000000")
-						$sa[0] = "1G";
-					elseif ($sa[0] == "100000000")
-						$sa[0] = "100M";
-					elseif ($sa[0] == "10000000")
-						$sa[0] = "10M";
-	
-					// Make the duplex part "full" if it's only "f", and
-					// "half" if it's only "h"
-		
-					if (sizeof($sa) > 1) {
-
-						if ($sa[1] == "f")
-							$sa[1] = "full";
-						elseif ($sa[1] == "h")
-							$sa[1] = "half";
-
-						$speed = "${sa[0]}/$sa[1]";
-					}
-
-					if (isset($sf[1]))
-						$speed .= " $sf[1]";
-				}
-				
-				if (isset($speed))
-					$lhs .= " <div>$speed</div>";
-			}
-
-			// na[4] can be DHCP or IPMP info. IPMP info goes on both sides
-
-			if ($na[4]) {
-
-				if ($na[4] == "DHCP")
-					$lhs .= " <div>DHCP</div>";
-				else {
-					$lhs .= " <div>IPMP</div>";
-					$rhs .= "<div>IPMP=${na[4]}</div>";
-				}
-
-			}
-
-			// LHS can also have +vswitch or VLAN info
-
-			if ($na[5]) $lhs .= "<div>" .strtoupper($na[5]) . "</div>";
-
-			// That's all the info that goes in the cells. Now we need to
-			// work out how to colour them
-
-			$subnet = false;
-
-			// If there's an IP address, try to get it's subnet.
-
-			if (preg_match("/^\d/", $na[1]))
-				$subnet = PlatformGrid::get_subnet($na[1]); 
-
-			// If na[1] is "unconfigured", we need to find out what virtual
-			// interfaces said NIC has by looping through all the NICs we
-			// were given until we hit a virtual interface belonging to
-			// $na[0]. VLANned interfaces show up as "unconfigured", but do
-			// have a speed.
-			
-			elseif (preg_match("/unconfigured/", $na[1])) {
-
-				foreach ($nic_arr as $tnic) {
-					$tna = explode("|", $tnic);
-
-					if (preg_match("/$na[0]:\d+$/",$tna[0])) {
-						$subnet = PlatformGrid::get_subnet($tna[1]);
-						break;
-					}
-
-				}
-
-				// If the above failed, we're either a VLAN or a vswitch
-
-				if (!$subnet) {
-
-					if ($na[5] == "+vsw")
-						$subnet = "vswitch";
-					elseif ($na[3])
-						$subnet = "vlan";
-
-				}
-
-			}
-			elseif (preg_match("/vswitch/", $na[1]))
-				$subnet = "vswitch";
-			elseif (preg_match("/vlanonly/", $na[1]))
-				$subnet = "vlanonly";
-			elseif (preg_match("/exclusive/", $na[1])) {
-
-				// Colour exclusive IP instances by getting the name of the
-				// zone which holds the IP instance, and getting its primary
-				// NIC's subnet. 
-
-				$zarr = GetServers::get_zone($this->map->get_base($na[2]),
-				"platform");
-
-				$snn = explode("|", $zarr["NIC"][0]);
-				$subnet = PlatformGrid::get_subnet($snn[1]);
-			}
-
-			// We know the subnet, so we can get the colour for the cells
-
-			$col = (isset(colours::$nic_cols[$subnet])) 
-				?  colours::$nic_cols[$subnet]
-				: false;
-
-			// Solid background colour on the physically cabled, non-VLAN
-			// NICs, and outline the address box in the appropriate subnet
-			// colour
-
-			$lcol = (!preg_match("/:/", $na[0]) && $col && $na[5] != "vlan")
-				? inlineCol::solid($col)
-				: false;
-
-			$rcol = ($col) 
-				? inlineCol::box($col)
-				: false;
-
-			// Now we can make the cell
-
-			$c_arr[] =  new Cell($lhs, false, $lcol, "30%") . new Cell($rhs,
-			false, $rcol) ;
-		}
-
-		return $this->embedded_table($c_arr, 3);
 	}
 
 	//-- o/s -----------------------------------------------------------------
@@ -1351,6 +1139,41 @@ class HostGrid {
 
 		return new Cell($data[0], $class, $col);
 	}
+
+	protected function show_packages($data)
+	{
+		// Print the number of packages installed in the zone, and highlight
+		// in amber if any of them are only partially installed
+
+		$class = preg_match("/partial/", $data[0])
+			? "solidamber"
+			: false;
+
+		return new Cell($data[0], $class);
+	}
+
+	protected function show_patches($data, $extra)
+	{
+		// If this is a local zone, get the number of patches in the global
+		// zone and compare. 
+		
+		$class = false;
+
+		if (!$this->map->is_global($extra["hostname"][0])) {
+			$parent = $this->map->get_parent_zone($extra["hostname"][0]);
+			
+			if ($this->map->has_data($parent)) {
+				$pz = $this->servers[$parent];
+
+				if ($data[0] < $pz["patches"][0])
+					$class = "solidamber";
+
+			}
+
+		}
+
+		return new Cell($data[0], $class);
+	}
 	
 	protected function show_local_zone($data) 
 	{
@@ -1389,54 +1212,18 @@ class HostGrid {
 			$class, $col);
 		}
 
-		return new listCell($call);
-	}
-
-	protected function show_packages($data)
-	{
-		// Print the number of packages installed in the zone, and highlight
-		// in amber if any of them are only partially installed
-
-		$class = preg_match("/partial/", $data[0])
-			? "solidamber"
-			: false;
-
-		return new Cell($data[0], $class);
-	}
-
-	protected function show_patches($data, $extra)
-	{
-		// If this is a local zone, get the number of patches in the global
-		// zone and compare. 
-		
-		$class = false;
-
-		if (!$this->map->is_global($extra["hostname"][0])) {
-			$parent = $this->map->get_parent_zone($extra["hostname"][0]);
-			
-			if ($this->map->has_data($parent)) {
-				$pz = $this->servers[$parent];
-
-				if ($data[0] < $pz["patches"][0])
-					$class = "solidamber";
-
-			}
-		}
-
-		return new Cell($data[0], $class);
+		return new listCell($call, "smallaudit");
 	}
 
 	protected function show_ldom($data) 
 	{
-		// Show Logical Domain information in a table
+		// Show Logical Domain 
 		// green highlighting on the domain name means "active"
 		// yellow highlighting on the domain name means "bound"
 		// red highlighting on the domain name means "other" and the status is
 		// displayed
 
 		// cs-dev-02-lws01 (active) [port 5000]
-
-		$ret = multiCellSmall::open_table();
 
 		foreach($data as $row) {
 			$port_part = preg_replace("/^.* \[/", "[", $row);
@@ -1453,11 +1240,382 @@ class HostGrid {
 				$rarr[0] = "$rarr[0] ($rarr[1])";
 			}
 
-			$ret .= "\n<tr class=\"multicellsmall\">" . new Cell("<strong>"
-			. $rarr[0] . "</strong> <div>$port_part</div>", $class) . "</tr>";
+			$c_arr[] =
+			array("<strong>$rarr[0]</strong><div>$port_part</div>", $class);
 		}
 
-		return new Cell($ret . "</table>");
+		return new listCell($c_arr, "smallaudit");
+	}
+
+	//-- Networking //-------------------------------------------------------
+
+	protected function show_NTP($data)
+	{
+		// Highlight preferred NTP servers, and if the machine itself is a
+		// server
+
+		$c_arr = array();
+
+		foreach($data as $datum) {
+			
+			if ($datum == "acting as server")
+				$class = "solidorange";
+			elseif (preg_match("/preferred server/", $datum))
+				$class = "solidgreen";
+			else
+				$class = "false";
+
+			$col = (preg_match("/not running/", $datum))
+				? inlineCol::box("red")
+				: false;
+			
+			$c_arr[] = array(preg_replace("/ \(.*$/", "", $datum), $class,
+			$col);
+		}
+		
+		return new listCell($c_arr);
+	}
+
+	protected function show_name_service($data)
+	{
+		return new listCell(preg_replace("/^(.*:)/", "<strong>$1</strong>",
+		$data));
+	}
+
+	protected function show_name_server($data) 
+	{
+		foreach ($data as $datum) {
+			$a = preg_split("/\s/", $datum);
+			
+			// a[0] is the name service (DNS, NIS etc)
+			// a[1] is the type of server (master, slave)
+			// a[2] is explanatory text
+
+			if ($a[0] == "NIS")
+				$txt = "$a[2] (<strong>$a[0]</strong>)<br/>$a[1]";
+			elseif($a[0] == "DNS")
+				$txt = "$a[2] (<strong>$a[0]</strong>)";
+
+			if (preg_match("/master/", $a[1]))
+				$class = "solidgreen";
+			elseif (preg_match("/slave/", $a[1]))
+				$class = "solidamber";
+			else {
+
+				// Some things, like DNS stubs, aren't slave or master, so
+				// don't colour the cell, and say what they are
+
+				$class = false;
+				$txt .= " $a[1]";
+			}
+
+			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr, "smallaudit");
+	}
+
+    protected function show_port($data)
+	{
+		// List open ports. Non-"expected" ports are on an amber field.
+		// Inetd ports are boxed in red.
+
+		$call = array();
+
+		foreach($data as $datum) {
+			$a = explode(":", $datum);
+
+			// a[0] is the port number
+			// a[1] is the /etc/services entry
+			// a[2] is the process 
+
+			// We may not be displaying high-numbered ports
+
+			if ((defined("OMIT_PORT_THRESHOLD")) && ($a[0] >
+			OMIT_PORT_THRESHOLD))
+				continue;
+		
+			$txt = "<strong>$a[0]</strong> (";
+
+			// If this port is in the "usual ports" array, don't highlight
+			// it
+
+			$class = (isset($this->omit) && in_array($a[0],
+			$this->omit->usual_ports))
+				? false
+				: "solidamber";
+
+			$col = ($a[2] == "inetd")
+				? inlineCol::box("red")
+				: false;
+
+			$txt .= ($a[1] != "")
+				? "$a[1]/"
+				: "-/";
+
+			$txt .= ($a[2] != "")
+				? "$a[2])"
+				: "-)";
+
+			$c_arr[] = array($txt, $class, $col);
+		}
+
+		return new listCell($c_arr);
+	}
+
+	protected function show_route($data)
+	{
+		// Look at routes
+
+
+		foreach($data as $datum) {
+			$a = explode(" ", $datum);
+			$class = false;
+
+			if ($a[0] == "default") {
+
+				// Default routes. Just print the route and (default) after
+				// it. If not in /etc/defaultrouter then a[2] will say so,
+				// and we put it on an amber field
+
+				$txt = "$a[1] (default)";
+
+				if (isset($a[2]))
+					$class = "solidamber";
+
+			}
+			else {
+				
+				// normal routes. Print network - gateway and put the
+				// interface after, if we have it. If it's a persistent
+				// route a[2] will say so, and we put it in a green box
+
+				$txt = "$a[0]&nbsp;-&nbsp;$a[1]";
+
+				// a[2] can be "persistent" or an interface name
+				
+				if (isset($a[2])) {
+
+					if ($a[2] == "(persistent)")
+						$class = "boxgreen";
+					else
+						$txt .= " $a[2]";
+
+				}
+
+			}
+				
+
+			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr, "smallaudit");
+	}
+
+	private function format_mac_addr($mac)
+	{
+		// Take a MAC address and make all the octets two digits
+
+		$octets = explode(":", $mac);
+		$mac = "";
+
+		foreach($octets as $o) {
+			$mac .= (strlen($o) == 1)
+				? "0${o}:"
+				: "${o}:";
+		}
+		
+		return preg_replace("/:$/", "", $mac);
+	}
+
+	public function show_NIC($nic_arr)
+	{
+		// $data is an array of NIC lines in parseable format. Each element
+		// is a NIC.
+
+		// The NIC info is presented in machine parseable form as a "|"
+		// delemited string which, when exploded, gives the following
+		// elements
+		//
+		//   [0] - device name 
+		//   [1] - IP address / uncabled / unconfigured in global /
+		//         vswitch on.. / exclusive IP on... / vlan
+		//   [2] - MAC address (possibly "unknown")
+		//   [3] - hostname / zonename
+		//   [4] - speed-duplex / speed:duplex
+		//   [5] - IPMP group / DHCP
+		//   [6] - +vsw / VLAN
+		//
+		// These line-up with the Sn variables in the auditor script
+
+		if (!is_array($nic_arr))
+			return new Cell("no information");
+
+		$c_arr = array();
+
+		foreach($nic_arr as $nic) {
+			$na = explode("|", $nic);
+			unset($speed);
+
+			// First row has the NIC name in bold if it's cabled, light if
+			// not, then the IP address or state of the interface
+			
+			$txt = ($na[1] == "uncabled" || preg_match("/:/", $na[0]))
+				? "$na[0]: $na[1]"
+				: "<strong>" . $na[0] . ": $na[1]</strong>";
+
+			// followed by the host/zone name if we have one
+
+			if ($na[3]) $txt .= " ($na[3])";
+
+			// Next row is the MAC
+
+			$txt .= "<div class=\"indent\">MAC: ";
+
+			$txt .= ($na[2] == "unknown")
+				? "unknown"
+				: "<tt>" . $this->format_mac_addr($na[2]) . "</tt>";
+
+			$txt .= "</div>";
+
+			// Speed on the next row
+
+			if ($na[4]) {
+
+				// in LDOMs speed is reported as "unknown"
+
+				if ($na[4] == "unknown")
+					$speed = "unknown speed";
+				else {
+			
+					// Split the speed/duplex into two parts
+
+					$sa = preg_split("/:|-/", $na[4]);
+	
+					// Now $sa[0] is the speed, $sa[1] is the duplex. I
+					// don't want the "b" on the speed.
+	
+					$sa[0] = str_replace("b", "", $sa[0]);
+	
+					// Make the speed "1G" if it's 1000M. Also look out for
+					// long strings from kstat.
+	
+					if ($sa[0] == "1000M" || $sa[0] == "1000000000")
+						$sa[0] = "1G";
+					elseif ($sa[0] == "100000000")
+						$sa[0] = "100M";
+					elseif ($sa[0] == "10000000")
+						$sa[0] = "10M";
+	
+					// Make the duplex part "full" if it's only "f", and
+					// "half" if it's only "h"
+		
+					if (sizeof($sa) > 1) {
+
+						if ($sa[1] == "f")
+							$sa[1] = "full";
+						elseif ($sa[1] == "h")
+							$sa[1] = "half";
+
+						$speed = "${sa[0]}bit/$sa[1] duplex";
+					}
+
+					if (isset($sf[1]))
+						$speed .= " $sf[1]";
+				}
+				
+				if (isset($speed))
+					$txt .= "<div class=\"indent\">$speed</div>";
+			}
+
+			// na[5] can be DHCP or IPMP info. IPMP info goes on both sides
+
+			if ($na[5]) {
+				$txt .= "<div class=\"indent\">";
+
+				$txt .= ($na[5] == "DHCP")
+					? "assigned by DHCP"
+					: "IPMP=$na[5]";
+
+				$txt .= "</div>";
+			}
+
+			// Then +vswitch or VLAN info
+
+			if ($na[6])
+				$txt .= "<div class=\"indent\">" .strtoupper($na[6]) .
+				"</div>";
+
+			// That's all the info that goes in the cells. Now we need to
+			// work out how to colour them. We do that with inline colour
+
+			$subnet = false;
+
+			// If there's an IP address, try to get it's subnet.
+
+			if (preg_match("/^\d/", $na[1]))
+				$subnet = PlatformGrid::get_subnet($na[1]); 
+
+			// If na[1] is "unconfigured", we need to find out what virtual
+			// interfaces said NIC has by looping through all the NICs we
+			// were given until we hit a virtual interface belonging to
+			// $na[0]. VLANned interfaces show up as "unconfigured", but do
+			// have a speed.
+			
+			elseif (preg_match("/unconfigured/", $na[1])) {
+
+				foreach ($nic_arr as $tnic) {
+					$tna = explode("|", $tnic);
+
+					if (preg_match("/$na[0]:\d+$/",$tna[0])) {
+						$subnet = PlatformGrid::get_subnet($tna[1]);
+						break;
+					}
+
+				}
+
+				// If the above failed, we're either a VLAN or a vswitch
+
+				if (!$subnet) {
+
+					if ($na[5] == "+vsw")
+						$subnet = "vswitch";
+					elseif ($na[3])
+						$subnet = "vlan";
+				}
+
+			}
+			elseif (preg_match("/vswitch/", $na[1]))
+				$subnet = "vswitch";
+			elseif (preg_match("/vlanonly/", $na[1]))
+				$subnet = "vlan";
+			elseif (preg_match("/exclusive/", $na[1])) {
+
+				// Colour exclusive IP instances by getting the name of the
+				// zone which holds the IP instance, and getting its primary
+				// NIC's subnet. 
+
+				$zarr = GetServers::get_zone($this->map->get_base($na[3]),
+				"net");
+
+				$snn = explode("|", $zarr["NIC"][0]) ;
+				$subnet = PlatformGrid::get_subnet($snn[1]);
+			}
+
+			// We know the subnet, so we can get the colour for the cells
+
+			$class = ($subnet)
+				? "net" . preg_replace("/\./", "", $subnet)
+				: false;
+
+			// If it's a virtual interface, use a box. Otherwise use solid
+
+			if (preg_match("/:/", $na[0])) $class = "box$class";
+
+			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 	//-- tools and applications ----------------------------------------------
 
@@ -1675,7 +1833,7 @@ class HostGrid {
 
 		$fstyp = (preg_replace("/ .*$/", "", $data[0]));
 
-		return new Cell($data[0], "box$fstyp");
+		return new Cell($data[0], $fstyp);
 	}
 
 	protected function show_fs($data)
@@ -1769,10 +1927,10 @@ class HostGrid {
 			if (isset($row2))
 				$out .= "\n  <div class=\"indent\">$row2</div>";
 
-			$c_arr[] = array($out, "smallbox$fstyp", $style);
+			$c_arr[] = array($out, $fstyp, $style);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	protected function show_export($data, $extra)
@@ -1831,10 +1989,10 @@ class HostGrid {
 			elseif ($fstyp == "smb")
 				$str .= "<div class=\"indent\">&quot;$earr[2]&quot;</div>";
 
-			$c_arr[] = array($str, "smallbox$fstyp", $col);
+			$c_arr[] = array($str, $fstyp, $col);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	//-- hosted services -----------------------------------------------------
@@ -1974,10 +2132,10 @@ class HostGrid {
 				$row3 .= ">config: $cf</div>";
 			}
 
-			$c_arr[] = array($row1 . $row2 . $row3, "small$ws");
+			$c_arr[] = array($row1 . $row2 . $row3, $ws);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	protected function show_database($data)
@@ -2003,10 +2161,10 @@ class HostGrid {
 				$col = inlineCol::solid("amber");
 			}
 				
-			$c_arr[] = array($str, "small$arr[0]", $col);
+			$c_arr[] = array($str, $arr[0], $col);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	//-- security ------------------------------------------------------------
@@ -2018,17 +2176,15 @@ class HostGrid {
 
 		// Discard username/uid pairs in the omit_users array
 
-		$c_arr = array();
-
 		$arr = (isset($this->omit->omit_users))
 			? array_diff($data, $this->omit->omit_users)
 			: array();
 
 		foreach($arr as $e) {
 			preg_match("/^(\S+) \((\d+)\)$/", $e, $a);
-			$un = $a[1];
-			$ui = $a[2];
-			$lclass = $rclass = false;
+			$un = $a[1];	// username
+			$ui = $a[2];	// UID
+			$class = false;
 
 			// Is the username already known? If so, does it have the same
 			// UID it did before? If it's not, add it to the known users
@@ -2037,7 +2193,7 @@ class HostGrid {
 			if (in_array($un, array_keys($this->known_users))) {
 
 				if (!in_array($ui, $this->known_users[$un])) {
-					$lclass = "solidred";
+					$class = "solidred";
 					$this->known_users[$un][] = $ui;
 				}
 
@@ -2048,7 +2204,7 @@ class HostGrid {
 			if (in_array($ui, array_keys($this->known_uids))) {
 
 				if (!in_array($un, $this->known_uids[$ui])) {
-					$rclass = "boxred";
+					$class = "boxred";
 					$this->known_uids[$ui][] = $un;
 				}
 
@@ -2056,17 +2212,17 @@ class HostGrid {
 			else
 				$this->known_uids[$ui][] = $un;
 		
-			$c_arr[] = new Cell($un, $lclass) . new Cell($ui, $rclass);
+			$c_arr[] = array($e, $class);
 
 		}
 
-		return $this->embedded_table($c_arr);
+		return new listCell($c_arr);
 	}
 
 	protected function show_authorized_key($data)
 	{
 		// Display authorized key data. Not much processing to do here. Root
-		// keys are highlighted in amber, everything else just goes in a
+		// keys are highlighted in red, everything else just goes in a
 		// list with the username in bold.
 
 		foreach($data as $row) {
@@ -2074,7 +2230,7 @@ class HostGrid {
 			$user = preg_replace("/[\(\)]/", "", $a[1]);
 			
 			$class = ($user == "root")
-				? "solidamber"
+				? "solidred"
 				: false;
 
 			$c_arr[] = array("<strong>$user</strong>:</div>$a[0]", $class);
@@ -2109,82 +2265,48 @@ class HostGrid {
 		$c_arr = array();
 
 		foreach($data as $attr)
-			$c_arr[] =  array(preg_replace("/^([^:]*)/",
-			"<strong>\\1</strong>",
-			$this->fold_line(htmlentities($attr),
-			30)), "lalign");
+			$c_arr[] = array(preg_replace("/^([^:]*)/",
+			"<tt><strong>$1</strong>", $this->fold_line(htmlentities($attr),
+			50, "[,;]")) . "</tt>", false);
 
-		return new listCell($c_arr);
-	}
-
-	protected function show_port($data)
-	{
-		// List open ports. Non-"expected" ports are on an amber field.
-		// Inetd ports are boxed in red.
-
-		$call = array();
-
-		foreach($data as $datum) {
-			$arr = explode(":", $datum);
-			
-			$class = (isset($this->omit) && in_array($arr[0],
-			$this->omit->usual_ports))
-				? false
-				: "solidamber";
-
-			$col = ($arr[2] == "inetd")
-				? inlineCol::box("red")
-				: false;
-
-			$extra = ($arr[1] != "")
-				? "<strong>$arr[1]</strong>"
-				: false;
-
-			$extra .= ($arr[2] != "")
-				? " ($arr[2])"
-				: false;
-
-			$c_arr[] = array($arr[0], $class, $col) . new Cell($extra,
-			$class, $col);
-		}
-
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallindent", false, 1);
 	}
 
 	protected function show_cron_job($data)
 	{
-		// List cron jobs. Pretty much a copy of show_user_attr()
+		// List cron jobs. Put the user in bold and the time on the first
+		// line, the command folded underneath
 
 		if (isset($this->omit))
 			$data = array_diff($data, $this->omit->omit_crons);
 
 		$c_arr = array();
 
-		foreach($data as $attr)
-			$c_arr[] =  array(preg_replace("/^([^:]*):/",
-			"<strong>\\1</strong> ", $this->fold_line(htmlentities($attr),
-			30)), "lalign");
+		foreach($data as $datum) {
+			$a = preg_split("/\s+/", $datum, 6);
+			$c_arr[] = array("<strong>" . preg_replace("/:/",
+			"</strong><tt> ", $a[0]) . " $a[1] $a[2] $a[3] $a[4]<br/><tt>" .
+			$this->fold_line(htmlentities($a[5]), 50) . "</tt>");
+		}
 
-		return new listCell($c_arr); 
+		return new listCell($c_arr, "smallindent", false, 1);
 	}
 
 	protected function show_empty_password($data)
 	{
-		// Highlight all these in amber, except root, which is RED
-
-		$c_arr = array();
+		// Highlight all these in amber, except root, which is RED. Surely
+		// people don't still have empty passwords do they? (I bet they do.)
 
 		foreach($data as $datum) {
 			
-			if ($datum == "root")
-				$class = "solidred";
-			else
-				$class = "solidamber";
+			$class= ($datum == "root")
+				? "solidred"
+				: "solidamber";
 
-			$c_arr[] = new Cell($datum, $class);
+			$c_arr[] = array($datum, $class);
 		}
 
-		return $this->show_parsed_list($c_arr);
+		return new listCell($c_arr);
 	}
 
 	protected function show_dtlogin($data)
@@ -2208,12 +2330,11 @@ class HostGrid {
 				: "solidamber";
 
 			$c_arr[] = array($ta[0], $class, false, false, false, $path);
-
-
 		}
 
 		return new listCell($c_arr);
 	}
+
 	//------------------------------------------------------------------------
 	// other display functions
 
@@ -2525,10 +2646,28 @@ class OSGrid extends PlatformGrid
 }
 
 //==============================================================================
+// NET AUDIT
+
+class NetGrid extends HostGrid {
+
+	// We can omit ports, so we need the omit data
+
+	protected $omit = array();
+
+	public function __construct($map, $servers)
+	{
+		require_once(ROOT . "/_conf/omitted_data.php");
+
+		parent::__construct($map, $servers);
+		$this->omit = new omitData();
+	}
+
+}
+
+//==============================================================================
 // FS AUDIT
 
-class FSGrid extends HostGrid
-{
+class FSGrid extends HostGrid {
 	protected $mntd_nfs = array();
 
 		// This array counts the number of times each NFS mount is used. It
@@ -2597,6 +2736,8 @@ class SecurityGrid extends HostGrid{
 
 	public function __construct($map, $servers)
 	{
+		require_once(ROOT . "/_conf/omitted_data.php");
+
 		parent::__construct($map, $servers);
 		$this->omit = new omitData();
 
@@ -3784,6 +3925,7 @@ class NavigationStaticHoriz {
 	private $links = array(
 		"index.php" => "platform",
 		"os.php" => "O/S",
+		"net.php" => "networking",
 		"fs.php" => "filesystem",
 		"application.php" => "applications",
 		"tools.php" => "tools",
@@ -4042,92 +4184,11 @@ class Cell {
 
 }
 
-class multiCellSmall extends MultiCell {
-
-	// This class is used to print lists in a single table cell
-
-	public function open_table()
-	{
-		return "\n  <table class=\"multicellsmall\" width=\"100%\" "
-		. "cellpadding=\"0\" cellspacing=\"0\">";
-	}
-
-}
-
-class multiCellSmallnb extends MultiCell {
-
-	// This class is used to print lists in a single table cell
-
-	public function open_table()
-	{
-		return "\n  <table class=\"multicellsmallnb\" width=\"100%\" "
-		. "cellpadding=\"0\" cellspacing=\"0\">";
-	}
-
-}
-
-class multiCell extends Cell {
-
-	// This class is used to print lists in a single table cell
-
-	public function open_table()
-	{
-		return "\n  <table class=\"multicell\" width=\"100%\" "
-		. "cellpadding=\"0\" cellspacing=\"0\">";
-	}
-
-	protected function add_content($content)
-	{
-		if (is_array($content)) {
-			$i = 1;
-
-			$rows = sizeof($content);
-
-			$ret = $this->open_table();
-	
-			foreach($content as $row) {
-				$class = ($i++ < $rows) ? "rowbar" : false;
-				$ret .= $this->add_row($row, $class);
-			}
-			
-			 $ret .= "</table>";
-		}
-		else
-			$ret = false;
-
-		return $ret;
-	}
-
-	protected function add_row($row, $class)
-	{
-		return"\n<tr>" . new Cell($row, $class) . "</tr>";
-	}
-
-}
-
-class tableCell extends multiCell {
-
-	// This class is used to print multi-column lists in a single table cell
-
-	protected function add_row($row)
-	{
-		// Some data is better printed in two fields, in a little embedded
-		// table
-
-		$t = explode(" ", $row);
-
-		return "\n<tr>" . new Cell($t[0]) . new Cell($t[1]) . "</tr>";
-	}
-		
-}
-
 class listCell {
 
 	// put lists in cells for multiples
 
 	private $html;
-	protected $list_tag = "ul";
-	protected $item_tag = "li";
 
 	public function __construct($data, $lclass = false, $span = 1, $nofill
 	= false)
@@ -4142,11 +4203,12 @@ class listCell {
 		//             into a list (that is, it won't be expanded to fill
 		//             the entire cell)
 
-
 		// If there's only one element in the $data class and $noexpand
 		// isn't set, just do a plain cell
 
-		if (sizeof($data) == 1 && !$nofill) {
+		if ($data == false)
+			$this->html = new Cell();
+		elseif (sizeof($data) == 1 && !$nofill) {
 			$a = array();
 
 			if (is_string($data[0])) $data[0] = array($data[0]);
@@ -4164,7 +4226,7 @@ class listCell {
 
 		else {
 
-			$h = "\n\n<$this->list_tag";
+			$h = "\n\n<ul";
 
 			if ($lclass) $h .= " class=\"$lclass\"";
 
@@ -4173,21 +4235,21 @@ class listCell {
 			if (is_array($data[0])) {
 
 				foreach($data as $arr) {
-					$h .= "\n  <$this->item_tag";
+					$h .= "\n  <li";
 
-					if ($arr[1]) $h.= " class=\"$arr[1]\"";
+					if (isset($arr[1]) && ($arr[1])) $h.= " class=\"$arr[1]\"";
 
 					if (isset($arr[2]) && $arr[2])
 						$h .= " style=\"$arr[2]\"";
 
-					$h .= ">$arr[0]</$this->item_tag>";
+					$h .= ">$arr[0]</li>";
 				}
 			}
 			else {
 				foreach($data as $txt) $h .= "\n  <li>$txt</li>";
 			}
 
-			$this->html = new Cell($h . "\n</$this->list_tag>\n", false,
+			$this->html = new Cell($h . "\n</ul>\n", false,
 			false, false, $span);
 		}
 
@@ -4200,11 +4262,4 @@ class listCell {
 
 }
 
-class deflistCell extends listCell {
-
-	// put lists in cells for multiples
-
-	protected $list_tag = "dl";
-	protected $item_tag = "dd";
-}
 ?>

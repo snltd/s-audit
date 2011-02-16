@@ -97,17 +97,21 @@ class docHelper {
 
 		foreach($data as $arr) {
 
-			// We may be given a class or an inline style. Some of the
-			// styles are "small", for the grid. We don't want them small
-			// right now. Also, some of the keys have line breaks in them.
-			// We don't need those either.
+			// Omit "NOTE"s
 
-			$class = str_replace("small", "", $arr[1]);
+			if (preg_match("/NOTE/", $arr[0]))
+				continue;
+
+			// We may be given a class or an inline style.  
+			
+			$il = (isset($arr[2]) && ($arr[2]))
+				? "style=\"$arr[2]\""
+				: "class=\"$arr[1]\"";
+
+			// Some of the keys have line breaks in them, and we don't want
+			// those
+
 			$txt = str_replace("<br/>", " ", $arr[0]);
-
-			$il = ($arr[2] == false)
-				? "class=\"$class\""
-				: "style=\"$arr[2]\"";
 
 
 			$ret .= "\n  <li><div ${il}>$txt</div></li>";
@@ -188,6 +192,34 @@ field.</dd>
 		}
 
 		echo ".</p>";
+	}
+
+	public function list_omitted($index, $class = "omitlist")
+	{
+		// Show what data is being omitted, by printing the relevant index
+		// of $omit_data as a list
+
+		// Get the omitted data if we haven't already
+
+		require_once(ROOT . "/_conf/omitted_data.php");
+
+		$omit = new omitData;
+
+		$data = $omit->get_data($index);
+
+		if ($data) {
+			$ret = "\n\n<ul class=\"$class\">";
+
+			foreach($data as $datum) {
+				$ret .= "\n  <li>$datum";
+			}
+
+			$ret .= "</ul>\n";
+		}
+		else
+			$ret = "<p class=\"err\">can't get data for ${index}.</p>";
+	
+		return $ret;
 	}
 
 }
