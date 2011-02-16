@@ -17,7 +17,7 @@ $pg = new docPage("s-audit.sh usage");
 <pre class="cmd">
 # s-audit.sh [-f dir] [-z all|zone] [-qpP] [-D secs] 
   [-R user@host:dir ] [-o test,test,...] [-e file]
-  app|fs|hardware|hosted|os|plist|security|tool|machine|all
+  app|fs|hardware|hosted|os|plist|net|security|tool|machine|all
 </pre>
 
 <pre class="cmd">
@@ -129,6 +129,9 @@ be provided. The classes are:</p>
 	<dt><a href="class_hosted.php">hosted</a></dt>
 	<dd>Examines a number of &quot;hosted services&quot; like websites and
 	databases. </dd>
+	
+	<dt><a href="class_net.php">net</a></dt>
+	<dd>Looks at the machine's network configuration.</dd>
 	
 	<dt><a href="class_os.php">os</a></dt>
 	<dd>Looks at Solaris itself.</dd>

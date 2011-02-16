@@ -54,6 +54,10 @@ $pg = new docPage($menu_entry);
 	<dd>Lists the guest domains on the box, reporting the state and the
 	console port of each. Omitted in local zones.</dd>
 
+	<dt>scheduler</dt>
+	<dd>If the system's process scheduler class has been altered, this check
+	gives the new class.</dd>
+
 	<dt>uptime</dt>
 	<dd>The uptime of the zone.</dd>
 
