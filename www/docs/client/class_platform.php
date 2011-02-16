@@ -102,28 +102,6 @@ $pg = new docPage($menu_entry);
 	<dt>sbus</dt>
 	<dd>Gives some information on SBUS cards. Obviously only works on SPARC
 	hardware. Omitted in local zones.</dd>
-
-	<dt>mac</dt>
-	<dd>Gets MAC addresses. The script operates in one of two ways.
-	Ordinarily it will only get the MAC of plumbed interfaces. However, if
-	the <tt>-M</tt> option is supplied, <tt>s-audit.sh</tt> will temporarily
-	plumb each unplumbed interface to get the address. This is the only test
-	which is capable of changing, even temporarily, the state of the machine
-	being audited, and you may not wish to use it. Requires root
-	privileges.</dd>
-
-	<dt>nic</dt>
-	<dd>This test queries network interfaces. It reports the name of the
-	interface, along with the IP address and the zone (if any) which uses
-	that interface. Uncabled and unconfigured interfaces are reported as
-	such.  The link speed and duplex setting is usually reported, but some
-	old cards on some old versions of Solaris do not support this, and
-	neither do virtual switches in LDOMs. VLANned ports are recognized, as
-	are etherstubs, virtual NICs, and IPMP teams. Interfaces with DHCP
-	assigned addresses are reported, as are exclusive IP instances for
-	zones. A full audit requires root privileges, though much useful
-	information can be obtained as a non-privileged user.</dd>
-
 </dl>
 
 <?php
