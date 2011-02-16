@@ -128,6 +128,5 @@ if ($qs == "hosted.php") {
 	"\n\na.strongr, a.strongg { font-weight: bold }\n\n/* end hosted */\n";
 }
 
-
 ?>
 

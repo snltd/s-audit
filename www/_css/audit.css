@@ -119,13 +119,13 @@ td.serverhn { /* hostname for global zones/physical servers */
 
 /*-- embedded lists --------------------------------------------------------*/
 
-.audit ul, ul.smallaudit, ul.smallauditl {
+.audit ul, ul.smallaudit, ul.smallauditl, .ssall ul {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-.audit li, ul.smallaudit, ul.smallauditl {
+.audit li, ul.smallaudit, ul.smallauditl, .ssall li {
 	margin-bottom: 1px;
 	padding: 1px;
 }
@@ -161,6 +161,3 @@ td.keyhead { /* table row which separtes the data from the key */
 	font-weight: bold;
 }
 
-tr.keyrow { /* the row at the bottom of audit tables, for keys */
-	vertical-align: top;
-}
