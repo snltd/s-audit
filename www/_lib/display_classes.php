@@ -847,6 +847,27 @@ class HostGrid {
 		return new listCell($c_arr, "smallaudit");
 	}
 
+	protected function show_printer($data)
+	{
+		// Put the default printer in a green box
+
+		foreach($data as $datum) {
+			
+			if (preg_match("/\(default\)/", $datum)) {
+				$class = "boxgreen";
+				$txt = preg_replace("/ .*$/", "", $datum);
+			}
+			else {
+				$class = false;
+				$txt = $datum;
+			}
+
+			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr);
+	}
+
 	protected function show_pci_card($data)
 	{
 		return new listCell(preg_replace("/^(\S+) /",

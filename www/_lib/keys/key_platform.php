@@ -48,6 +48,11 @@ $grid_key = array(
 		array("address &quot;guessed&quot; by querying DNS", "boxorange",
 		false)
 	),
+
+	"printer" => array(
+		array("default printer", "boxgreen", false),
+	),
+
 	
 	"storage" => array(
 		array("disk drive", "disk", false),
