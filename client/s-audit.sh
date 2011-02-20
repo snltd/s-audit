@@ -1805,12 +1805,23 @@ function get_php_mod
 	# get_webserver() FUNCTON AND REQUIRES AN ARGUMENT
 	# $1 is the directory we expect to hold libphp
 	# $2 is the web server that's loaded the module
-	# $3 is the Apache version loading the module
+	# $3 is the Apache version loading the module (if applicable)
 
-	PHPLIB=$(find $1 -follow -type f -a -name libphp\?.so | sed '1q')
+	find $1 -follow -type f -a -name libphp\?.so | while read pl
+	do
+		# First look for the X-Powered string. This is in version 4+, and
+		# IIRC, late version 3. If that fails, do a dodgy pattern match that
+		# appears to work for everything
 
-	[[ -n $PHPLIB ]] && disp "mod_php" $(strings $PHPLIB | sed -n \
-	'/^X-Powered/s/.*\///p') "($2 module) ($3)"
+		pv=$(strings $pl | sed -n '/^X-Powered/s/.*\///p')
+		
+		[[ -z $pv ]] \
+			&& pv=$(strings $pl | egrep "^[3-5]\.[0-9]\.[0-9]*$" | head -1)
+
+		[[ -z $pv ]] && pv="unknown"
+
+		disp "mod_php" "$pv ($2 module) ($3)"
+	done
 }
 
 function get_tomcat
