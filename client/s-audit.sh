@@ -1602,7 +1602,7 @@ function get_ntp
 
 	if [[ -f $F ]]
 	then
-		is_running xntpd || X=" (not running)"
+		is_running xntpd || is_running ntpd || X=" (not running)"
 
 		grep ^server $F | while read a b c
 		do
