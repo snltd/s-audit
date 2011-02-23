@@ -105,8 +105,8 @@ $dh->doc_class_start();
 	as well as VDISK devices in logical domians.  For the first two, the
 	path is the Unix mountpoint, for ISCSI and VDISK, it is the exported
 	device, which may not be mounted. For NFS exports, this line has a third
-	field, which tells you how many other machines <emph>known to
-	s-audit</tt> were mounting that filesystem when they were last audited.
+	field, which tells you how many other machines <em>known to
+	s-audit</em> were mounting that filesystem when they were last audited.
 	Note that &quot;0 known mounts&quot; here does not necessarily mean
 	nothing is using that export. Possibly the filesystem is only mounted at
 	certain times, or it may only be mounted by machines which have not been
@@ -122,7 +122,7 @@ $dh->doc_class_start();
 	<tt>STRIP_DOMAIN</tt> definition in <tt>_conf/site_config.php</tt> then
 	that domain name will be stripped off all hostnames in this field. If
 	this has been done, you will see a note telling you so at the bottom of
-	the key.</p>
+	the key.</dd>
 
 	<dd>The following colour-coding is used.</dd>
 

@@ -46,7 +46,7 @@ versions) and Sun Webserver (version 7 only) are supported.</dd>
 	<dt>Apache</dt>
 	<dd>Each zone has its Apache websites broken down by configuration file.
 	So, if you bundle all your virtual hosts into a single config, the
-	output may not be entirely clear. For each vhost, the server names
+	output may not be entirely clear.</dd>
 
 	<dd>First the server names and aliases are listed in
 	<strong>bold</strong> face. The first line also gives the server type in
@@ -84,7 +84,6 @@ versions) and Sun Webserver (version 7 only) are supported.</dd>
 	same highlighting as for Apache.</dd>
 
 	<dd>The final indented line gives the server instance name.</dd>
-	</dd>
 
 	</dl>
 	</dd>

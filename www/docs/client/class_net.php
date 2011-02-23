@@ -53,7 +53,9 @@ $pg = new docPage($menu_entry);
 	service type and whether it is a master or slave server. Output is of
 	the form</dd>
 
+	<dd>
 	<pre>name_service (master/slave) domain</pre>
+	</dd>
 
 	<dd>Currently the only supported name service types are DNS and
 	NIS.</dd>
@@ -62,7 +64,9 @@ $pg = new docPage($menu_entry);
 	<dd>Gets a list of all open ports, and attempts to work out which
 	program is using each one. Output is of the form</dd>
 
+	<dd>
 	<pre>port_number:service:process</pre>
+	</dd>
 	
 	<dd>The &quot;service&quot;name comes from <tt>/etc/services</tt>, and
 	the &quot;process&quot; comes from examining processes with
@@ -104,7 +108,9 @@ $pg = new docPage($menu_entry);
 	<dd>Output is not particularly human-readable, as it has to carry a
 	lot of information, but takes the form:</dd>
 
+	<dd>
 	<pre>device ip_addr mac_addr hostname speed-duplex ipmp_group vlan</pre>
+	</dd>
 
 	<dd>The <tt>ipmp_group</tt> field can also hold DHCP information, and
 	the <tt>vlan</tt> field can also contain information on virtual

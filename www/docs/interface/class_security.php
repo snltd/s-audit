@@ -43,9 +43,11 @@ in <a href="../extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>.</dd>
 
 <dd>On this system the omitted users are:</dd>
 
+<dd>
 <?php
     echo $dh->list_omitted("omit_users");
 ?>
+</dd>
 
 <dt>empty password</dt>
 <dd>If any empty passwords were found on the host, they are displayed here.
@@ -98,9 +100,17 @@ privilges is in <strong>bold face</strong>.</dd>
 
 <dd>On this system the omitted roles are:</dd>
 
+<dd>
+
 <?php
     echo $dh->list_omitted("omit_attrs", "omitlisttt");
 ?>
+
+</dd>
+
+<dd>If only standard roles are found, the auditor will display
+&quot;standard roles&quot;.</dd>
+
 
 <dt>dtlogin</dt>
 <dd>Displays any dtlogin/XDMP type programs. If they are running, they are
@@ -119,9 +129,16 @@ line(s), indented, is the command.</dd>
 
 <dd>The following jobs are considered standard, and are not displayed.</dd>
 
+<dd>
+
 <?php
     echo $dh->list_omitted("omit_crons", "omitlisttt");
 ?>
+
+</dd>
+
+<dd>If only standard cron jobs are found, the auditor will display
+&quot;standard jobs&quot;.</dd>
 
 <?php
 

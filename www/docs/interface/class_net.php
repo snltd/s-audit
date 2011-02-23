@@ -90,9 +90,11 @@ for kernel-level services like <tt>lockd</tt> or <tt>sunrpc</tt>.</dd>
 in the <a href="../extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>
 file. The expected ports on this system are:</dd>
 
+<dd>
 <?php
 	echo $dh->list_omitted("usual_ports");
 ?>
+</dd>
 
 <dd>Open ports which are not in the list above are placed on an amber
 field. Ports which are held open by <tt>inetd</tt> are denoted by a red
