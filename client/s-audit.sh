@@ -56,6 +56,9 @@
 
 PATH=/bin:/usr/bin
 
+WSP="	 "
+	# A space and a literal tab. ksh88 won't accept \t
+
 MY_VER="3.0"
 	# The version of the script. PLEASE UPDATE
 
@@ -236,8 +239,8 @@ function disp
 	elif [[ -n $val ]]
 	then
 		[[ -n $SHOW_PATH && -n $pth ]] && sp=" [@$pth]"
-    	RKEY=$key
-    	print "$RKEY : ${val}$sp"
+		RKEY=$key
+		print "$RKEY : ${val}$sp"
 	fi
 }
 
@@ -275,7 +278,7 @@ function find_bins
 		done
 
 		ls -i $tgt | \
-		sed "s|^\(.\)[ 	]*\([0-9]*\)[ 	]*\($tgt\)$|${#pth} $pth \2|"
+		sed "s|^\(.\)[$WSP]*\([0-9]*\)[$WSP]*\($tgt\)$|${#pth} $pth \2|"
 	done | sort -n -k 3 | uniq -f2 | cut -d\  -f2
 }
 
@@ -333,8 +336,8 @@ function is_global
 	then
 		RET=$IS_GLOBAL
 	else
-		(( $OSVERCMP > 59)) && ID="sbin" || ID="etc"
-		(( $(my_pgrep "/${ID}/init") == 1)) || RET=1
+		(($OSVERCMP > 59)) && ID="sbin" || ID="etc"
+		(($(my_pgrep "/${ID}/init") == 1)) || RET=1
 		IS_GLOBAL=$RET
 	fi
 
@@ -530,15 +533,15 @@ function my_pgrep
 
 	# If we're using ps | sed, we have to escape backslashes
 
-	(( $USE_PGREP == 3 )) && srch=$(print $1 | sed 's|/|\\/|g')
+	(($USE_PGREP == 3)) && srch=$(print $1 | sed 's|/|\\/|g')
 
 	if [[ $USE_PGREP -lt 3 && -n $2 ]]
 	then
 		out=$(pgrep $Z_FLAG -f)
-	elif (( $USE_PGREP == 1 ))
+	elif (($USE_PGREP == 1))
 	then
 		out=$(pgrep $Z_FLAG -f -o $1)
-	elif (( $USE_PGREP == 2 ))
+	elif (($USE_PGREP == 2))
 	then
 		out=$(pgrep -f $Z_FLAG $1 | sed 1q)
 	elif [[ -z $2 ]]
@@ -600,7 +603,7 @@ function timeout_job
 	$1 2>/dev/null &
 	BGP=$!
 
-	while (( $count > 1 ))
+	while (($count > 1))
 	do
 		# If there are no backgrounded jobs, exit
 
@@ -653,7 +656,7 @@ function get_disk_type
 	elif [[ $s == *virtual-devices@* ]]
 	then
 		print "virtual"
-	elif (( $OSVERCMP >= 510 )) && iostat -En $dev | $EGS "VBOX"
+	elif (($OSVERCMP >= 510)) && iostat -En $dev | $EGS "VBOX"
 	then
 		print "VBOX"
 	else
@@ -697,16 +700,16 @@ function num_suff
 	typeset num=${1%%.*}
 	typeset -i l=${#num}
 
-	if (( $l < 3 ))
+	if (($l < 3))
 	then
 		e="0:"
-	elif (( $l < 9 ))
+	elif (($l < 9))
 	then
 		e="1:k"
-	elif (( $l < 10 ))
+	elif (($l < 10))
 	then
 		e="2:M"
-	elif (( $l < 12 ))
+	elif (($l < 12))
 	then
 		e="3:G"
 	else
@@ -782,7 +785,7 @@ function get_os_dist
 
 	# Anything prior to 5.11 is standard Solaris
 
-	if (( $OSVERCMP < 511 ))
+	if (($OSVERCMP < 511))
 	then
 		OS_D="Solaris"
 	elif $EGS Community /etc/release
@@ -815,10 +818,10 @@ function get_os_ver
 {
 	# Get the SunOS version of the operating system
 
-	if (( $OSVERCMP < 511 ))
+	if (($OSVERCMP < 511))
 	then
 		MV=${OSVER#*.}
-		(( $OSVERCMP < 57 )) && MV="2.$MV"
+		(($OSVERCMP < 57)) && MV="2.$MV"
 		OS_V="$MV (SunOS $OSVER)"
 	else
 		OS_V="SunOS $OSVER"
@@ -832,7 +835,7 @@ function get_os_rel
 {
 	# Get the release of the operating environment/distribution
 
-	if (( $OSVERCMP < 511 ))
+	if (($OSVERCMP < 511))
 	then
 		OS_R=$(sed '1!d;s/^.*Solaris [^ ]* \([^_ ]*\).*$/\1/' /etc/release)
 	elif [[ $OS_D == SXCE ]]
@@ -900,11 +903,11 @@ function get_cpus
 	# Get CPU information. Solaris 10 has the -p option, and understands the
 	# concept of physical and virtual processors
 
-	if (( $OSVERCMP >= 510 ))
+	if (($OSVERCMP >= 510))
 	then
 		CPUN=$(psrinfo -p)
 		CPUC=$(psrinfo -pv 0 | sed '/physical/!d;s/^.*has \([0-9]*\).*$/\1/')
-		(( $CPUC > 1 )) && CPUX="x $CPUC cores"
+		(($CPUC > 1)) && CPUX="x $CPUC cores"
 	else
 		CPUN=$(psrinfo | wc -l)
 	fi
@@ -943,7 +946,7 @@ function get_optical
 		elif eject -q /dev/dsk/${dev}s2 >/dev/null 2>&1 
 		then
 			x="(loaded)"
-		elif (( $OSVERCMP > 56))
+		elif (($OSVERCMP > 56))
 		then
 			x="(empty)"
 		fi
@@ -977,7 +980,7 @@ function get_disks
 		[[ $dev == c[0-9]* ]] && print "$size $(get_disk_type $dev)"
 	done | sort -n | uniq -c | while read no info
 	do
-		(( i = $i + 1))
+		((i = $i + 1))
 		disp "storage" "disk: $no x $info"
 	done
 
@@ -1032,9 +1035,9 @@ function get_lux_enclosures
 
 		if luxadm display $node | $EGS Vendor:
 		then
-			luxadm display $node | sed -n -e "/Vendor/s/^.*:[ 	]*//p" \
-				-e "/Product/s/^.*:[	 ]*//p" \
-				-e "/Revision/{s/^.*:[ 	]*\(.*\)/(fw \1)/p;q;}" \
+			luxadm display $node | sed -n -e "/Vendor/s/^.*:[$WSP]*//p" \
+				-e "/Product/s/^.*:[$WSP]*//p" \
+				-e "/Revision/{s/^.*:[$WSP]*\(.*\)/(fw \1)/p;q;}" \
 				| tr '\n' ' ' | tr -s ' '
 			print
 		else
@@ -1141,7 +1144,7 @@ function get_virtualization
 			# can't work out a bulletproof way to tell whether those old
 			# OSes are running on a physical machine or in a virtualbox
 			
-			if (( $OSVERCMP > 59 ))
+			if (($OSVERCMP > 59))
 			then
 				sysconf=$($PRTDIAG | sed 1q)
 
@@ -1211,10 +1214,10 @@ function get_virtualization
 		# We're not a global zone. We could be in a branded zone. They have
 		# to be whole root
 
-		if (( $OSVERCMP == 58 ))
+		if (($OSVERCMP == 58))
 		then
 			VIRT="zone (whole root/solaris8)"
-		elif (( $OSVERCMP == 59 ))
+		elif (($OSVERCMP == 59))
 		then
 			VIRT="zone (whole root/solaris9)"
 		else
@@ -1572,8 +1575,8 @@ function get_name_server
 
 	if [[ -n $CF ]]
 	then
-		egrep "^[ 	]*zone[ 	]|type" /var/named/etc/named.conf | sed -e :a \
-			-e 's/zone[ 	]*\"//;s/\".*$//;$!N;s/\n.*type/ /;ta' \
+		egrep "^[$WSP]*zone[$WSP]|type" $CF | sed -e :a \
+			-e "s/zone[$WSP]*\"//;s/\".*$//;\$!N;s/\n.*type/ /;ta" \
 			-e 's/;//' -e 'P;D' |  grep -v 'in-addr.arpa' | sort -k2 | \
 		while read a b 
 		do
@@ -1618,7 +1621,7 @@ function get_nfs_domain
 {
 	# If it's been changed (and is supported) get the NFSv4 domain name
 
-	disp "NFS domain" $(sed -n '/^[	 ]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p' \
+	disp "NFS domain" $(sed -n "/^[$WSP]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p" \
 	/etc/default/nfs)
 }
 
@@ -1671,7 +1674,7 @@ function get_package_count
 		PARTIAL=$(pkginfo -p | wc -l)
 		PKGS=$(pkginfo | wc -l)
 	
-		(( $PARTIAL > 0 )) && PKGS="$PKGS (${PARTIAL## * } partial)"
+		(($PARTIAL > 0)) && PKGS="$PKGS (${PARTIAL## * } partial)"
 
 		PKGS="$PKGS [SVR4]"
 	fi
@@ -2550,7 +2553,7 @@ function get_site_apache
 			# blank lines while we're at it
 
 			TCF="/tmp/ap_conf$$"
-			sed "/^[ 	]*#/d;s/^[ 	]*//;s/[ 	]*$//;/^$/d" $conf >$TCF
+			sed "/^[$WSP]*#/d;s/^[$WSP]*//;s/[$WSP]*$//;/^$/d" $conf >$TCF
 
 			# If what's left has a ServerName directive, let's assume it's a
 			# config file. So, if it isn't, forget it
@@ -2560,7 +2563,7 @@ function get_site_apache
 			# Get the document root. There should only be one of these.
 
 			docrt=$(grep -i "^DocumentRoot" $TCF \
-			| sed "s/^.*[ 	]//;s/\"//g" | head -1)
+			| sed "s/^.*[$WSP]//;s/\"//g" | head -1)
 
 			# There may be multiple servers in a single vhost config.
 			# Aliases can be on multiple backslashed lines, or with repeated
@@ -2696,8 +2699,8 @@ function get_capacity
 	then
 		zpool list -H | grep -w ONLINE | while read nm sz usd av cap hlth altr
 		do
-			(( avail = $avail + $(expand_suff $sz) ))
-			(( used = $used + $(expand_suff $usd) ))
+			((avail = $avail + $(expand_suff $sz)))
+			((used = $used + $(expand_suff $usd)))
 		done
 	fi
 	
@@ -2708,8 +2711,8 @@ function get_capacity
 		df -kF$fstyp | sed '1d'
 	done | while read dev sz usd av cap mpt
 	do
-		(( avail = $avail + $sz * 1024 ))
-		(( used = $used + $usd * 1024 ))
+		((avail = $avail + $sz * 1024))
+		((used = $used + $usd * 1024))
 	done
 
 	pcu=$(print "scale=2;$used / $avail * 100" | bc)
@@ -2814,7 +2817,7 @@ function get_fs
 				&& extra="${extra}:comp"
 		elif [[ $typ == "nfs" || $typ == "lofs" || $typ == "smbfs" ]]
 		then
-			$EGS "^${dev}[ 	]" /etc/vfstab && extra="${extra}:in_vfstab"
+			$EGS "^${dev}[$WSP]" /etc/vfstab && extra="${extra}:in_vfstab"
 			
 			# If we're in a global zone, don't report NFS, SMBFS or LOFS
 			# filesystems mounted under zone roots
@@ -2848,7 +2851,7 @@ function get_exports
 	#   nfs:nfs options
 	#   smb:name of share
 	#   iscsi:
-	# 	vdisk:dev:vol:domain
+	#   vdisk:dev:vol:domain
 
 	# NFS first. Only global zones can export filesystems
 
@@ -2903,10 +2906,9 @@ function get_exports
 		while read vol dev
 		do
 
-	    	for ldm in $LDMS
+			for ldm in $LDMS
 			do
-				ldm list-constraints -p $ldm | $EGS \
-				"^VDISK\|name=${vol}\|" \
+				ldm list-constraints -p $ldm | $EGS "^VDISK\|name=${vol}\|" \
 					&& disp "export" "vdisk:${dev}:${vol}:$ldm"
 
 			done
@@ -2938,7 +2940,7 @@ function get_user_attr
 	if [[ -f $ATTR_FILE ]]
 	then
 
-		egrep -v "^[ 	]*#|^$" $ATTR_FILE | while read line
+		egrep -v "^[$WSP]*#|^$" $ATTR_FILE | while read line
 		do
 			disp user_attr "$line"
 		done
@@ -3116,7 +3118,7 @@ function get_cron
 		# command
 
 		crontab -l $user 2>/dev/null | sed -e :a -e '/\\$/N; s/\\\n//; ta' \
-		| sed "/^[ 	]*$/d;/^[ 	]*#/d;s/^/$user:/"
+		| sed "/^[$WSP]*$/d;/^[$WSP]*#/d;s/^/$user:/"
 	done | while read line
 	do
 		disp "cron job" "$line"
@@ -3469,7 +3471,7 @@ do
 	eval TESTS='$'"${TPFX}_${T_CL}_TESTS"
 	
 	[[ -n $RWARN ]] && ! is_root && cat <<-EOWARN | \
-	sed -e 's/[	 ]*//' -e :a -e 's/^.\{1,77\}$/ & /;ta' >&2
+	sed -e "s/[$WSP]*//" -e :a -e 's/^.\{1,77\}$/ & /;ta' >&2
 ------------------------------------------------------------------------------
 
 		WARNING: running this script as an unprivileged user may not produce
