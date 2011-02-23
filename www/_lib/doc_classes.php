@@ -211,7 +211,7 @@ field.</dd>
 			$ret = "\n\n<ul class=\"$class\">";
 
 			foreach($data as $datum) {
-				$ret .= "\n  <li>$datum";
+				$ret .= "\n  <li>" . htmlentities($datum) . "</li>";
 			}
 
 			$ret .= "</ul>\n";
