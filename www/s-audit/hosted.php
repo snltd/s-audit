@@ -37,7 +37,7 @@ echo "\n<p class=\"center\">";
 echo (file_exists(URI_MAP_FILE))
 	? "This table incorporates data from a $um generated at "
 	. date("H:i D d/m/Y", filemtime(URI_MAP_FILE))
-	: "<p class=\"center\">You do not have a $um";
+	: "You do not have a $um";
 
 echo ".</p>", $grid->show_grid();
 

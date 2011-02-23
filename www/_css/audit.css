@@ -59,8 +59,7 @@ th, td.comprow { /* table headings for audit grids */
 	color: black;
 	padding: 6px 1px 6px 1px;
 	background-color: #ccc;
-	border-bottom: 2px solid black;
-	font-weight: bold;
+	border-bottom: 1px solid black;
 }
 
 /*-- backgrounds for rows --------------------------------------------------*/

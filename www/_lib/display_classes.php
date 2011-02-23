@@ -2179,7 +2179,7 @@ class HostGrid {
 				? "solidred"
 				: false;
 
-			$c_arr[] = array("<strong>$user</strong>:</div>$a[0]", $class);
+			$c_arr[] = array("<strong>$user</strong>: $a[0]", $class);
 		}
 
 		return new listCell($c_arr);
@@ -2231,7 +2231,7 @@ class HostGrid {
 		foreach($data as $datum) {
 			$a = preg_split("/\s+/", $datum, 6);
 			$c_arr[] = array("<strong>" . preg_replace("/:/",
-			"</strong><tt> ", $a[0]) . " $a[1] $a[2] $a[3] $a[4]<br/><tt>" .
+			"</strong><tt> ", $a[0]) . " $a[1] $a[2] $a[3] $a[4]<br/>" .
 			$this->fold_line(htmlentities($a[5]), 50) . "</tt>");
 		}
 
