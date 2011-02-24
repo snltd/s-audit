@@ -74,8 +74,8 @@ VARBASE="/var/tmp/s-audit"
 LOCKFILE="${VARBASE}/s-audit.lock"
 	# Lock file, to stop us running multiple instances
 
-LOGDEV="local7"
-    # System log facility to which we record any errors
+RUN_HERE=1
+	# run checks in this zone, unless told otherwise
 
 # Set a big PATH. This should try to include everywhere we expect to find
 # software. SPATH is for quicker searching later.
@@ -104,22 +104,16 @@ SCADM=/usr/platform/${HW_HW}/sbin/scadm
 	&& PRTDIAG=/usr/sbin/prtdiag \
 	|| PRTDIAG=/usr/platform/${HW_HW}/sbin/prtdiag
 
+IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc "
+	# Ignore these fs types in the fs audit
+
 # On Nexenta, egrep is really ggrep, and the two have different flags.
 
 egrep --version >/dev/null 2>&1 && EGS="ggrep -q" || EGS="egrep -s"
 
-# Installation directories for software
-
 IPL_DIRS="/opt/SUNWwbsvr /opt/oracle/webserver7 /usr/netscape/suitespot \
 	/sun/webserver7"
 	# Directories where we look for iPlanet software
-
-#DO_PLUMB=1
-	# If this variable is set, s-audit will temporarily plumb unconfigured
-	# network interfaces to get their MAC address during a platform audit
-
-IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc "
-	# Ignore these fs types in the fs audit
 
 EXTRAS="/etc/s-audit_extras"
 	# default path for extras file
@@ -165,30 +159,31 @@ fi
 
 #-- TEST LISTS ---------------------------------------------------------------
 
-# Here we define the lists of tests which make up the various audits. These
-# lists are always bookended by "hostname" and "time".  I loosely define
-# "applications" as things which run as daemons, and "tools" as things which
-# are user invoked.
+CL_LS=" platform os net fs app tool hosted security patch "
+	# All the classes we support
 
-G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks \
+# Here we define the lists of tests which make up the various audits. These
+# lists are always bookended by "hostname" and "time". 
+
+G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
 	optical lux_enclosures tape_drives pci_cards sbus_cards printers" 
 L_PLATFORM_TESTS="virtualization printers"
 
-G_NET_TESTS="ntp name_service dns_serv nis_domain name_server \
-	nfs_domain snmp ports routes nic"
+G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
+	snmp ports routes nic"
 L_NET_TESTS=$G_NET_TESTS
 
-G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms \
+G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms
 	scheduler package_count patch_count uptime "
-L_OS_TESTS="os_dist os_ver os_rel kernel hostid \
+L_OS_TESTS="os_dist os_ver os_rel kernel hostid
 	package_count patch_count uptime"
 
-L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s \
-	ora_s svnserve sendmail exim cronolog mailman splunk sshd named ssp \
-	symon samba x vbox"
+L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
+	svnserve sendmail exim cronolog mailman splunk sshd named ssp symon
+	samba x vbox"
 G_APP_TESTS="vxvm vxfs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
-L_TOOL_TESTS="openssl rsync mysql_c sqlplus svn_c java perl php_cmd python \
+L_TOOL_TESTS="openssl rsync mysql_c sqlplus svn_c java perl php_cmd python
 	ruby cc gcc pca nettracker saudit scat explorer"
 G_TOOL_TESTS="sccli sneep vts $L_TOOL_TESTS"
 
@@ -198,7 +193,7 @@ L_HOSTED_TESTS=$G_HOSTED_TESTS
 G_PATCH_TESTS="patch_list package_list"
 L_PATCH_TESTS=$G_PATCH_TESTS
 
-G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root \
+G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
 	user_attr root_shell dtlogin cron"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
@@ -212,7 +207,7 @@ G_FS_TESTS="zpools capacity $L_FS_TESTS"
 
 function disp
 {
-	# Print information in one of two ways. If PARSEABLE isn't set, display
+	# Print information in one of two ways. If OUT_P isn't set, display
 	# in a nice tabular way that people will like, otherwise print in a
 	# cold, clinical fashion that a heartless computer enjoys.  If SHOW_PATH
 	# is set, the path to the binary is printed, presuming it was ever
@@ -232,7 +227,7 @@ function disp
     shift
 	val=$*
 
-	if [[ -n $val && -n $PARSEABLE ]]
+	if [[ -n $val && -n $OUT_P ]]
 	then
 		[[ -n $SHOW_PATH && -n $pth ]] && sp="@=$pth"
 		print "${key}=${val}$sp"
@@ -313,16 +308,6 @@ function find_config
 	fi
 }
 
-function separator
-{
-	# Prints a bar to separate data when it's in human-readable format
-
-	cat <<-EOSEP
-
-------------------------------------------------------------------------------
-	EOSEP
-}
-
 function is_global
 {
 	# Are we running in the global zone? True if we are, false if we're not.
@@ -361,136 +346,47 @@ function is_root
 	return $RET
 }
 
-function is_cron
-{
-    # Are we being run from cron? True if we are, false if we're not. Value
-    # is cached in IS_CRON variable. This works by examining the tty the
-    # process is running on. Cron doesn't allocate one, the shells have a
-    # pts/n, on Solaris at least
-
-    if [[ -n $IS_CRON ]]
-    then
-        RET=$IS_CRON
-    else
-        [[ $(ps -otty= -p$$)  == "?"* ]] || RET=1
-        IS_CRON=$RET
-    fi
-
-	return ${RET:-0}
-}
-
 function log
 {
     # Shorthand wrapper to logger, so we are guaranteed a consistent message
-    # format. We write through syslog if we're running through cron, through
-    # stderr if not
+    # format
 
     # $1 is the message
     # $2 is the syslog level. If not supplied, defaults to info
 
-    typeset -u PREFIX=${2:-info}
-
-    is_cron \
-        && logger -p ${LOGDEV}.${2:-info} "${0##*/}: $1" \
-        || print -u2 "${PREFIX}: $1"
-}
-
-function usage
-{
-	# How to use the script
-
-	cat<<-EOUSAGE
-
-	usage:
-
-	    ${0##*/} [-f dir] [-z all|zone] [-qpPM] [-D secs] 
-		[-o test,test,...,test] [-R user@host:dir ] [-e file]
-	    app|fs|hosted|os|platform|plist|net|security|tool|machine|all
-
-	    ${0##*/} -l
-
-	where
-	  -f :     write files to an (optionally) supplied local directory.
-	           Files are named in the format "audit.hostname.type" where
-	           type is either "os" or "software". Without this option
-	           output goes to standard out
-	  -z :     audit a zone. A single zone name may be supplied, or "-z all"
-	           may be used to audit all running zones. The output from "-z
-	           all" can be confusing, and it is intended to be run with the
-	           -f flag
-	  -M :     in network audits, plumb and unplumb uncabled NICs to obtain
-	           their MAC address
-	  -o :     omit these tests, comma separated
-	  -p :     write machine-parseable output. By default output is
-	           "prettyfied"
-	  -P :     print paths to tools and applications. (Implied by -f.)
-	  -q :     be quiet
-	  -R :     information for scp to copy audit files to remote host. Of
-	           form "user@host:directory"
-	  -D :     delay this many seconds before beginning the audit
-	  -e :     full path to "extras" file
-	  -l :     list tests in each audit type
-	  -V :     print version and exit
-
-	The final argument tells the script what kind of audit to perform.
-
-	           platform : looks at the box and things attached to it
-	           net      : looks at network connections and configuration
-	           os       : looks at the OS and virtualizations
-	           app      : examines installed versions of a range of
-	                      application software
-	           tool     : examines installed versions of various tools.
-	                      "apps" are normally things which are run as
-	                      daemons, "tools" things which are run by a user
-	           hosted   : looks at services hosted on the box, like
-	                      databases and web sites
-	           fs       : local and remote filesystem information
-	           plist    : lists installed patches and packages
-	           security : examines security issues and NFS
-	           machine  : all of the above, for all zones
-	           all      : all audit types for the current zone
-
-	"machine" can only be run from a global zone, and performs all the other
-	audit types in the global, and every local, zone. It only really makes
-	sense when used with the -f flag.
-
-	EOUSAGE
-	exit 2
-}
-
-function show_checks
-{
-	# List what we can do
-
-	typeset -u cn
-
-	for cl in platform os net app tool hosted fs patch security
-	do
-		cn=$cl
-		print "\nGlobal zone '$cl' audit tests"
-		eval print '$'"G_${cn}_TESTS" | fold -sw 65 | sed "s/^/  /"
-		print "\nLocal zone '$cl' audit tests"
-		eval print '$'"L_${cn}_TESTS" | fold -sw 65 | sed "s/^/  /"
-	done
-
-}
-
-function clean_up
-{
-	# Clean up lock file
-
-	rm -f $LOCKFILE
+	[[ -n $SYSLOG ]] && logger -p ${SYSLOG}.${2:-info} "${0##*/}: $1"
 }
 
 function die
 {
-	# Print a message to stderr and exit.
+	# Print a message to stderr, log it, and exit.
 	# $1 is the message to print
-	# $2 is an optional exit code. Exits 1 if $2 is blank
+	# $2 is an optional exit code, defaults to 1
 
-	log "$1" error
+	print -u2 "ERROR: $1"
+	log "$1" err
 	clean_up
 	exit ${2:-1}
+}
+
+function msg
+{
+	# Print a message to stderr and log it
+	# $1 is the message
+	# $2 is optional syslog level (default is notice)
+
+	[[ x$2 == xwarn ]] && print -u2 -n "WARNING: "
+
+	print -u2 "$1"
+	log "$1" ${2:-notice}
+}
+
+function clean_up
+{
+	# Clean up lock file and output directory
+
+	rm -f $LOCKFILE
+	[[ -n $OD ]] && rm -fr ${OD}/$HOSTNAME
 }
 
 function can_has
@@ -719,6 +615,173 @@ function num_suff
 	print -- $(print "scale=1;$1 / 1024 ^ ${e%:*}" | bc)${e#*:}
 }
 
+function class_head
+{
+	# Print the preamble to a class audit.
+	# $1 is the class
+
+	if [[ -n $OUT_P ]]
+	then
+		print "BEGIN $1@$HOSTNAME"
+	elif [[ -z $TO_FILE ]]
+	then
+		tput bold
+		print "\n'$1' audit on $HOSTNAME\n"
+		tput sgr0
+	fi
+}
+
+function class_foot
+{
+	# Print the information that goes after a class audit
+
+	if [[ -n $OUT_P ]]
+	then
+		print "END $1@$HOSTNAME" 
+	elif [[ -z $TO_FILE ]]
+	then
+		print "\n$(prt_bar)"
+	fi
+}
+
+function run_class
+{
+	# Run all the tests belonging to a class
+	# $1 is the class to run
+
+	typeset -u cl=$1
+
+	is_global && TPFX="G" || TPFX="L"
+	eval TESTS='$'"${TPFX}_${cl}_TESTS"
+
+	RUN_TESTS="hostname $TESTS extras time"
+	
+	for get in $RUN_TESTS
+	do
+		[[ $OMIT_TESTS == *" $get "* ]] || get_$get
+	done
+}
+
+function prt_bar
+{
+	cat <<-EOSEP
+------------------------------------------------------------------------------
+
+	EOSEP
+}
+
+function nr_warn
+{
+	# Warnings for checks not run as a non-root user
+	# $1 is the audit class
+
+	if [[ $1 == "platform" ]]
+	then
+		print "Many tests, including ALOM, FC enclosure, virtualization will
+		not be run"
+	elif [[ $1 == "net" ]]
+	then
+		print "NIC information will be limited"
+	elif [[ $1 == "os" ]]
+	then
+		print "There will be no zone type information, and LDOM information
+		may be limited"
+	elif [[ $1 == "security" ]]
+	then
+		print "There will be no information on blank passwords, authorized
+		keys or cron jobs, and poorer identification of open ports."
+	elif [[ $1 == "app" ]]
+	then
+		print "There may be no information on loaded Apache modules, Tomcat
+		information may be incomplete, and Veritas and SunONE/iPlanet
+		applications may not be audited."
+	elif [[ $1 == "tool" ]]
+	then
+		print "If sccli is installed it will not be audited"
+	fi
+}
+
+function show_checks
+{
+	# List what we can do
+
+	typeset -u cn
+
+	for cl in platform os net app tool hosted fs patch security
+	do
+		cn=$cl
+		print "\nGlobal zone '$cl' audit tests"
+		eval print '$'"G_${cn}_TESTS" | fold -sw 65 | sed "s/^/  /"
+		print "\nLocal zone '$cl' audit tests"
+		eval print '$'"L_${cn}_TESTS" | fold -sw 65 | sed "s/^/  /"
+	done
+}
+
+function usage
+{
+	# How to use the script
+
+	cat<<-EOUSAGE
+
+	usage:
+
+	    ${0##*/} [-f dir] [-z all|zone] [-qpPM] [-D secs] [-L facility]
+	    [-o test,test,...,test] [-R user@host:dir ] [-e file] [-u file]
+	    $(print $CL_LS | tr " " "|")|all|machine
+
+	    ${0##*/} -l
+
+	where
+	  -f :     write files to an (optionally) supplied local directory.
+	           Files are named in the format "audit.hostname.type" where
+	           type is either "os" or "software". Without this option
+	           output goes to standard out
+	  -z :     audit a zone. A single zone name may be supplied, or "-z all"
+	           may be used to audit all running zones. The output from "-z
+	           all" can be confusing, and it is intended to be run with the
+	           -f flag
+	  -M :     in network audits, plumb and unplumb uncabled NICs to obtain
+	           their MAC address
+	  -o :     omit these tests, comma separated
+	  -p :     write machine-parseable output. By default output is
+	           "prettyfied"
+	  -P :     print paths to tools and applications. (Implied by -f.)
+	  -q :     be quiet
+	  -R :     information for scp to copy audit files to remote host. Of
+	           form "user@host:directory"
+	  -D :     delay this many seconds before beginning the audit
+	  -u :     path to user check file
+	  -e :     full path to "extras" file
+	  -L :     syslog facility - must be lower case
+	  -l :     list tests in each audit type
+	  -V :     print version and exit
+
+	The final argument tells the script what kind of audit to perform.
+
+	           platform : looks at the box and things attached to it
+	           net      : looks at network connections and configuration
+	           os       : looks at the OS and virtualizations
+	           app      : examines installed versions of a range of
+	                      application software
+	           tool     : examines installed versions of various tools.
+	                      "apps" are normally things which are run as
+	                      daemons, "tools" things which are run by a user
+	           hosted   : looks at services hosted on the box, like
+	                      databases and web sites
+	           fs       : local and remote filesystem information
+	           plist    : lists installed patches and packages
+	           security : examines security issues and NFS
+	           machine  : all of the above, for all zones
+	           all      : all audit types for the current zone
+
+	"machine" can only be run from a global zone, and performs all the other
+	audit types in the global, and every local, zone. It only really makes
+	sense when used with the -f flag.
+
+	EOUSAGE
+	exit 2
+}
+
 #-- AUDITING FUNCTIONS -------------------------------------------------------
 
 # Every check has its own function, called get_something. Just put
@@ -744,7 +807,6 @@ function get_extras
 		done
 
 	fi
-
 }
 
 function get_time
@@ -1495,7 +1557,7 @@ function get_nic
 		# Now, depending the kind of output we're producing, we either trim
 		# up the S variables, or pass a string to disp
 
-		if [[ -n $PARSEABLE ]]
+		if [[ -n $OUT_P ]]
 		then
 			disp NIC "$S0|$S1|$S2|$S3|$S4|$S5|$S6"
 		else
@@ -2670,7 +2732,7 @@ function get_db_mysql
 
 			# Print differently if we're parseable
 
-			if [[ -n $PARSEABLE ]]
+			if [[ -n $OUT_P ]]
 			then
 				disp "database" "mysql:${dir##*/}:${dbsize}:$dbextra"
 			else
@@ -3170,13 +3232,15 @@ function get_patch_list
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
-# Find out which shell we're running in.
+log "${0##*/} invoked"
 
-whence disown >/dev/null && MYSH=93 || MYSH=88
+# Clean up if we're "ctrl-c"ed
+
+trap 'clean_up; exit' 2 9 15
 
 # Get options
 
-while getopts "D:e:f:lMo:pPqR:z:V" option 2>/dev/null
+while getopts "D:e:f:lL:Mo:pPqR:uVz:" option 2>/dev/null
 do
 	case $option in
 
@@ -3185,22 +3249,25 @@ do
 			;;
 
 		"e")	# Path to "extras" file
-
-			UEXTRAS=$OPTARG \
+			UEXTRAS=$OPTARG
 			;;
 			
 
 		"f")	# send all output to automatically named files, optionally
 				# in the named directory
-
-			LOCAL_OUTDIR=${OPTARG##* }
-			LOCAL_OUT=1
+			OD_R=${OPTARG##* }
+			TO_FILE=1
 			;;
 
 		"l")	# display the checks we have
 			show_checks
 			exit 0
 			;;
+
+		"L")	# Set syslog facility
+			SYSLOG=$OPTARG
+			;;
+
 
 		"M")
 			DO_PLUMB=1
@@ -3213,7 +3280,7 @@ do
 		"p")	# We want machine-parsable output, so set a flag which
 				# disp() will pick up. Set the Z_OPTS variable in case we
 				# need to propagate this option down to local zones
-			PARSEABLE=1
+			OUT_P=1
 			Z_OPTS="-p"
 			SHOW_PATH=1
 			;;
@@ -3228,7 +3295,12 @@ do
 
 		"R")	# Remote copy information
 			REMOTE_STR=$OPTARG
-			REMOTE_OUTDIR="${VARBASE}/audit_out"
+			OD_R="${VARBASE}/audit_out"
+			TO_FILE=1
+			;;
+
+		"u")	# User check file
+			UCHK=$OPTARG
 			;;
 
 		"V")	# Print version and exit
@@ -3237,7 +3309,8 @@ do
 			;;
 
 		"z")	# Do a zone
-			ZONE=$OPTARG
+			ZL=$(print $OPTARG | tr "," " ")
+			unset RUN_HERE
 			;;
 
 		*)	usage
@@ -3252,27 +3325,68 @@ shift $(($OPTIND - 1))
 
 [[ -n $BE_QUIET ]] && { exec >/dev/null; exec 2>&-; }
 
-# If we've been asked to delay startup, do that now
-
-[[ -n $T_DELAY ]] && sleep $T_DELAY
-
 # We run a lot of pgreps. Make sure we only check the current zone if we're
-# on a zoned system by dropping $Z_FLAG into the command. Also use this in a
-# couple of other places.
+# on a zoned system by dropping $Z_FLAG into the command.
 
 can_has zonename && Z_FLAG="-z $(zonename)"
 
-# There should be one argument. No more, no less.
+# Sanity checking. Args?
 
-[[ $# == 1 ]] || usage
+[[ $# == 0 ]] && usage
+CL=$@
 
-# Clean up if we're "ctrl-c"ed
+# If we're writing to syslog, does it look like a proper facility?
 
-trap 'clean_up; exit' 2 9 15
+[[ -n $SYSLOG ]] && [[ $SYSLOG != "local"[0-7] ]] \
+	&& die "Invalid syslog facility. [${SYSLOG}]"
+
+# Verify classes and zones
+
+if [[ "$CL" == "machine" ]]
+then
+	is_global || die "machine audits can only be run from the global zone."
+	ZL=all
+	CL=$CL_LS
+elif [[ "$CL" == "all" ]]
+then
+	CL=$CL_LS
+else
+
+	for c in $@
+	do
+		[[ $CL_LS == *" $c "* ]] || die "invalid class. [$c]"
+	done
+
+fi
+
+if [[ -n $ZL ]]
+then
+	is_global || die "-z option invalid in local zones."
+	is_root || die "only root can use -z option."
+	can_has zonename || die "system does not support zones."
+
+	AL=$(print " "$(zoneadm list -i)" ")
+	
+	[[ $ZL == "all" ]] \
+		&& ZL=$AL \
+		|| for z in $ZL
+		do
+			[[ $AL == *" $z "* ]] || die "invalid zone. [$z]"
+		done
+
+fi
+
+# If this zone has been named, remove it from the zlist
+
+if can_has zonename && [[ " $ZL " == *" $(zonename) "* ]]
+then
+	RUN_HERE=2 &&
+	ZL=$(print $ZL | sed "s/$(zonename) //")
+fi
 
 # Extras file?
 
-[[ ! -f $EXTRAS ]] && unset EXTRAS
+[[ -f $EXTRAS ]] || unset EXTRAS
 
 if [[ -n $UEXTRAS ]]
 then
@@ -3280,307 +3394,141 @@ then
 
 	[[ -f $UEXTRAS ]] \
 		&& EXTRAS=$UEXTRAS \
-		|| print -u2 "WARNING: extras file not found. [${UEXTRAS}]"
+		|| msg "extras file not found. [${UEXTRAS}]" warn
 
 fi
 
-# Look to see if there's a lock file. If there is, report an error message.
-# That goes to the console if we're not a cron job, and out through syslog
-# if we are. Don't worry about lockfiles if we're not root
+# Lock-file time. If there already is one, that's an error. If not and we're
+# root, make one. Don't worry about lockfiles if we're not root.
 
-if is_root
+if is_root && [[ -f $LOCKFILE ]] 
 then
+	OPID=$(cat $LOCKFILE)
+	can_has zonename && OPID="$OPID, zone $(zonename)"
+	die "Lock file exists at ${LOCKFILE}. [PID ${OPID}]"
+elif is_root
+then
+	[[ -d ${LOCKFILE%/*} ]] || mkdir -p ${LOCKFILE%/*} 2>/dev/null
+	print $$ >$LOCKFILE 2>/dev/null \
+		|| msg "could not create lockfile." warn
+fi
 
-	if [[ -f $LOCKFILE ]] 
+# If we've been asked to delay startup, do that now
+
+[[ -n $T_DELAY ]] && sleep $T_DELAY
+
+# Are we writing to files? If so, make the target directory
+
+if [[ -n $TO_FILE ]]
+then
+	umask 002
+
+	OD=${OD_R}/$HOSTNAME
+	mkdir -p $OD
+	[[ -d $OD && -w $OD ]] || die "can't write files to ${OD}."
+
+	# parseable audits write to a single file, human-readable to one file
+	# per class. It has a header.
+
+	if [[ -n $OUT_P ]]
 	then
-		OPID=$(cat $LOCKFILE)
-		can_has zonename && ZINFO=", zone $(zonename)"
-
-		print -u2 \ 
-			"ERROR: Lock file exists at ${LOCKFILE}. [PID ${OPID}${ZINFO}.]"
-
-		is_cron && die "auditor already running as pid ${OPID},${ZINFO}." 5
-	else
-		[[ -d ${LOCKFILE%/*} ]] || mkdir -p ${LOCKFILE%/*} 2>/dev/null
-		print $$ >$LOCKFILE 2>/dev/null \
-			|| print -u2 "WARNING: could not create lockfile."
+		exec 3>"${OD}/audit.$HOSTNAME"
+		print -u3 "@@s-audit.sh version $MY_VER $(date)"
 	fi
 
-fi
-
-# If we're writing to a directory, we may have two to choose from a
-# specified local one and a temporary one for remote transfer. If we have
-# both the specified local one takes precedence
-
-[[ -n $LOCAL_OUTDIR ]] && OUTBASE=$LOCAL_OUTDIR || OUTBASE=$REMOTE_OUTDIR
-
-# If we're doing a machine audit, force all zones and use the DO_THIS
-# variable to force an audit of this global zone
-
-if [[ $1 == "machine" ]]
-then
-	is_global || die "full machine audits can only be run from a global zone"
-	is_root || die "only root can perform full machine audits"
-	can_has zoneadm && ZONE=all || unset ZONE
-
-	CLASSES="platform os net fs app tool hosted security"
-	DO_THIS=true
-	MACHINE=true
-
-	# If we're writing files, write the patch and package lists
-
-	[[ -n $OUTBASE ]] && CLASSES="$CLASSES plist"
-elif [[ $1 == "all" ]]
-then
-	CLASSES="platform os net fs app tool hosted security"
-else
-	CLASSES=$1
-fi
-
-# If we're writing files automatically, check the target directory exists.
-# If we're not, direct file descriptor 3 to standard out
-
-umask 002
-
-if [[ -n $OUTBASE ]]
-then
-	OUTDIR=${OUTBASE}/$HOSTNAME
-	[[ -d $OUTDIR ]] || mkdir -p $OUTDIR
-	print "writing audit files to $OUTDIR"
-
-	[[ -d $OUTDIR ]] || die "can't write files to $OUTDIR"
+	msg "Writing audit files to ${OD}."
 else
 	exec 3>&1
 fi
 
-# If we've been asked to work in a zone, do a few checks.
+# Now ZL is the list of zones to do, and RUN_HERE is set if we're doing this
+# zone. We can run the checks
 
-if [[ -n $ZONE ]]
+if [[ -n $RUN_HERE ]]
 then
-	can_has zoneadm || die "this system does not support zones"
-	is_root || die "only root can audit zones"
 
-	# If we've been given -z all, we want to audit all zones on the box.
-	# Otherwise, check the supplied argument is a valid zone.
+	# Don't write head and foot to file for non-parseable, and issue a
+	# warning if we're not root
 
-	if [[ $ZONE == "all" ]]
-	then
-		ZONELIST="$(zoneadm list -i | egrep -v ^global$ | sort)"
-	else
-		zoneadm -z $ZONE list >/dev/null 2>&1 \
-			|| die "zone $ZONE is not installed"
+	for c in $CL
+	do
+		[[ -n $TO_FILE && -z $OUT_P ]] && exec 3>"${OD}/audit.${HOSTNAME}.$c"
 
-		ZONELIST=$ZONE
-	fi
+		WARN=$(nr_warn $c)
 
-	DO_ZONES=true
+		if [[ -n $WARN ]] && ! is_root 
+		then
+			prt_bar
+			print "WARNING: running this script as an unprivileged user 
+			may not produce a full audit. ${WARN}.\n" | \
+			sed -e "s/[$WSP]*//" -e :a -e 's/^.\{1,77\}$/ & /;ta' 
+			prt_bar
+		fi >&2
 
-	# A Solaris 10 machine may not have any zones, so don't complain if
-	# we're doing a full machine audit and don't find any
+		class_head $c >&3
+		run_class $c >&3
+		class_foot $c >&3
+	done
 
-	[[ -z ${MACHINE}$ZONELIST ]] && die "no zones to audit"
-else
-	# We're just doing this zone.
-	DO_THIS=true
 fi
 
-# Turn on separator bars if we're not writing to a file, we're not producing
-# parseable output, and we're doing multiple zones and/or multiple audits
+# To audit zones we copy ourselves into the zone root, then run that copy
+# via zlogin, capturing the output
 
-[[ -z $PARSEABLE && -z $LOCAL_OUT ]] && [[ ${ZONELIST}${CLASSES} == *" "* ]] \
-	&& PRINT_SEP=true
-
-# Now we know which type of test(s) to run ($CLASSES) so let's run them. We
-# could be running either type of test on a local or global zone, so we'll
-# pick out the appropriate test list with each iteration.
-
-for class in $CLASSES
+for z in $ZL
 do
-	# If we're performing an audit (which we may not be, if -z has been
-	# supplied and we're in the global zone), we're doing human-readable
-	# output and we're not directing to a file, say what we're doing.
+	zoneadm -z $z list -p | cut -d: -f3,4,6 | tr : " " | read zst zr zbr
 
-	if [[ -n $DO_THIS && -z $PARSEABLE && -z $LOCAL_OUT ]]
+	# Running zones get properly audited but those which aren't running get
+	# some dummy output so the interface can show that the zone exists
+
+	[[ -n $TO_FILE && -z $OUT_P ]] 
+	if [[ $zst == "running" && $zbr != "lx" ]]
 	then
-		tput bold
-		print "\n'$class' audit on $HOSTNAME\n"
-		tput sgr0
+		zf=${zr}/root/$$${0##*/}$RANDOM
+		cp -p $0 $zf
+
+		# The only way to get separate files is to run the script multiple
+		# times
+
+		if [[ -z $OUT_P && -n $TO_FILE ]]
+		then
+
+			for c1 in $CL
+			do
+				exec 3>"${OD}/audit.${HOSTNAME}.${z}.$c1"
+				zlogin $z /${zf##*/} $Z_OPTS $c1 >&3
+			done
+
+		else
+			zlogin $z /${zf##*/} $Z_OPTS $CL >&3
+		fi
+
+		rm $zf
+	else
+		disp "hostname" $z
+		disp "zone status" $zst
+		get_time
 	fi
 
-	typeset -u T_CL=$class
-	unset WARN
-
-	case $class in
-
-		"platform"|"hardware")
-			RWARN="Many tests, including ALOM, FC enclosure,
-			virtualization will not be run"
-			;;
-
-		"net")
-			RWARN="NIC information will be limited"
-			;;
-
-		"os")
-			RWARN="There will be no zone type information, and LDOM
-			information may be limited"
-			;;
-
-		"fs"|"filesystem")
-			T_CL="fs"
-			;;
-			
-		"security")
-			RWARN="There will be no information on blank passwords,
-			authorized keys or cron jobs, and poorer identification of open
-			ports."
-			;;
-
-		"application"|"app")
-			T_CL="APP"
-			RWARN="There may be no information on loaded Apache modules,
-			Tomcat information may be incomplete, and Veritas and
-			SunONE/iPlanet applications may not be audited."
-			;;
-
-		"tool"|"tools")
-			T_CL="TOOL"
-			RWARN="If sccli is installed it will not be audited"
-			;;
-
-		"hosted")
-			:
-			;;
-
-		"patch"|"patches"|"plist")
-			T_CL="PATCH"
-			;;
-
-		"help")
-			usage
-			;;
-
-		*)	die "unknown test type [$class]"
-			exit 2
-			;;
-
-	esac
-
-	is_global && TPFX="G" || TPFX="L"
-
-	eval TESTS='$'"${TPFX}_${T_CL}_TESTS"
-	
-	[[ -n $RWARN ]] && ! is_root && cat <<-EOWARN | \
-	sed -e "s/[$WSP]*//" -e :a -e 's/^.\{1,77\}$/ & /;ta' >&2
-------------------------------------------------------------------------------
-
-		WARNING: running this script as an unprivileged user may not produce
-		a full audit. ${RWARN}.
-
-------------------------------------------------------------------------------
-	EOWARN
-
-	# Now we're almost ready to run the checks. We always start with
-	# "hostname" and finish with "extras", then "time", so bracket the list
-	# with those.
-
-	RUN_TESTS="hostname $TESTS extras time"
-	
-	# Check output is written to file descriptor 3. If OUTDIR is not set,
-	# that's already been redirected to standard out. If not, we need to
-	# point it to a file in the block below, and make sure output goes
-	# there. First, this zone.
-
-	if [[ -n $DO_THIS ]]
-	then
-
-		[[ -n $OUTDIR ]] && exec 3>"${OUTDIR}/audit.${HOSTNAME}.$class"
-
-		for get in $RUN_TESTS
-		do
-			[[ $OMIT_TESTS == *" $get "* ]] || get_$get
-		done >&3
-
-		# If we're writing pretty output, not to a file, print a separator
-		# bar
-
-		[[ -z "${PARSEABLE}$OUTDIR" ]] && separator >&3
-	fi
-
-	# Now, local zones. Note that this code block doesn't run any checks. It
-	# just copies the script to the local zone, and runs it via zlogin. On
-	# that execution, the block of code ABOVE will be run.
-
-	if [[ -n $DO_ZONES ]]
-	then
-		# The easiest way I can think of to run this script in a zone is to
-		# temporarily copy the whole thing to the zone, then execute it via
-		# zlogin.
-
-		for zone in $ZONELIST
-		do
-
-			[[ -n $OUTDIR ]] && exec 3>"${OUTDIR}/audit.${zone}.$class"
-
-			# Running zones get properly audited but those which aren't
-			# running get some dummy output so the interface can show that
-			# the zone exists, even if it doesn't do a lot
-
-			ZSTATE=$(zoneadm -z $zone list -p | cut -d: -f3,6)
-
-			# We don't attempt to audit lx branded zones. Maybe if I ever
-			# adapt this script to work with Linux...
-
-			if [[ ${ZSTATE%:*} == "running" && ${ZSTATE#*:} != "lx" ]]
-			then
-				ZFILE=$(zonecfg -z $zone info zonepath \
-				| cut -d" " -f2)/root/${0##*/}
-
-				cp $0 $ZFILE
-
-				if [[ -s $ZFILE ]]
-				then
-					zlogin $zone "/${0##*/} $Z_OPTS $class"
-					rm $ZFILE
-				fi
-
-			else 
-				disp "hostname" $zone
-				disp "zone status" ${ZSTATE%:*}
-				get_time
-			fi >&3
-
-		done
-
-	fi
-
-done
+done 
 
 # Do we have to copy the output directory?
 
 if [[ -n $REMOTE_STR ]]
 then
-	SCP=$(find_bins scp | sed '1q')
 
-	if [[ -n $SCP ]]
-	then
-		print -n \ "\ncopying to ${REMOTE_STR#*@} as ${REMOTE_STR%:*}: "
+	can_has scp	|| die "no scp binary."
 
-		$SCP -rqCp $OUTDIR $REMOTE_STR >/dev/null 2>&1\
-			&& print "ok" \
-			|| print "FAILED"
-	else
-		print -u2 "ERROR: no scp binary."
-	fi
+	scp -rqCp $DP $REMOTE_STR >/dev/null 2>&1 \
+		&& msg "copied data to $REMOTE_STR" \
+		|| die "failed to copy data to $REMOTE_STR"
 
 fi
 
 # If we were only asked for a remote copy of the audit files, remove the
 # local one
 
-[[ -n $REMOTE_STR && -z $LOCAL_OUT ]] && rm -fr $OUTDIR
-
-# Finished
 
 clean_up
 exit 0
