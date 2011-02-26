@@ -51,6 +51,12 @@ $ s-audit.sh -V
 	class of audit, in both global and local zones. No other action is
 	taken.</dd>
 	
+	<dt>-L facility</dt>
+	<dd>Lets the user supply a syslog facility to which <tt>s-audit.sh</tt>
+	will write messages.</dd>
+
+	<dd>The argument to this flag must be given in lower-case.</dd>
+
 	<dt>-M</dt>
 	<dd>Normally, in a hardware audit, <tt>s-audit.sh</tt> will only report
 	MAC addresses for plumbed interfaces. When <tt>-M</tt> is specified, the
@@ -79,7 +85,7 @@ $ s-audit.sh -V
   	<dt>-q</dt>
 	<dd>Suppresses any writing to standard out or standard err. This is
 	intended to be used with the <tt>-f</tt> option when <tt>s-audit.sh</tt>
-	is run through cron.</dd>
+	is run through cron or SMF.</dd>
 
 	<dt>-R user@host:directory</dt>
 	<dd>This option is used in conjunction with <tt>-f</tt> to copy files to
@@ -157,23 +163,34 @@ be provided. The classes are:</p>
 
 </dl>
 
-<h1>Logging</h1>
+<h1>Output and Logging</h1>
 
-<p>If it is being run as a cron job, <tt>s-audit.sh</tt> will attempt to
-write error messages to the system logger, using <tt>logger(1)</tt>. By
-default it writes to the <tt>LOCAL7</tt> facility, but you can change this
-via the <tt>LOGDEV</tt> variable. Messages are written at the <tt>error</tt>
-level.</p>
+<p>If the <tt>-q</tt> option is given, then nothing will be written to
+standard out or standard err, even error messages from the programs being
+audited.</p>
+
+<p>If you intend to generate regular audits by running <tt>s-audit.sh</tt>
+through a scheduler, you will generally use <tt>-q</tt>, but you may also
+wish to supply a syslog facility with the <tt>-L</tt> option. If syslog is
+being used, <tt>s-audit.sh</tt> will record the start and finish of every
+audit it performs, along with any error messages. Start and finish messages
+are written at <tt>info</tt> level, error messages at <tt>err</tt>.</p>
 
 <p>To capture the <tt>s-audit.sh</tt> output, put a line like this in your
-<tt>/etc/syslog.conf</tt>. Remember, as usual, it has to be tab-separated,
-you'll have to touch the destination file, and restart the syslog
-daemon.</p>
+<tt>/etc/syslog.conf</tt>. Remember that <tt>syslog.conf</tt> fields must be
+tab-separated, you'll have to touch the destination file, and restart the
+syslog daemon. This example assumes you run <tt>s-audit.sh</tt> with
+<tt>-L local7</tt> and wish to record all starts, stops, and errors.</p>
 
 <pre>
 local7.info                 /var/log/s-audit.log
 </pre>
 
+<p>Alternatively, to only record error messages:</p>
+
+<pre>
+local7.err                 /var/log/s-audit.log
+</pre>
 
 <?php
 
