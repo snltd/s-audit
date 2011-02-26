@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/ksh93
 
 #=============================================================================
 #
@@ -18,6 +18,7 @@
 # You can do various types of audit. Currently, those types are:
 #   "platform" : looks at the hardware/virtual environment
 #   "os"       : looks at the O/S
+#   "net"      : looks at network configuration
 #   "app"      : examines various applications
 #   "tool"     : examines various tools
 #   "hosted"   : looks at services hosted on the box, like databases and web
