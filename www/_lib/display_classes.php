@@ -2206,11 +2206,14 @@ class HostGrid {
 		// We're not interested in the ones in omit_attrs
 
 		if (isset($this->omit))
-			$data = array_diff($data, $this->omit->omit_attrs);
+			$ns = array_diff($data, $this->omit->omit_attrs);
+
+		if (sizeof($data > 0) && sizeof($ns) == 0)
+			return new Cell("standard attrs");
 
 		$c_arr = array();
 
-		foreach($data as $attr)
+		foreach($ns as $attr)
 			$c_arr[] = array(preg_replace("/^([^:]*)/",
 			"<tt><strong>$1</strong>", $this->fold_line(htmlentities($attr),
 			50, "[,;]")) . "</tt>", false);
@@ -2224,11 +2227,14 @@ class HostGrid {
 		// line, the command folded underneath
 
 		if (isset($this->omit))
-			$data = array_diff($data, $this->omit->omit_crons);
+			$ns = array_diff($data, $this->omit->omit_crons);
+
+		if (sizeof($data > 0) && sizeof($ns) == 0)
+			return new Cell("standard jobs");
 
 		$c_arr = array();
 
-		foreach($data as $datum) {
+		foreach($ns as $datum) {
 			$a = preg_split("/\s+/", $datum, 6);
 			$c_arr[] = array("<strong>" . preg_replace("/:/",
 			"</strong><tt> ", $a[0]) . " $a[1] $a[2] $a[3] $a[4]<br/>" .
