@@ -110,9 +110,20 @@ internal. This is fast and efficient.</p>
 
 </dl>
 
+<h2>Adding Checks</h2>
+
+<p>Create a function which gets the version of, say, &quot;myprog&quot;. The
+function should be called <tt>get_myprog()</tt>, and should call either the
+<tt>disp()</tt> or <tt>is_run_ver()</tt> functions, depending on whether or
+not you want to check for a running program.</p>
+
+<p>To check for multiple installed copies of a program, wrap the body of
+your function in a loop, using the find_bins function to get a list of
+binaries to run. Finally add <tt>myprog</tt> to the appropriate test
+list.</p>
+
 <?php
 
 $pg->close_page();
 
 ?>
-

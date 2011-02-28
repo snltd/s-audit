@@ -12,9 +12,9 @@ $pg = new docPage("the s-audit.sh client");
 
 <p>The client part of <tt>s-audit.sh</tt> is a Korn shell script which
 gathers information on a wide range of system features and configurations.
-It is intended to show what hardware the system is running on, how the O/S
-is installed and patched, what software is available, what services are
-running, and so-on.</p>
+It shows what kind of hardware or virtualized environment the system is running in, how the O/S
+is installed and patched, what software is available, how the network is
+configured, what websites or databases are hosted on it, and so-on.</p>
 
 <p>There are different types, or <em>classes</em> of audit, with each
 class being made up of a number of <em>tests</em>.  A list of the available
