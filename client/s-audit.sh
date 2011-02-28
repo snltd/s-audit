@@ -1,4 +1,4 @@
-#!/bin/ksh93
+#!/bin/ksh
 
 #=============================================================================
 #
@@ -11,44 +11,15 @@
 # Can be run as any user, but a full audit requires root privileges.
 # Currently is not RBAC aware.
 #
-# For documentation and more information please see 
+# For usage information run
+#
+#  s-audit.sh -h
+#
+# For documentation, license, changelog and more please see 
 #
 #   http://snltd.co.uk/s-audit
 #
-# You can do various types of audit. Currently, those types are:
-#   "platform" : looks at the hardware/virtual environment
-#   "os"       : looks at the O/S
-#   "net"      : looks at network configuration
-#   "app"      : examines various applications
-#   "tool"     : examines various tools
-#   "hosted"   : looks at services hosted on the box, like databases and web
-#                sites
-#   "fs"       : gets information on local and network filesystems
-#   "security" : looks at certain security-related issues
-#   "patch"    : lists installed patches and packages
-#
-# Yes this script is huge. Yes it could be broken up into smaller "modules".
-# Yes it could be written in other languages. but I don't think it would be
-# appreciably smaller or appreciably faster, and I wanted absolutely NO
-# dependencies. The whole idea of it is that you can copy it anywhere on any
-# Solaris box, run it, and get a full audit of what's on the machine. I
-# don't plan to change that.
-#
-# HOW TO ADD A CHECK
-# ------------------
-# Create a function which gets the version of, say, "myprog". The function
-# should be called "get_myprog", and should call either the disp() or
-# is_run_ver() functions, depending on whether or not you want to check for
-# a running program. If you want to check for multiple installed copies of a
-# program, wrap the body of your function in a loop, using the find_bins
-# function to get a list of binaries to run. Finally add "myprog" to the
-# appropriate test list.
-#
-# R Fisher 11/10
-#
-# Please record changes below
-#
-# v3.0  First public release.
+# v3.0. (c) 2011 SNLTD.
 #
 #=============================================================================
 
@@ -678,24 +649,24 @@ function nr_warn
 
 	if [[ $1 == "platform" ]]
 	then
-		print "Many tests, including ALOM, FC enclosure, virtualization will
-		not be run"
+		print "Many tests, including ALOM, FC enclosure, virtualization \
+		will not be run"
 	elif [[ $1 == "net" ]]
 	then
 		print "NIC information will be limited"
 	elif [[ $1 == "os" ]]
 	then
-		print "There will be no zone type information, and LDOM information
-		may be limited"
+		print "There will be no zone type information, and LDOM \
+		information may be limited"
 	elif [[ $1 == "security" ]]
 	then
-		print "There will be no information on blank passwords, authorized
+		print "There will be no information on blank passwords, authorized \
 		keys or cron jobs, and poorer identification of open ports."
 	elif [[ $1 == "app" ]]
 	then
-		print "There may be no information on loaded Apache modules, Tomcat
-		information may be incomplete, and Veritas and SunONE/iPlanet
-		applications may not be audited."
+		print "There may be no information on loaded Apache modules, \
+		Tomcat information may be incomplete, and Veritas and \
+		SunONE/iPlanet applications may not be audited."
 	elif [[ $1 == "tool" ]]
 	then
 		print "If sccli is installed it will not be audited"
@@ -3433,8 +3404,9 @@ then
 
 	if [[ -n $OUT_P ]]
 	then
-		exec 3>"${OD}/audit.$HOSTNAME"
-		print -u3 "@@s-audit.sh version $MY_VER $(date)"
+		exec 3>"${OD}/${HOSTNAME}.machine.saud"
+		print -u3 "@@BEGIN_s-audit v-$MY_VER "$(date "+%Y %m %d %H %M")
+
 	fi
 
 	msg "Writing audit files to ${OD}."
@@ -3453,16 +3425,17 @@ then
 
 	for c in $CL
 	do
-		[[ -n $TO_FILE && -z $OUT_P ]] && exec 3>"${OD}/audit.${HOSTNAME}.$c"
+		[[ -n $TO_FILE && -z $OUT_P ]] \
+			&& exec 3>"${OD}/${HOSTNAME}.${c}.saud"
 
 		WARN=$(nr_warn $c)
 
 		if [[ -n $WARN ]] && ! is_root 
 		then
 			prt_bar
-			print "WARNING: running this script as an unprivileged user 
-			may not produce a full audit. ${WARN}.\n" | \
-			sed -e "s/[$WSP]*//" -e :a -e 's/^.\{1,77\}$/ & /;ta' 
+			print "WARNING: running this script as an unprivileged user may 
+			not produce a full audit. ${WARN}.\n" | fold -s -w 80 | \
+			sed -e "s/[$WSP]\{1,\}/ /g" -e :a -e 's/^.\{1,78\}$/ & /;ta' 
 			prt_bar
 		fi >&2
 
@@ -3497,7 +3470,7 @@ do
 
 			for c1 in $CL
 			do
-				exec 3>"${OD}/audit.${HOSTNAME}.${z}.$c1"
+				exec 3>"${OD}/${z}.${c1}.saud"
 				zlogin $z /${zf##*/} $Z_OPTS $c1 >&3
 			done
 
@@ -3514,22 +3487,20 @@ do
 
 done 
 
+# Write a footer if we've just done a parseable file
+
+[[ -n $TO_FILE && -n $OUT_P ]] && print -u3 "@@END_s-audit"
+
 # Do we have to copy the output directory?
 
 if [[ -n $REMOTE_STR ]]
 then
-
 	can_has scp	|| die "no scp binary."
 
 	scp -rqCp $DP $REMOTE_STR >/dev/null 2>&1 \
 		&& msg "copied data to $REMOTE_STR" \
 		|| die "failed to copy data to $REMOTE_STR"
-
 fi
-
-# If we were only asked for a remote copy of the audit files, remove the
-# local one
-
 
 clean_up
 exit 0
