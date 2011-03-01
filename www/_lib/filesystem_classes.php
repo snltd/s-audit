@@ -1,7 +1,16 @@
 <?php
 
-//----------------------------------------------------------------------------
-// FILESYSTEM ACCESS
+//============================================================================
+//
+// filesystem_classes.php
+// ----------------------
+//
+// A class to read and write flat files.
+//
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
+//
+//============================================================================
 
 class Filesystem {
 

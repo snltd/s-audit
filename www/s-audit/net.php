@@ -15,12 +15,9 @@
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 
-//------------------------------------------------------------------------------
-// SCRIPT STARTS HERE
-
 $map = new ZoneMap(LIVE_DIR);
-$s = new GetServersNet($map);
-$grid = new NetGrid($map, $s->get_array());
+$s = new GetServers($map, false, "net");
+$grid = new NetGrid($map, $s->get_array(), "net");
 
 $pg = new audPage("networking audit", $grid->server_count(),
 $grid->zone_toggle());

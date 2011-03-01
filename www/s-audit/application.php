@@ -15,12 +15,9 @@
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 
-//------------------------------------------------------------------------------
-// SCRIPT STARTS HERE
-
 $map = new ZoneMap(LIVE_DIR);
-$s = new GetServersApp($map);
-$grid = new SoftwareGrid($map, $s->get_array());
+$s = new GetServers($map, false, "app");
+$grid = new SoftwareGrid($map, $s->get_array(), "app");
 
 $pg = new audPage("application software audit", $grid->server_count(),
 $grid->zone_toggle());

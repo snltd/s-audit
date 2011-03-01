@@ -69,6 +69,10 @@ define("PKG_DEF_DIR", LIB . "/pkg_defs");
 define("PCH_DEF_DIR", LIB . "/pch_defs");
 	// Where to find patch definition files
 
+define("MAX_AF_VER", 3.0);
+define("MIN_AF_VER", 3.0);
+	// Maximum and minimum audit file versions we support
+
 // We always need our basic classes
 
 require_once(LIB . "/display_classes.php");

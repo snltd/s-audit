@@ -7,7 +7,11 @@
 //
 // Classes which sort, process, and display audit data.
 //
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
 //
+//============================================================================
+
 //============================================================================
 
 define("MY_VER", "3.0");
@@ -64,10 +68,11 @@ class HostGrid {
 	//------------------------------------------------------------------------
 	// METHODS
 
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $class)
 	{
 		// A simple constructor which just populates a few arrays.
 
+		$this->c = $class;
 		$this->servers = $servers;
 		$this->fields = $this->get_fields();
 		$this->fields = $this->sort_fields("audit completed");
@@ -80,6 +85,24 @@ class HostGrid {
 		$this->get_key();
 	}
 
+	public function get_parent_prop($zone, $class, $prop)
+	{
+		$p = $this->map->get_parent_zone($zone);
+		
+		if (isset($this->servers[$p][$class][$prop])) {
+			$r = $this->servers[$p][$class][$prop];
+
+			$r = (count($r) == 1)
+				? $r[0]
+				: $r;
+		}
+		else
+			$r = false;
+
+		return $r;
+		
+	}
+		
 	protected function get_key()
 	{
 		// Each audit page has a key held in a file. Work out what that file
@@ -152,7 +175,7 @@ class HostGrid {
 	{
 
 		// We need to know how many fields to print, and what those fields
-		// are. This has to be worked out from the audit files.
+		// are. This has to be worked out from the servers[] array
 
 		// We simultaneously try two ways of doing it. The first is to find
 		// the audit file with the most unique keys. Secondly, we make a
@@ -173,7 +196,7 @@ class HostGrid {
 			if (!is_array($zone))
 				continue;
 
-			foreach(array_keys($zone) as $col_name) {
+			foreach(array_keys($zone[$this->c]) as $col_name) {
 				$temp_arr[] = $col_name;
 
                 if (!in_array($col_name, $all_keys))
@@ -308,7 +331,7 @@ class HostGrid {
 		// Display the HTML for a single server and all its zones, if
 		// necessary
 
-		$ret = $this->show_zone($this->servers[$server]);
+		$ret = $this->show_zone($this->servers[$server][$this->c]);
 
 		$zl = (defined("NO_ZONES"))
 			? false
@@ -317,7 +340,7 @@ class HostGrid {
 		if (is_array($zl)) {
 
 			foreach($this->map->list_server_zones($server) as $zone) {
-				$ret .= $this->show_zone($this->servers[$zone]);
+				$ret .= $this->show_zone($this->servers[$zone][$this->c]);
 			}
 
 		}
@@ -334,6 +357,7 @@ class HostGrid {
 	{
 		// Returns a row of HTML which describes a single zone.
 
+		//echo "<pre>", print_r($data), "</pre>";
 		// If $data isn't an array, that's an indicator that parse_files hit
 		// a zero sized file. If it is, then we have useable data
 
@@ -341,33 +365,15 @@ class HostGrid {
 
 			// We always have the zone name as [hostname];
 
-			$zname = $data["hostname"][0];
+			$z = $data["hostname"][0];
 			
-			// Are we a local zone, global zone, logical domain primary or
-			// other logical domain? With the addition of the
-			// "virtualization" field, this has got easier. We may have to
-			// parse the platform file to get it though.
+			// use the map to get the virtualization
 
-			if (isset($data["virtualization"][0]))
-				$zv = $data["virtualization"][0];
-			else {
-				$hw = GetServers::parse_file($this->map->get_base($zname) .
-				".platform");
-
-				$zv = isset($hw["virtualization"][0])
-					? $hw["virtualization"][0]
-					: false;
-			}
-
-			if (preg_match("/^VirtualBox/", $zv))
+			if (in_array($z, $this->map->list_vbox()))
 				$row_class = "vb";
-			elseif (preg_match("/^primary LDOM/", $zv))
-				$row_class = "ldmp";
-			elseif (preg_match("/^guest LDOM/", $zv))
+			elseif (in_array($z, $this->map->list_ldoms()))
 				$row_class = "ldm";
-			elseif (preg_match("/^none/", $zv))
-				$row_class = "server";
-			elseif ($this->map->is_global($zv))
+			elseif ($this->map->is_global($z))
 				$row_class = "server";
 			else
 				$row_class = "zone";
@@ -386,15 +392,18 @@ class HostGrid {
 				// for each of them. If it does, look to see if there's a
 				// special method for handling that data
 
+				$dk = array_keys($data);
+
 				foreach($this->fields as $field) {
 
-					if (in_array($field, array_keys($data))) {
+					if (in_array($field, $dk)) {
 
 						$method = preg_replace("/\W/", "_", "show_$field");
 
-						if (method_exists($this, $method))
+						if (method_exists($this, $method)) {
 							$ret_str .= $this->$method($data[$field],
 							$data);
+						}
 						else
 							$ret_str .= $this->show_generic($data[$field],
 							$field);
@@ -890,7 +899,7 @@ class HostGrid {
 
 		if (!$this->map->is_global($zn)) {
 
-			if ($this->map->get_parent_prop($zn, "version", "os")  !=
+			if ($this->get_parent_prop($zn, "os", "version") !=
 			preg_replace("/ zone$/", "", $data[0]))
 				$class = "boxamber";
 		}
@@ -958,8 +967,8 @@ class HostGrid {
 		// If we've got something in the array above, translate it. We need
 		// the Solaris revision first.
 	
-		preg_match("/^.*SunOS ([\d.]+).*$/", $this->map->get_zone_prop($zn,
-		"version", "os"), $vi);
+		preg_match("/^.*SunOS ([\d.]+).*$/",
+		$this->servers[$zn]["os"]["version"][0]);
 
 		if (isset($vi[1])) {
 			$sv = $vi[1];
@@ -976,8 +985,9 @@ class HostGrid {
 		// parent
 
 		if (!$this->map->is_global($zn)) {
+			$p = $this->map->get_parent_zone($zn);
 
-			if ($this->map->get_parent_prop($zn, "release", "os")  !=
+			if ($this->get_parent_prop($zn, "os", "release") !=
 			preg_replace("/ zone$/", "", $data[0]))
 				$class = "boxamber";
 		}
@@ -1018,7 +1028,8 @@ class HostGrid {
 			$zn = $extra["hostname"][0];
 
 			if (!$this->map->is_global($zn))
-				$pu = $this->uptime_in_m($this->map->get_parent_prop($zn,
+				$pu =
+				$this->uptime_in_m($this->get_parent_prop($zn,
 				"uptime", "os"));
 
 			// Flag the box amber if uptime is less than a day. Put an amber
@@ -1057,6 +1068,7 @@ class HostGrid {
 
 		$zn = $extra["hostname"][0];
 		$kr = $data[0];
+		$col = false;
 
 		if (!isset($this->latest_kerns))
 			return $this->show_generic($kr);
@@ -1065,7 +1077,6 @@ class HostGrid {
 		$extra["version"][0]);
 
 		// Don't colour "virtual" kernels at all
-
 		if ($kr == "Virtual")
 			$class = false;
 		elseif (in_array($osver, array_keys($this->latest_kerns)))
@@ -1078,11 +1089,10 @@ class HostGrid {
 
 		// Now look to see if the kernel is the same as the parent
 
-		$col = ($this->map->is_global($zn) || $data[0] ==
-		$this->map->get_parent_prop($zn, "kernel", "os"))
-			? false
-			: inlineCol::box("amber");
-
+		if (!$this->map->is_global($zn) && ($data[0] !=
+		$this->get_parent_prop($zn, "os", "kernel")))
+			$col = inlineCol::box("amber");
+			
 		return new Cell($data[0], $class, $col);
 	}
 
@@ -1106,14 +1116,13 @@ class HostGrid {
 		$class = false;
 
 		if (!$this->map->is_global($extra["hostname"][0])) {
-			$parent = $this->map->get_parent_zone($extra["hostname"][0]);
+			$p= $this->map->get_parent_zone($extra["hostname"][0]);
 			
-			if ($this->map->has_data($parent)) {
-				$pz = $this->servers[$parent];
+			if (isset($this->servers[$p]["os"]["patches"][0])) {
+				$ppn = $this->servers[$p]["os"]["patches"][0];
 
-				if ($data[0] < $pz["patches"][0])
+				if ($data[0] < $ppn)
 					$class = "solidamber";
-
 			}
 
 		}
@@ -1374,7 +1383,7 @@ class HostGrid {
 		return preg_replace("/:$/", "", $mac);
 	}
 
-	public function show_NIC($nic_arr)
+	public function show_NIC($nic_arr, $extra)
 	{
 		// $data is an array of NIC lines in parseable format. Each element
 		// is a NIC.
@@ -1541,11 +1550,21 @@ class HostGrid {
 				// zone which holds the IP instance, and getting its primary
 				// NIC's subnet. 
 
-				$zarr = GetServers::get_zone($this->map->get_base($na[3]),
-				"net");
+				if (isset($this->servers[$na[3]]["net"]["NIC"])) {
+					$n = $this->servers[$na[3]]["net"]["NIC"];
 
-				$snn = explode("|", $zarr["NIC"][0]) ;
-				$subnet = PlatformGrid::get_subnet($snn[1]);
+					foreach($n as $nr) {
+						$snn = explode("|", $nr);
+
+						if ($snn[0] == $na[0]) {
+							$subnet = PlatformGrid::get_subnet($snn[1]);
+							break;
+						}
+
+					}
+
+				}
+
 			}
 
 			// We know the subnet, so we can get the colour for the cells
@@ -2299,7 +2318,7 @@ class HostGrid {
 		$ld = sizeof($this->map->list_ldoms());
 		$lz = sizeof($this->map->list_locals());
 		$vb = sizeof($this->map->list_vbox());
-		$others = ($this->map->count - PER_PAGE);
+		$others = (count($this->map) - PER_PAGE);
 		$parts = 0;
 
 		// Logical domains, virtualboxes and physical servers all have
@@ -2381,7 +2400,7 @@ class HostGrid {
 		$no = $os + PER_PAGE;
 		$po = $os - PER_PAGE;
 
-		if ($this->map->count > PER_PAGE) {
+		if (count($this->map) > PER_PAGE) {
 
 			if ($os != 0) {
 
@@ -2464,20 +2483,21 @@ class HostGrid {
 			return $a[1];
 	}
 
-	protected function get_paired_list($prop1, $prop2)
+	protected function get_paired_list($class, $prop1, $prop2)
 	{
 		// Make an array of the latest version of prop2 for each unique
-		// prop1
+		// prop1 in audit class $class
 
 		$lo = array();
 
 		foreach ($this->servers as $server) {
+			$sc = $server[$class];
 		
-			if (!isset($server[$prop1][0]) || !isset($server[$prop2][0]))
+			if (!isset($sc[$prop1][0]) || !isset($sc[$prop2][0]))
 				continue;
 
-			$p1 = $server[$prop1][0];
-			$p2 = $server[$prop2][0];
+			$p1 = $sc[$prop1][0];
+			$p2 = $sc[$prop2][0];
 	
 			if (in_array($p1, array_keys($lo)))
 				$lo[$p1][] = $p2;
@@ -2511,14 +2531,14 @@ class PlatformGrid extends HostGrid
 	protected $key_filename = "key_platform.php";
 		// Helps us include they key file automatically
 
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
 		// generates the $latest[] OBP and ALOM arrays
 	
-		parent::__construct($map, $servers);
-		$this->latest_obps = $this->get_paired_list("hardware", "OBP");
-		$this->latest_aloms = $this->get_paired_list("hardware", "ALOM f/w");
+		parent::__construct($map, $servers, $c);
+		$this->latest_obps = $this->get_paired_list("platform", "hardware", "OBP");
+		$this->latest_aloms = $this->get_paired_list("platform", "hardware", "ALOM f/w");
 	}
 
 }
@@ -2537,12 +2557,13 @@ class OSGrid extends PlatformGrid
 		// where "s" denotes SPARC and "x" x86/amd64
 
 	protected $key_filename = false;
-    public function __construct($map, $servers)
+
+    public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
 		// generates the $latest[] array
 
-		parent::__construct($map, $servers);
+		parent::__construct($map, $servers, $c);
 		$this->latest_kerns = $this->get_latest_kerns();
 	}
 
@@ -2554,11 +2575,12 @@ class OSGrid extends PlatformGrid
 		$dist = preg_replace("/ zone/", "", $dist);
 		$osver = preg_replace("/\W/", "", $dist . $sver);
 
-		$arch = ($this->map->is_global($zn))
-			? $this->map->get_zone_prop($zn, "hardware", "platform")
-			: $this->map->get_parent_prop($zn, "hardware", "platform");
+		$z = ($this->map->is_global($zn))
+			? $zn
+			: $this->map->get_parent_zone($zn);
 
-		$arch = (preg_match("/SPARC/", $arch))
+		$arch = (preg_match("/SPARC/",
+		$this->servers[$z]["platform"]["hardware"][0]))
 			? "s"
 			: "x";
 
@@ -2574,13 +2596,15 @@ class OSGrid extends PlatformGrid
 
 		foreach ($this->servers as $server) {
 
-			if (!isset($server["distribution"][0]) ||
-			!isset($server["version"][0]))
+			$d = $server["os"];
+
+			if (!isset($d["distribution"][0]) || !isset($d["version"][0]))
 				continue;
 
-			$kp = $server["kernel"][0];
-			$osver = $this->mk_ver_arch_str($server["hostname"][0],
-			$server["distribution"][0], $server["version"][0]);
+			$kp = $d["kernel"][0];
+
+			$osver = $this->mk_ver_arch_str($d["hostname"][0],
+			$d["distribution"][0], $d["version"][0]);
 
 			if (in_array($osver, array_keys($lk))) {
 
@@ -2606,11 +2630,11 @@ class NetGrid extends HostGrid {
 
 	protected $omit = array();
 
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $c)
 	{
 		require_once(ROOT . "/_conf/omitted_data.php");
 
-		parent::__construct($map, $servers);
+		parent::__construct($map, $servers, $c);
 		$this->omit = new omitData();
 	}
 
@@ -2627,9 +2651,9 @@ class FSGrid extends HostGrid {
 		// because we only want it to be populated when we do a proper FS
 		// audit, not when we're comparing or showing a single server.
 
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $c)
 	{
-		parent::__construct($map, $servers);
+		parent::__construct($map, $servers, $c);
 		$this->mntd_nfs = $this->get_nfs_mounts();
 	}
 	
@@ -2639,6 +2663,7 @@ class FSGrid extends HostGrid {
 		return (preg_match("/\(nfs:/", $row))
 			? true
 			: false;
+
 	}
 
 	protected function get_nfs_mounts()
@@ -2651,6 +2676,7 @@ class FSGrid extends HostGrid {
 
 		$ta = array();
 
+		/*
 		foreach($this->map->list_all() as $srvr) {
 
 			if (!isset($this->servers[$srvr]["fs"]))
@@ -2665,6 +2691,7 @@ class FSGrid extends HostGrid {
 				preg_replace("/^.* \(nfs:[^:]*:([^:]*):([^:\)]*).*$/",
 				"\\1:\\2", $nfs_arr), $ta);
 		}
+		*/
 
 		return array_count_values($ta);
 	}
@@ -2686,11 +2713,11 @@ class SecurityGrid extends HostGrid{
 
 	protected $omit = array();
 
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $c)
 	{
 		require_once(ROOT . "/_conf/omitted_data.php");
 
-		parent::__construct($map, $servers);
+		parent::__construct($map, $servers, $c);
 		$this->omit = new omitData();
 
 		if (isset($this->omit->omit_users)) {
@@ -2731,13 +2758,12 @@ class SoftwareGrid extends HostGrid
 		"mod_php" => "Sun Web Server"
 		);
 
-
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
 		// generates the $latest[] array
 
-		parent::__construct($map, $servers);
+		parent::__construct($map, $servers, $c);
 		$this->latest = $this->get_latest();
 	}
 
@@ -2837,10 +2863,10 @@ class SoftwareGrid extends HostGrid
 		// Assuming we've got a valid array, mash together all the servers
 		// and software into one big array
 
-		foreach($this->servers as $hostname=>$sw) {
+		foreach($this->servers as $hostname=>$cd) {
 
-			if (is_array($sw))
-				$all_sw = array_merge_recursive($sw, $all_sw);
+			if (is_array($cd[$this->c]))
+				$all_sw = array_merge_recursive($cd[$this->c], $all_sw);
 		}
 
 		// In the loop below, $sw is the name of the software, and $vers is
@@ -3036,39 +3062,36 @@ class HostedGrid extends HostGrid
 	protected $ip_list = array();
 	protected $nfs_dirs = array();
 
-	public function __construct($map, $servers)
+	public function __construct($map, $servers, $c)
 	{
 		// This does a bit more than the usual grid class. We try to get a
 		// list of our resolved external IP addresses, and we try to get a
 		// list of all NFS mounted directories
 
-		parent::__construct($map, $servers);
+		parent::__construct($map, $servers, $c);
 		$this->ip_list = $this->get_ip_list();
 
-		$fss = new GetServersFS($map, false);
-		$this->nfs_dirs = $this->get_nfs_dirs($fss);
+		$this->nfs_dirs = $this->get_nfs_dirs();
 	}
 
-	protected function get_nfs_dirs($fss)
+	private function get_nfs_dirs()
 	{
 		// Get a list of all NFS mounted directories. We use this to work
-		// out whether or not document roots are NFS mounted. Each nfs mount
-		// is an element in an array. Arg is the servers map created in the
-		// constructor
+		// out whether or not document roots are NFS mounted. Each NFS mount
+		// is an element in an array, one array per host
 
+		return;
+		// XXX does not work. As you can only see SOME of the servers if you
+		// have more than 20
 		$ra = array();
 
-		foreach($fss->servers as $server=>$data) {
+		foreach($this->servers as $h=>$s) {
 
-			if (!isset($data["fs"]))
-				continue;
-				
-			foreach($data["fs"] as $fs) {
-				preg_match("/^(\S*) \((\w*):.*$/", $fs, $a);
+			foreach($s["fs"]["fs"] as $fsl) {
+				preg_match("/^([^ ]+) \(([^:]+):.*$/", $fsl, $m);
 
-				if ($a[2] == "nfs")
-					$ra[$server][] = $a[1];
-
+				if ($m[2] == "nfs")
+					$ra[$h][] = $m[1];
 			}
 
 		}

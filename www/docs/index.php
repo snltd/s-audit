@@ -28,9 +28,9 @@ grown hand-in-hand with the client script.</p>
 shell script which is run on the machine you wish to audit. This is the only
 essential, and may prove useful on its own. It is written to be compatible
 with the version of ksh88 shipped with Solaris 2.6, and has no other
-dependencies. Therefore it will work perfectly on any Solaris system running
-today, however minimal. The client performs different &quot;classes&quot; of
-audit, looking at different aspects of the machine on which it is run.</p>
+dependencies. Therefore it will run on any Solaris system running today,
+however minimal. The client performs different &quot;classes&quot; of audit,
+looking at different aspects of the machine on which it is run.</p>
 
 <p>The client writes human-readable or machine-parseable information to
 standard out or to files. The files are understood, and turned into pretty,

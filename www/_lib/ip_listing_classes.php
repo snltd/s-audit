@@ -36,14 +36,12 @@ class GetIpList {
 	public $subnets = array();
 		// A unique array of subnets x.x.x.0
 
-	public function __construct($map)  {
-		
+	public function __construct($map, $servers)  {
 		// Use a separate class to get all the IP addresses from the audit
 		// files
 
 		if (sizeof($map->map) > 0) {
-			$aud_ips = new GetIPFromAudit($map);
-			$this->addrs["IP_LIVE"] = $aud_ips->get_ips();
+			$this->addrs["IP_LIVE"] = $this->get_ip_from_audit($servers);
 		}
 		else
 			$this->addrs["IP_LIVE"] = array();
@@ -140,8 +138,42 @@ class GetIpList {
 		$this->subnets = array_unique($nets);
 	}
 
-}
+	private function get_ip_from_audit($servers)
+	{
+		// Go through the server data pulling out NIC and ALOM info
 
+		foreach($servers as $h=>$s) {
+		
+			if (isset($s["platform"]["ALOM IP"])) {
+				$aip = $s["platform"]["ALOM IP"][0];
+				$ret[$aip] = "$h LOM";
+			}
+
+			if (isset($s["net"]["NIC"])) {
+				$nic = preg_grep("/^\w+[:\d]+\|\d/", $s["net"]["NIC"]);
+
+				foreach($nic as $n) {
+					$a = explode("|", $n);
+					
+					// Put in the names of non-aliased interfaces
+					
+					$if = (!preg_match("/:/", $a[0]))
+						?  " $a[0]"
+						: "";
+					
+					$ret[$a[1]] = "${h}$if";
+				}
+
+			}
+			
+		}
+
+		return $ret;
+	}
+
+}
+		
+		
 //----------------------------------------------------------------------------
 // DATA DISPLAY
 
@@ -157,6 +189,8 @@ class IPGrid extends HostGrid{
 	{
 		// The fields are the subnets we know about. We have to manually
 		// include the key since we don't call the parent::__construct()
+
+		//echo "<pre>", print_r($this->addrs), "</pre>";
 
 		$this->fields = $s->subnets;
 		$this->l = $s->addrs;

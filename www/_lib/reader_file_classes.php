@@ -1,9 +1,17 @@
 <?php
 
+//============================================================================
+//
+// reader_file_classes.php
+// -----------------------
+//
 // These classes get audit data from flat files. They extend the classes in
 // reader_classes.php
-
 //
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
+//
+//============================================================================
 
 // Since we're reading files, we need the Filesystem:: class
 
@@ -15,86 +23,58 @@ require_once(LIB . "/filesystem_classes.php");
 class ZoneMap extends ZoneMapBase {
 
 	// Extend the ZoneMapBase class so audit data can be read in from flat
-	// files
+	// files. Now we just use a single flat file per server.
 
-	public function __construct($audit_dir, $can_be_empty = false)
+	// Class variables are defined in the ZoneMapBase class in
+	// reader_classes.php
+
+	public function __construct($audit_dir)
 	{
-		// If you don't mind there being no files in an audit directory,
-		// call with the second arg as true. 
+		// Get the offset, if we have one
 
 		$this->offset = (isset($_GET["o"])) ? $_GET["o"] : 0;
 
+		// Check we've got some data
+
 		if (!is_dir($audit_dir))
-			page::error("missing directory [${audit_dir}]");
+			page::error("missing directory. [${audit_dir}]");
 
 		$server_dirs = filesystem::get_files($audit_dir, "d");
-		$this->count = sizeof($server_dirs);
+
+		if (sizeof($server_dirs) == 0)
+			page::error("no audit data. [${audit_dir}]");
 
 		// Throw away server_dirs we aren't interested in, but not if we're
 		// on the single server view page
 
 		if (!defined("HOST_COLS"))
-			$server_dirs = array_slice($server_dirs, $this->offset, PER_PAGE);
+			$server_dirs = array_slice($server_dirs, $this->offset,
+			PER_PAGE);
 
-		if (sizeof($server_dirs) == 0) {
-
-			if ($can_be_empty)
-				return;
-			else
-				page::error("no server information [$audit_dir]");
-		}
-
-		// Loop through all the directories we have, building up the
-		// publicly visible arrays
+		// Create part of the map. Each directory is a server.
+		// globals[] is a list of servers
+		// map[] is server->file
 
 		foreach($server_dirs as $d) {
-			$sname = basename($d);
-			$this->globals[] = $sname;
-
-			// Look at the virtualization type in the global zone's platform
-			// file. There always be a single entry, so the current() is
-			// safe
-
-			$hwf = "${d}/audit.${sname}.platform";
-
-			if (file_exists($hwf)) {
-				$fdat = file($hwf);
-
-				$virt = current(preg_grep("/^virtualization/", $fdat));
-
-				// Look for LDOMs which aren't primaries, and VirtualBoxes
-
-				if (preg_match("/(?<!primary) LDOM/i", $virt))
-					$this->ldoms[] = $sname;
-				elseif (preg_match("/VirtualBox/i", $virt))
-					$this->vbox[] = $sname;
-
-			}
+			$sn = basename($d); 
+			$sf = "${d}/${sn}.machine.saud";
 			
-			foreach(filesystem::get_files($d, "f") as $f) {
-
-				// Do some regexp work to get the filename base (match[1])
-				// and the zone name (match[2])
-
-				preg_match("/(^.*\/audit\.([^\.]*))\..*$/", $f, $match);
-
-				$fbase = $match[1];
-				$zname = $match[2];
-				$tmp_arr[$zname] = $fbase;
-
-				if ($sname != $zname && ! in_array($zname, $this->locals))
-					$this->locals[] = $server_arr[] = $zname;
-
-			}
-
-			if (isset($server_arr)) {
-				$this->servers[$sname] = $server_arr;
-				unset($server_arr);
+			if (file_exists($sf)) {
+				$this->globals[] = $sn;
+				$this->map[$sn] = $sf;
 			}
 
 		}
 
-		$this->map = $tmp_arr;
+	}
+	
+	public function get_fname($server)
+	{
+		// Return the audit filename for the given server
+
+		return (in_array($server, array_keys($this->map)))
+			? $this->map[$server]
+			: false;
 	}
 
 }
@@ -105,182 +85,175 @@ class ZoneMap extends ZoneMapBase {
 class GetServers extends GetServersBase {
 
 	// Extend the GetServersBase class to get data from flat files
+	protected $globals;
 
-	public function __construct($map, $pattern = false, $s_list = false)
+	public function __construct($map, $s_list = false, $cl)
 	{
 		// $map is the map created by ZoneFileMap
-		// $pattern is the audit class
-		// $s_list can be an array of servers to get. If false, then look to
-		// see if no_zones is set in the $_GET[] array. If so, get all
-		// global zones, if not, get all known zones
-
-		if (!$s_list) {
-
-			if (isset($_GET["no_zones"])) {
-				$s_list = $map->list_globals();
-				define("NO_ZONES", true);
-			}
-			else
-				$s_list = $map->list_all();
-		}
-
-		foreach($s_list as $s) {
-			$this->servers[$s] = $this->get_zone($map->get_base($s),
-			$pattern);
-		}
-
-	}
-	
-	public function get_zone($file, $pattern)
-	{
-		// Returns an array of zones. i.e. a whole server
-		// Pattern is a string, or an array of strings, to be used in
-		// creating a list of files which are parsed with parse_file()
-
-		// If we know the file and we know the pattern, we can just get it.
-		// If we have an array of patterns, loop through them.
-
-		if (is_array($pattern)) {
-			$ret = array();
-
-			foreach($pattern as $pat) {
-				$ret = array_merge($ret, $this->parse_file("${file}.$pat"));
-			}
-
-		}
-		else 
-			$ret = GetServers::parse_file("${file}.$pattern");
-
-		return $ret;
-
-	}
-
-	public function parse_file($file)
-	{
-		// Returns a multidimensional array of data in the given file. i.e.
-		// for a single zone Of the form:
-		// Array
-		// (
-		//     [hostname] => Array
-		//         (
-		//             [0] => stephen
-		//         )
-		//
-		//     [platform] => Array
-		//         (
-		//             [0] => Sun Fire V210
-		//         )
-		// I know all those single element arrays look clumsy, and sometimes
-		// there's a lot of seemingly unnecessary references to [0]
-		// elsewhere, but it's the best way of hanlding things when you
-		// don't know if there will be one of them, or many. For instance
-		// disks, NICs, missing patches, websites etc.
+		// $s_list can be an array of servers to get. 
+		// $cl is a class or list of classes
 		
-		// If the file is missing, or zero size, return the name of the file
-		// so other functions can display it in error messages
+		// If we have no $s_list, look to see if no_zones is set in the
+		// $_GET[] array. If so, get all global zones, if not, get all known
+		// zones. This is probably pointless, but a hangover from when we
+		// used to have a file for each zone and each audit type
 
-		if (file_exists($file) && (filesize($file) > 0)) {
+		if (isset($_GET["no_zones"]))
+			define("NO_ZONES", true);
 
-			$data = file($file);
+		if ($cl && is_string($cl))
+			$cl = array($cl);
 
-			foreach($data as $line) {
-				$line = trim($line);
-				$key = preg_replace("/=.*$/", "", $line);
-				$ret[$key][] = preg_replace("/^[^=]*=/", "", $line);
-			}
+		$cl[] = "platform";
 
-		}
-		else 
-			$ret = $file;
+		$this->globals = $map->list_globals();
 
-		return $ret;
-	}
+		if (!$s_list)
+			$s_list = $this->globals;
 
-}
+		if (is_string($s_list))
+			$s_list = array($s_list);
 
-//----------------------------------------------------------------------------
-// IP listing 
-
-class GetIPFromAudit {
-
-	// Used by the GetIPList class. Pulls all IP addresses out of audit
-	// files. Does NICs and ALOMs. Populates an array addrs[] which pairs
-	// ip_addr => "hostname (nic)"
-
-	private $addrs = array();
-	
-	public function __construct($map)
-	{
-		// We need to look at everything to be sure we catch exclusive IP
-		// instances. Look for LOMs in platform and NICs in net
-
-		foreach ($map->list_all() as $zone) {
-			$df = $map->get_base($zone) . ".platform";
-		
-			//-- ALOM --------------------------------------------------------
-
-			if (!file_exists($df))
-				continue;
-
-			$alom = $this->get_value($df, "ALOM IP");
-
-			if (isset($alom[0]))
-				$this->addrs[$alom[0]] = "$zone LOM"; 
-
-			//-- NIC ---------------------------------------------------------
-
-			$df = $map->get_base($zone) . ".net";
-		
-			if (!file_exists($df))
-				continue;
-
-			$nic = $this->get_value($df, "NIC");
-			$nic = preg_grep("/^\w+[:\d]+\|\d/", $nic);
+		foreach($s_list as $g) {
 			
-			// The same IP address can be overwritten because it may exist
-			// in both a global and local zone.  But I don't think it
-			// matters.
+			if ($f = $map->get_fname($g))
+				$this->servers = array_merge($this->servers,
+				$this->parse_m_file($f, $cl));
+		}
 
-			foreach($nic as $n) {
-				$a = explode("|", $n);
-				
-				// Put in the names of non-aliased interfaces
+		// Finish the map
 
-				$if = (!preg_match("/:/", $a[0])) 
-					? " $a[0]"
-					: "";
+		foreach($this->servers as $server) {
 
-				$this->addrs[$a[1]] = "${zone}$if";
+			if(!isset($server["platform"]["hostname"][0]))
+				return;
+
+			$hn = $server["platform"]["hostname"][0];
+
+			// Catch non-running zones
+
+			$v = (isset($server["platform"]["virtualization"][0]))
+				? $server["platform"]["virtualization"][0]
+				: "zone";
+
+			if (in_array($hn, $map->list_globals())) {
+				$c_g = $hn;
+				$map->map[$hn] = array();
 			}
 
+			if (preg_match("/^VirtualBox/", $v))
+				$map->vbox[] = $hn;
+			elseif (preg_match("/^LDOM/", $v))
+				$map->ldoms[] = $hn;
+			elseif(preg_match("/^zone/", $v)) {
+				$map->locals[] = $map->servers[$c_g][] = $hn;
+			}
+			
 		}
 
 	}
-	
-	private function get_value($file, $key)
+
+	private function parse_m_file($file, $cl = false)
 	{
-		// Get the value paired with key in the named file. Returns values
-		// as an array
+		// Only get classes in the second arg
 
-        $ret_arr = array();
+		if ($cl && is_string($cl))
+			$cl = array($cl);
 
-        $file_pointer = fopen("$file", "r");
+		// Parse an all-in-one machine file into an array like this
+		//
+		// [global_hn] => [os]
+		//             => [net]
+		// [zone_1_hn] => [os]
+		// etc. etc.
 
-        for ($i = 0; !feof($file_pointer); $i++) {
-            $line = fgets($file_pointer, 1024);
+		// File is readable?
 
-            if (preg_match("/^${key}=/", $line))
-                $ret_arr[] = trim(preg_replace("/^${key}=/", "", $line));
-        }
+		if (!is_readable($file))
+			page::error("Audit file is not readable. [${file}]");
 
-        return $ret_arr;
-    }
+		// Read in the file - don't add newlines to each record
 
-	public function get_ips()
-	{
-		// Method to pass back the addresses
+		if (!$fa = file($file, FILE_IGNORE_NEW_LINES))
+			page::error("Could not read file. [${file}]");
 
-		return $this->addrs;
+		$last_row = count($fa) - 1;
+
+		// Sanity check. Split the header into chunks and check they look
+		// okay
+
+		preg_match("/^([^ ]+) v-([^ ]*) .*$/", $fa[0], $ca);
+
+		if ($ca[1] != "@@BEGIN_s-audit")
+			page::error("Invalid audit file. [${file}]");
+
+		if ($ca[2] > MAX_AF_VER || $ca[2] < MIN_AF_VER)
+			page::error("Invalid audit file version. [${file}]");
+
+		// And do we have a good-looking footer?
+
+		if ($fa[$last_row] != "@@END_s-audit")
+			page::error("Invalid footer. [${file}]");
+
+		// We're good to go. Read through the file in chunks. Remember each
+		// audit type/zone is delimited by BEGIN class@hostname. We've
+		// already checked the first and last lines, so get rid of them.
+
+		unset($fa[0], $fa[$last_row]);
+		$ret = array();
+		$skip = 0;
+
+		foreach($fa as $l) {
+
+			if (preg_match("/^BEGIN ([^@]+)@(.*)$/", $l, $a)) {
+
+				// If we hit a BEGIN line, start recording the data in a
+				// temporary array
+
+				$this_h = $a[2];
+				$this_c = $a[1];
+
+				if (($cl && ! in_array($this_c, $cl)) ||
+				(defined("NO_ZONES") && !in_array($this_h, $this->globals)))
+					$skip = 1;
+				else {
+					$tmp = array();
+					$skip = 0;
+				}
+
+			}
+			elseif ($skip == 0 && preg_match("/^END (.*)/", $l, $e)) {
+
+				// If we hit the END line corresponding to the last BEGIN,
+				// store the data. If not, store an error
+
+				$ret[$this_h][$this_c] = ($e[1] == "${this_c}@$this_h")
+					? $tmp
+					: "ERROR";
+
+				if (isset($tmp)) unset($tmp);
+
+			}
+			elseif ($skip == 0) {
+				// not a beginning or an end, so must be data
+
+				preg_match("/^([^=]+)=(.*)$/", $l, $d);
+
+				// Silently fail if we don't get key=value. This is probably
+				// a bad idea...
+
+				if (sizeof($d) == 3)
+					$tmp[$d[1]][] = $d[2];
+				else
+					continue;
+					}
+				
+
+		}
+
+		return $ret;
 	}
 
 }
+
+?>

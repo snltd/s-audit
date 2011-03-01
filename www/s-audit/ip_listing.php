@@ -39,7 +39,8 @@ $res_doc = "<a href=\"" . DOC_URL .
 // SCRIPT STARTS HERE
 
 $map = new ZoneMap(LIVE_DIR);
-$s = new GetIPList($map);
+$servers = new GetServers($map, false, "net");
+$s = new GetIPList($map, $servers->get_array());
 $grid = new IPGrid($s);
 $pg = new ipPage("IP address list");
 
