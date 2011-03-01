@@ -355,10 +355,11 @@ function msg
 
 function clean_up
 {
-	# Clean up lock file and output directory
+	# Clean up lock file, output directory, and temporary copies of ourself
 
 	rm -f $LOCKFILE
 	[[ -n $OD ]] && rm -fr ${OD}/$HOSTNAME
+	[[ -n $zf && -f $zf ]] && rm $zf
 }
 
 function can_has
@@ -590,15 +591,16 @@ function num_suff
 function class_head
 {
 	# Print the preamble to a class audit.
-	# $1 is the class
+	# $1 is the zone
+	# $2 is the class
 
 	if [[ -n $OUT_P ]]
 	then
-		print "BEGIN $1@$HOSTNAME"
+		print "BEGIN $2@$1"
 	elif [[ -z $TO_FILE ]]
 	then
 		tput bold
-		print "\n'$1' audit on $HOSTNAME\n"
+		print "\n'$2' audit on $1\n"
 		tput sgr0
 	fi
 }
@@ -606,10 +608,12 @@ function class_head
 function class_foot
 {
 	# Print the information that goes after a class audit
+	# $1 is the zone
+	# $2 is the class
 
 	if [[ -n $OUT_P ]]
 	then
-		print "END $1@$HOSTNAME" 
+		print "END $2@$1" 
 	elif [[ -z $TO_FILE ]]
 	then
 		print "\n$(prt_bar)"
@@ -3417,18 +3421,19 @@ fi
 # Now ZL is the list of zones to do, and RUN_HERE is set if we're doing this
 # zone. We can run the checks
 
+[[ -z $OUT_P && -n $TO_FILE ]] && of_h=1
+
 if [[ -n $RUN_HERE ]]
 then
 
 	# Don't write head and foot to file for non-parseable, and issue a
 	# warning if we're not root
 
-	for c in $CL
+	for myc in $CL
 	do
-		[[ -n $TO_FILE && -z $OUT_P ]] \
-			&& exec 3>"${OD}/${HOSTNAME}.${c}.saud"
+		[[ -n $ofh ]] && exec 3>"${OD}/${HOSTNAME}.${myc}.saud"
 
-		WARN=$(nr_warn $c)
+		WARN=$(nr_warn $myc)
 
 		if [[ -n $WARN ]] && ! is_root 
 		then
@@ -3439,9 +3444,9 @@ then
 			prt_bar
 		fi >&2
 
-		class_head $c >&3
-		run_class $c >&3
-		class_foot $c >&3
+		class_head $HOSTNAME $myc >&3
+		run_class $myc >&3
+		class_foot $HOSTNAME $myc >&3
 	done
 
 fi
@@ -3451,40 +3456,51 @@ fi
 
 for z in $ZL
 do
+	[[ $ZL == "global" ]] && continue
+
 	zoneadm -z $z list -p | cut -d: -f3,4,6 | tr : " " | read zst zr zbr
 
 	# Running zones get properly audited but those which aren't running get
 	# some dummy output so the interface can show that the zone exists
 
-	[[ -n $TO_FILE && -z $OUT_P ]] 
-	if [[ $zst == "running" && $zbr != "lx" ]]
+	[[ $zst == "running" && $zbr != "lx" ]] && zlive=1 || zlive=""
+
+	if [[ -n $zlive ]]
 	then
 		zf=${zr}/root/$$${0##*/}$RANDOM
 		cp -p $0 $zf
-
-		# The only way to get separate files is to run the script multiple
-		# times
-
-		if [[ -z $OUT_P && -n $TO_FILE ]]
-		then
-
-			for c1 in $CL
-			do
-				exec 3>"${OD}/${z}.${c1}.saud"
-				zlogin $z /${zf##*/} $Z_OPTS $c1 >&3
-			done
-
-		else
-			zlogin $z /${zf##*/} $Z_OPTS $CL >&3
-		fi
-
-		rm $zf
-	else
-		disp "hostname" $z
-		disp "zone status" $zst
-		get_time
 	fi
 
+	# The only way to get separate files is to run the script multiple
+	# times, changing the file descriptor each time. Also run multiple times
+	# for a non-running zone
+
+	if [[ -n $ofh || -z $live ]]
+	then
+
+		for c1 in $CL
+		do
+
+			[[ -n $of_h ]] && exec 3>"${OD}/${z}.${c1}.saud"
+
+			if [[ -n $zlive ]] 
+			then
+				zlogin $z /${zf##*/} $Z_OPTS $c1
+			else
+				class_head $z $c1
+				disp "hostname" $z
+				disp "zone status" $zst
+				get_time
+				class_foot $z $c1
+			fi >&3
+
+		done
+
+	else
+		zlogin $z /${zf##*/} $Z_OPTS $CL >&3
+	fi
+
+	[[ -n $zlive ]] && rm $zf
 done 
 
 # Write a footer if we've just done a parseable file
