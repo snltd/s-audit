@@ -37,9 +37,13 @@ class ZoneMapBase {
 	public $locals = array();
 		// List of local zones
 
+	public $pldoms = array();
+		// List of logical domains which are physical servers.  Subset
+		// of $globals
+
 	public $ldoms = array();
-		// List of logical domains which are not physical servers. Subset of
-		// $globals
+		// List of logical domains which are not physical servers.  Subset
+		// of $globals
 
 	public $vbox = array();
 		// List of virtualboxes. Subset of $globals
@@ -58,6 +62,13 @@ class ZoneMapBase {
 		return $this->globals;
 	}
 	
+	public function list_pldoms()
+	{
+		// Returns an array of all LDOMs which are also physical servers
+
+		return $this->pldoms;
+	}
+
 	public function list_ldoms()
 	{
 		// Returns an array of all LDOMs which aren't also physical servers

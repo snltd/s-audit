@@ -112,4 +112,5 @@ div.spacer {
 
 .warn { /*warning messages */
 	background-color: #ffee99;
+	text-align: center;
 }

@@ -26,6 +26,10 @@ $grid_key = array(
 		array("different kernel<br/>in local zone", "boxamber", false)
 	),
 
+	"hostid" => array(
+		array("different hostid<br/>in local zone", "boxamber", false)
+	),
+
 	"local zone" => array(
 		array("running zone", "solidgreen", false),
 		array("installed zone", "solidamber", false),

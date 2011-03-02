@@ -47,8 +47,8 @@ class HostGrid {
 		// The top level audit directory. This holds a directory for every
 		// known server
 
-	protected $hidden_fields = array("zone status");
-		// This field is never shown in its own column. It's handled
+	protected $hidden_fields = array("zone status", "_err_");
+		// These fields are never shown in its own column, but handled
 		// elsewhere
 
 	protected $adj_fields = array();
@@ -64,6 +64,9 @@ class HostGrid {
 		// Data for keys and notes, at the foot of the page
 
 	protected $show_zones = true;
+
+	private $cz; 
+		// stores info on the current zone
 
 	//------------------------------------------------------------------------
 	// METHODS
@@ -87,6 +90,11 @@ class HostGrid {
 
 	public function get_parent_prop($zone, $class, $prop)
 	{
+		// Get a propery from a parent zone
+		// $zone is the local zone you're looking at
+		// $class is the audit class
+		// $prop is the property/field name
+
 		$p = $this->map->get_parent_zone($zone);
 		
 		if (isset($this->servers[$p][$class][$prop])) {
@@ -100,7 +108,6 @@ class HostGrid {
 			$r = false;
 
 		return $r;
-		
 	}
 		
 	protected function get_key()
@@ -361,6 +368,8 @@ class HostGrid {
 		// If $data isn't an array, that's an indicator that parse_files hit
 		// a zero sized file. If it is, then we have useable data
 
+		$this->cz =& $data;
+
 		if (is_array($data)) {
 
 			// We always have the zone name as [hostname];
@@ -371,6 +380,8 @@ class HostGrid {
 
 			if (in_array($z, $this->map->list_vbox()))
 				$row_class = "vb";
+			elseif (in_array($z, $this->map->list_pldoms()))
+				$row_class = "ldmp";
 			elseif (in_array($z, $this->map->list_ldoms()))
 				$row_class = "ldm";
 			elseif ($this->map->is_global($z))
@@ -383,6 +394,8 @@ class HostGrid {
 			// Zones which aren't in the running state should only have
 			// three elements in their array. Handle those as a special case
 		
+			if ($this->erred_zone($data))
+				return $this->erred_zone_print($data) . "</tr>";
 			if ($this->non_running_zone($data))
 				$ret_str .= $this->non_running_zone_print($data);
 			else {
@@ -401,8 +414,7 @@ class HostGrid {
 						$method = preg_replace("/\W/", "_", "show_$field");
 
 						if (method_exists($this, $method)) {
-							$ret_str .= $this->$method($data[$field],
-							$data);
+							$ret_str .= $this->$method($data[$field]);
 						}
 						else
 							$ret_str .= $this->show_generic($data[$field],
@@ -462,6 +474,26 @@ class HostGrid {
 		return $ret_str;
 	}
 
+	protected function erred_zone($data)
+	{
+		// A check to see if a zone is running or not
+
+		return isset($data["_err_"]) 
+			? true
+			: false;
+	}
+
+	protected function erred_zone_print($data)
+	{
+		// This function informs the user that a zone audit failed part-way
+		// through. There probably won't even be an audit completed field
+
+		return $this->show_hostname($data["hostname"], $data) 
+		. new Cell("Audit errored. Message was &quot;" . $data["_err_"][0] .
+		"&quot;", "error", false, false, (sizeof($this->fields) - 1));
+	}
+
+
 	protected function non_running_zone($data)
 	{
 		// A check to see if a zone is running or not
@@ -507,7 +539,7 @@ class HostGrid {
 		return $ret_str;
 	}
 
-	protected function show_hostname($data, $extra)
+	protected function show_hostname($data)
 	{
 		// Ask the map if this is a global zone or not
 
@@ -688,7 +720,7 @@ class HostGrid {
 		return new Cell($str, $class, $col);
 	}
 
-	protected function show_OBP($data, $extra)
+	protected function show_OBP($data)
 	{
 		// Colour latest green, others red, but only if $this->latest_obps
 		// is set
@@ -696,7 +728,7 @@ class HostGrid {
 		if (!isset($this->latest_obps))
 			return $this->show_generic($data);
 
-		$hw = $extra["hardware"][0];
+		$hw = $this->cz["hardware"][0];
 
 		if (in_array($hw, array_keys($this->latest_obps))) {
 			$lobp = $this->latest_obps[$hw];
@@ -711,14 +743,14 @@ class HostGrid {
 		return new Cell($data[0], $class);
 	}
 
-	protected function show_ALOM_F_W($data, $extra)
+	protected function show_ALOM_F_W($data)
 	{
 		// Colour latest green, others red
 
 		if (!isset($this->latest_aloms))
 			return new Cell($data[0]);
 
-		$hw = $extra["hardware"][0];
+		$hw = $this->cz["hardware"][0];
 
 		if (in_array($hw, array_keys($this->latest_aloms))) {
 			$lalom = $this->latest_aloms[$hw];
@@ -889,12 +921,12 @@ class HostGrid {
 
 	//-- o/s -----------------------------------------------------------------
 
-	protected function show_version($data, $extra)
+	protected function show_version($data)
 	{
 		// In a local zone, if the version is not the same as the parent
 		// zone, box it in amber
 
-		$zn = $extra["hostname"][0];
+		$zn = $this->cz["hostname"][0];
 		$class = false;
 
 		if (!$this->map->is_global($zn)) {
@@ -907,7 +939,7 @@ class HostGrid {
 		return new Cell($data[0], $class);
 	}
 
-	protected function show_release($data, $extra)
+	protected function show_release($data)
 	{
 		// Show the operating system version and revision. For normal
 		// Solaris we get this in a "5.10 10/09" style, which doesn't mean a
@@ -960,7 +992,7 @@ class HostGrid {
 				)
 			);
 
-		$zn = $extra["hostname"][0];
+		$zn = $this->cz["hostname"][0];
 		$class = false;
 		$os_hr = $data[0];
 
@@ -985,14 +1017,29 @@ class HostGrid {
 		// parent
 
 		if (!$this->map->is_global($zn)) {
-			$p = $this->map->get_parent_zone($zn);
-
 			if ($this->get_parent_prop($zn, "os", "release") !=
 			preg_replace("/ zone$/", "", $data[0]))
 				$class = "boxamber";
 		}
 
 		return new Cell($os_hr, $class);
+	}
+
+	private function show_hostid($data)
+	{
+		// a zone has 
+
+		$zn = $this->cz["hostname"][0];
+		$id = $data[0];
+		$class = false;
+
+		if (!$this->map->is_global($zn)) {
+			if ($this->get_parent_prop($zn, "os", "hostid") != $id)
+				$class = "boxamber";
+		}
+
+		return new Cell($id, $class);
+
 	}
 
 	private function uptime_in_m($up)
@@ -1014,33 +1061,27 @@ class HostGrid {
 		return round($up);
 	}
 
-	protected function show_uptime($data, $extra = false)
+	protected function show_uptime($data)
 	{
 
 		$up = $this->uptime_in_m($data[0]);
 		$class = false;
+		$zn = $this->cz["hostname"][0];
 
-		// If this is a global zone, and extra is set, get the parent's
-		// uptime also. ($extra won't be set when this is called from the
-		// compre grid)
+		// If this is a local zone, get the parent's uptime also
 
-		if ($extra) {
-			$zn = $extra["hostname"][0];
+		if (!$this->map->is_global($zn))
+			$pu = $this->uptime_in_m($this->get_parent_prop($zn, "uptime",
+			"os"));
 
-			if (!$this->map->is_global($zn))
-				$pu =
-				$this->uptime_in_m($this->get_parent_prop($zn,
-				"uptime", "os"));
+		// Flag the box amber if uptime is less than a day. Put an amber
+		// border round the cell if this is a zone and it's been rebooted
+		// more recently than the global. Reboot gets priority
 
-			// Flag the box amber if uptime is less than a day. Put an amber
-			// border round the cell if this is a zone and it's been
-			// rebooted more recently than the global. Reboot gets priority
-
-			if (isset($pu) && $up < $pu)
-				$class = "boxamber";
-			elseif ($up < 1440)
-				$class = "solidamber";
-		}
+		if (isset($pu) && $up < $pu)
+			$class = "boxamber";
+		elseif ($up < 1440)
+			$class = "solidamber";
 
 		// Make the numbers a bit more human-readable
 
@@ -1059,22 +1100,22 @@ class HostGrid {
 		return new Cell($up, $class);
 	}
 
-	protected function show_kernel($data, $extra)
+	protected function show_kernel($data)
 	{
 		// We used to only print the kernel in global zones, because local
 		// zones would always have the same kernel as the the global. But
 		// with the SUNWsolaris10 brand, that's no longer the case. We also
 		// now colour the kernel version squares when we do O/S audits
 
-		$zn = $extra["hostname"][0];
+		$zn = $this->cz["hostname"][0];
 		$kr = $data[0];
 		$col = false;
 
 		if (!isset($this->latest_kerns))
 			return $this->show_generic($kr);
 
-		$osver = $this->mk_ver_arch_str($zn, $extra["distribution"][0],
-		$extra["version"][0]);
+		$osver = $this->mk_ver_arch_str($zn, $this->cz["distribution"][0],
+		$this->cz["version"][0]);
 
 		// Don't colour "virtual" kernels at all
 		if ($kr == "Virtual")
@@ -1108,15 +1149,15 @@ class HostGrid {
 		return new Cell($data[0], $class);
 	}
 
-	protected function show_patches($data, $extra)
+	protected function show_patches($data)
 	{
 		// If this is a local zone, get the number of patches in the global
 		// zone and compare. 
 		
 		$class = false;
 
-		if (!$this->map->is_global($extra["hostname"][0])) {
-			$p= $this->map->get_parent_zone($extra["hostname"][0]);
+		if (!$this->map->is_global($this->cz["hostname"][0])) {
+			$p= $this->map->get_parent_zone($this->cz["hostname"][0]);
 			
 			if (isset($this->servers[$p]["os"]["patches"][0])) {
 				$ppn = $this->servers[$p]["os"]["patches"][0];
@@ -1383,7 +1424,7 @@ class HostGrid {
 		return preg_replace("/:$/", "", $mac);
 	}
 
-	public function show_NIC($nic_arr, $extra)
+	public function show_NIC($nic_arr)
 	{
 		// $data is an array of NIC lines in parseable format. Each element
 		// is a NIC.
@@ -1535,8 +1576,11 @@ class HostGrid {
 
 					if ($na[5] == "+vsw")
 						$subnet = "vswitch";
+					elseif($na[1] == "unconfigured")
+						$subnet = "unconfigured";
 					elseif ($na[3])
 						$subnet = "vlan";
+
 				}
 
 			}
@@ -1630,14 +1674,14 @@ class HostGrid {
 		return new listCell($c_arr);
 	}
 
-	protected function show_apache_so($data, $extra)
+	protected function show_apache_so($data)
 	{
 		// Print a list of Apache shared modules. The module lists contain
 		// the version number of the Apache to which they belong. If there's
 		// only one Apache on this box, strip that extraneous information
 		// out
 
-		if (sizeof($extra["Apache"]) == 1)
+		if (sizeof($this->cz["Apache"]) == 1)
 			$data = preg_replace("/ .*$/", "", $data);
 
 		// If the parent apache is of an unknown version, the auditor just
@@ -1652,13 +1696,13 @@ class HostGrid {
 		return new listCell($data);
 	}
 
-	protected function show_mod_php($data, $extra)
+	protected function show_mod_php($data)
 	{
 		// Parse PHP modules. 
 
 		$data = preg_replace("/\(\)/", "(unknown)", $data);
 
-		$data = (sizeof($extra["Apache"]) == 1)
+		$data = (sizeof($this->cz["Apache"]) == 1)
 			? preg_replace("/\(apache.*$/", "(apache)", $data)
 			: preg_replace("/module\) \(/", "", $data);
 
@@ -1898,7 +1942,7 @@ class HostGrid {
 		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
-	protected function show_export($data, $extra)
+	protected function show_export($data)
 	{
 		// Nicely present exported filesystems. At the moment they can be
 		// NFS, SMB, or iSCSI (yes, I know that's not strictly an exported
@@ -1933,7 +1977,7 @@ class HostGrid {
 				// skip this step
 
 				if (isset($this->mntd_nfs) && sizeof($this->mntd_nfs) > 0) {
-					$key = $extra["hostname"][0] . ":" . $earr[1];
+					$key = $this->cz["hostname"][0] . ":" . $earr[1];
 	
 					$mnts = (in_array($key, array_keys($this->mntd_nfs)))
 						? $this->mntd_nfs[$key]
@@ -1962,7 +2006,7 @@ class HostGrid {
 
 	//-- hosted services -----------------------------------------------------
 
-	protected function show_website($data, $extra)
+	protected function show_website($data)
 	{
 		// Show websites. Colour coded on the server which provides them.
 		// Each element of $data is of the form
@@ -2053,7 +2097,7 @@ class HostGrid {
 			// populated NFS directory array
 
 			$row2 = $row3 = "<div class=\"indent\"";
-			$hn = $extra["hostname"][0];
+			$hn = $this->cz["hostname"][0];
 			
 			if (isset($this->nfs_dirs) && sizeof($this->nfs_dirs) > 0 &&
 				in_array($hn, array_keys($this->nfs_dirs))) {
@@ -2602,6 +2646,10 @@ class OSGrid extends PlatformGrid
 				continue;
 
 			$kp = $d["kernel"][0];
+
+			// Disregard the virtual kernels in branded zones
+
+			if ($kp == "Virtual") continue;
 
 			$osver = $this->mk_ver_arch_str($d["hostname"][0],
 			$d["distribution"][0], $d["version"][0]);
@@ -3199,6 +3247,8 @@ class serverView extends HostGrid {
 	}
 }
 
+//----------------------------------------------------------------------------
+
 class singleGeneric extends HostGrid {
 
 	// This class isn't currently used, as I've created an extension class
@@ -3338,11 +3388,13 @@ class singleGeneric extends HostGrid {
 		$method = preg_replace("/\W/", "_", "show_$field");
 
 		return (method_exists($this, $method))
-			? $this->$method($val, $this->data)
+			? $this->$method($val)
 			: $this->show_generic($val);
 	}
 
 }
+
+//----------------------------------------------------------------------------
 
 class singlePlatform extends singleGeneric {
 
@@ -3351,6 +3403,8 @@ class singlePlatform extends singleGeneric {
 
 	protected $one_cols = array("NIC");
 }
+
+//----------------------------------------------------------------------------
 
 class singleOS extends singleGeneric {
 
@@ -3361,10 +3415,14 @@ class singleOS extends singleGeneric {
 
 }
 
+//----------------------------------------------------------------------------
+
 class singleFS extends singleGeneric {
 	protected $type = "Filesystem";
 	protected $one_cols = array("fs", "export");
 }
+
+//----------------------------------------------------------------------------
 
 class singleApp extends singleGeneric {
 	protected $cols = 4;
@@ -3638,8 +3696,17 @@ class Page {
 
 	public function error($msg = "undefined error")
 	{
+		// Print an error message and close the page
+
 		echo "<p class=\"error\">ERROR: $msg</p>" .  Page::close_page();
 		exit();
+	}
+
+	public function warn($msg = "undefined warning")
+	{
+		// Print a warning message across the page
+
+		echo "<p class=\"warn\">WARNING: ${msg}</p>";
 	}
 
 }
@@ -3949,6 +4016,8 @@ class NavigationStaticHoriz {
 
 }
 
+//----------------------------------------------------------------------------
+
 class html {
 
 	static function dialog_submit($name, $value)
@@ -4001,6 +4070,8 @@ class html {
 
 	}
 }
+
+//----------------------------------------------------------------------------
 
 class Units {
 
@@ -4086,6 +4157,8 @@ class Units {
 
 }
 
+//----------------------------------------------------------------------------
+
 class Cell {
 	
 	// A shorthand way to create (quite nasty) HTML <table> cells. Allows
@@ -4166,6 +4239,8 @@ class Cell {
 	}
 
 }
+
+//----------------------------------------------------------------------------
 
 class listCell {
 

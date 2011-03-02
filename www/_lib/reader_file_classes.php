@@ -143,7 +143,9 @@ class GetServers extends GetServersBase {
 
 			if (preg_match("/^VirtualBox/", $v))
 				$map->vbox[] = $hn;
-			elseif (preg_match("/^LDOM/", $v))
+			elseif (preg_match("/^primary LDOM/", $v))
+				$map->pldoms[] = $hn;
+			elseif ($v == "guest LDOM")
 				$map->ldoms[] = $hn;
 			elseif(preg_match("/^zone/", $v)) {
 				$map->locals[] = $map->servers[$c_g][] = $hn;
@@ -170,12 +172,12 @@ class GetServers extends GetServersBase {
 		// File is readable?
 
 		if (!is_readable($file))
-			page::error("Audit file is not readable. [${file}]");
+			page::warn("Audit file is not readable. [${file}]");
 
 		// Read in the file - don't add newlines to each record
 
 		if (!$fa = file($file, FILE_IGNORE_NEW_LINES))
-			page::error("Could not read file. [${file}]");
+			page::warn("Could not read file. [${file}]");
 
 		$last_row = count($fa) - 1;
 
@@ -185,15 +187,15 @@ class GetServers extends GetServersBase {
 		preg_match("/^([^ ]+) v-([^ ]*) .*$/", $fa[0], $ca);
 
 		if ($ca[1] != "@@BEGIN_s-audit")
-			page::error("Invalid audit file. [${file}]");
+			page::warn("Invalid audit file. [${file}]");
 
 		if ($ca[2] > MAX_AF_VER || $ca[2] < MIN_AF_VER)
-			page::error("Invalid audit file version. [${file}]");
+			page::warn("Invalid audit file version. [${file}]");
 
 		// And do we have a good-looking footer?
 
 		if ($fa[$last_row] != "@@END_s-audit")
-			page::error("Invalid footer. [${file}]");
+			page::warn("Invalid footer. [${file}]");
 
 		// We're good to go. Read through the file in chunks. Remember each
 		// audit type/zone is delimited by BEGIN class@hostname. We've
