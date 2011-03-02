@@ -3339,16 +3339,19 @@ if [[ -n $ZL ]]
 then
 	is_global || die "-z option invalid in local zones."
 	is_root || die "only root can use -z option."
-	can_has zonename || die "system does not support zones."
 
-	AL=$(print " "$(zoneadm list -i)" ")
+	if can_has zoneadm
+	then
+		AL=$(print " "$(zoneadm list -i)" ")
 	
-	[[ $ZL == "all" ]] \
-		&& ZL=$AL \
-		|| for z in $ZL
-		do
-			[[ $AL == *" $z "* ]] || die "invalid zone. [$z]"
-		done
+		[[ $ZL == "all" ]] \
+			&& ZL=$AL \
+			|| for z in $ZL
+			do
+				[[ $AL == *" $z "* ]] || die "invalid zone. [$z]"
+			done
+	
+	fi
 
 fi
 
@@ -3454,7 +3457,7 @@ fi
 # To audit zones we copy ourselves into the zone root, then run that copy
 # via zlogin, capturing the output
 
-for z in $ZL
+can_has zoneadm && for z in $ZL
 do
 	[[ $ZL == "global" ]] && continue
 
