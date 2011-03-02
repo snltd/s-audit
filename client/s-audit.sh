@@ -38,7 +38,12 @@ typeset -R15 RKEY
 	# Right alignment of LH column in disp() function
 
 T_MAX=10
-	# The maximum time, in seconds, any timed job is allowed to take
+	# The maximum time, in seconds, any individual timed job is allowed to
+	# take
+
+C_TIME=180
+	# The maximum time, in seconds, any audit class is allowed to take.
+	# Override with -T option
 
 VARBASE="/var/tmp/s-audit"
     # The directory we keep our data in
@@ -492,7 +497,7 @@ function timeout_job
 
 		[[ -n $pl ]] && kill $pl
 
-		print "TIMED OUT"
+		#print -u2 "TIMED OUT"
 		return 1
 	fi
 }
@@ -730,6 +735,7 @@ function usage
 	  -e :     full path to "extras" file
 	  -L :     syslog facility - must be lower case
 	  -l :     list tests in each audit type
+	  -T :     maximum time, in s, for any audit class
 	  -V :     print version and exit
 
 	The final argument tells the script what kind of audit to perform.
@@ -3216,7 +3222,7 @@ trap 'clean_up; exit' 2 9 15
 
 # Get options
 
-while getopts "D:e:f:lL:Mo:pPqR:uVz:" option 2>/dev/null
+while getopts "D:e:f:lL:Mo:pPqR:T:uVz:" option 2>/dev/null
 do
 	case $option in
 
@@ -3275,6 +3281,10 @@ do
 			TO_FILE=1
 			;;
 
+		"T")	# class timeout
+			C_TIME=$OPTARG
+			;;
+
 		"u")	# User check file
 			UCHK=$OPTARG
 			;;
@@ -3310,6 +3320,10 @@ can_has zonename && Z_FLAG="-z $(zonename)"
 
 [[ $# == 0 ]] && usage
 CL=$@
+
+# Timeout?
+
+print $C_TIME | $EGS "^[0-9]*$" || die "Invalid timeout. [${C_TIME}]"
 
 # If we're writing to syslog, does it look like a proper facility?
 
@@ -3447,9 +3461,15 @@ then
 			prt_bar
 		fi >&2
 
-		class_head $HOSTNAME $myc >&3
-		run_class $myc >&3
-		class_foot $HOSTNAME $myc >&3
+		# Run the audit class. If it's not come back after three minutes,
+		# log an error
+
+		{
+		class_head $HOSTNAME $myc
+		timeout_job "run_class $myc 2>/dev/null" $C_TIME \
+			|| disp "_err_" "timed out"
+		class_foot $HOSTNAME $myc
+		} >&3
 	done
 
 fi
@@ -3488,7 +3508,8 @@ do
 
 			if [[ -n $zlive ]] 
 			then
-				zlogin $z /${zf##*/} $Z_OPTS $c1
+				zlogin $z /${zf##*/} $Z_OPTS $c1 \
+				|| disp "error" "incomplete audit"
 			else
 				class_head $z $c1
 				disp "hostname" $z
@@ -3500,7 +3521,8 @@ do
 		done
 
 	else
-		zlogin $z /${zf##*/} $Z_OPTS $CL >&3
+		zlogin $z /${zf##*/} $Z_OPTS $CL >&3 \
+			|| disp "error" "incomplete audit"
 	fi
 
 	[[ -n $zlive ]] && rm $zf
