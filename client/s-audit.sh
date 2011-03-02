@@ -1583,7 +1583,7 @@ function get_routes
 	# Routing table. Flag up default routes not in defaultrouters and non
 	# .0 routes which are persistent
 
-	route -p show 2>&1 >/dev/null && HAS_PER=1
+	route -p show >/dev/null 2>&1 && HAS_PER=1
 
 	netstat -nr | egrep -v '127.0.0.1|224.0.0.0' | \
 	while read dest gw fl ref use int
