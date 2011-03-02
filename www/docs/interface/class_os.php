@@ -102,6 +102,10 @@ $dh->doc_class_start();
 	<dt>hostid</dt>
 	<dd>Displays the hostid of the server or zone.</dd>
 
+	<?php
+		echo $dh->colour_key($grid_key["hostid"]);
+	?>
+
 	<dt>local zone</dt>
 	<dd>In global zones, this cell gives a list of all local zones on the
 	system. The zone name is in <strong>bold face</strong>, with the zone
@@ -116,7 +120,22 @@ $dh->doc_class_start();
 		echo $dh->colour_key($grid_key["local zone"]);
 	?>
 
-	<dd>This field is blank for local zones.</dd>
+	<dd>This field is blank for local zones. If you do not have any zoned
+	machines, this field will not be displayed.</dd>
+
+	<dt>LDOM</dt>
+	<dd>In a primary logical domain, this field displays a list of the
+	guest domains configured on the box. The domain name is in <strong>bold
+	face</strong> on the first line, with the console port number underneath
+	in square brackets. The domain's state is highlighted by the following
+	colour-coding.</dd>
+
+	<?php
+		echo $dh->colour_key($grid_key["local zone"]);
+	?>
+
+	<dd>If you do not have any logical domains, this field will not be
+	displayed.</dd>
 
 	<dt>scheduler</dt>
 	<dd>Displays the process scheduler class. If none of your machines have
