@@ -15,7 +15,9 @@
 $grid_key = array(
 
 	"zpool" => array(
-		array("zpool can be<br/>upgraded", "solidorange", false)
+		array("faulted zpool", "solidred", false),
+		array("degraded zpool", "solidamber", false),
+		array("online zpool can be<br/>upgraded", "solidorange", false)
 	),
 
 	"capacity" => array(

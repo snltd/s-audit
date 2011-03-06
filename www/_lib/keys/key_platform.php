@@ -58,7 +58,9 @@ $grid_key = array(
 		array("disk drive", "disk", false),
 		array("optical drive", "cd", false),
 		array("tape drive", "tp", false),
-		array("fibre array", "fc", false)
+		array("fibre array", "fc", false),
+		array("loaded CD/DVD", "boxamber", false),
+		array("mounted CD/DVD", "boxgreen", false)
 	),
 
 );

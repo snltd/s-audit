@@ -779,8 +779,8 @@ class HostGrid {
 		if (is_array($data))  {
 
 			$colfn = (is_array($guess))
-				? "solid"
-				: "box";
+				? "box"
+				: "solid";
 
 			$sn = (isset(colours::$nic_cols["alom"]))
 				? "alom"
@@ -1000,7 +1000,7 @@ class HostGrid {
 		// the Solaris revision first.
 	
 		preg_match("/^.*SunOS ([\d.]+).*$/",
-		$this->servers[$zn]["os"]["version"][0]);
+		$this->servers[$zn]["os"]["version"][0], $vi);
 
 		if (isset($vi[1])) {
 			$sv = $vi[1];
@@ -1782,28 +1782,58 @@ class HostGrid {
 	protected function show_zpool($data)
 	{
 		// List Zpools and their sizes. Ones which can be upgraded are on an
-		// orange field
+		// orange field. Red for faulted, amber for degraded
 
 		$c_arr = false;
 
 		foreach($data as $row) {
 			$rarr = preg_split("/[ :]/", $row);
 
-			// We deal with the version part separately
+			// for a normal zpool we'll have 7 fields
+			//
+			// 0 - pool name
+			// 1 - raw capacity
+			// 2 - zpool version/highest available version
+			// 3 - zpool state
+			// 4 - "last"
+			// 5 - "scrub"
+			// 6 - date of last scrub
 
-			$varr = explode("/", preg_replace("/[\[\]]/", "", $rarr[2]));
+			// A faulted pool just has two
+			//
+			// 0 - pool name
+			// 1 - "FAULTED"
 
-			if ($varr[0] != $varr[1]) {
-				$vex = "v$varr[0] (v$varr[1] available)";
-				$class = "solidorange";
-			}
+			$txt = "<strong>$rarr[0]</strong> $rarr[1]";
+
+			if ($rarr[1] == "FAULTED")
+				$class = "solidred";
 			else {
-				$vex =" v$varr[0]";
-				$class = false;
+
+				// We deal with the version part separately
+
+				$varr = explode("/", preg_replace("/[\[\]]/", "",
+				$rarr[2]));
+
+				if ($varr[0] != $varr[1]) {
+					$vex = "v$varr[0] (v$varr[1] available)";
+					$class = "solidorange";
+				}
+				else {
+					$vex =" v$varr[0]";
+					$class = false;
+				}
+
+				$txt .= "<div>$vex $rarr[3]</div>";
 			}
 
-			$c_arr[] = array("<strong>$rarr[0]</strong> $rarr[1]"
-			. "<div>$vex</div>", $class);
+			// if the pool is in a degrated state, override the background
+			// colour
+
+			if ($rarr[1] == "DEGRADED")
+				$class = "solidamber";
+
+			$c_arr[] = array($txt, $class);
 		}
 
 		return new listCell($c_arr);

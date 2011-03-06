@@ -45,9 +45,7 @@ class omitData {
 		"dladm (15)"
 		);
 
-	// The following user_attrs aren't displayed.  The first four elements
-	// are Solaris 10, fifth is Solaris 9, sixth, seventh and tenth are
-	// Nevada, ninth is Solaris 8
+	// The following user_attrs aren't displayed.
 
 	public $omit_attrs = array(
 		"adm::::profiles=Log Management",
@@ -59,12 +57,19 @@ class omitData {
 		"dladm::::auths=solaris.smf.manage.wpa,solaris.smf.modify",
 		"root::::type=normal;auths=solaris.*,solaris.grant;profiles=All",
 		"zfssnap::::type=role;auths=solaris.smf.manage.zfs-auto-snapshot;profiles=ZFS File System Management",
-		"daemon::::auths=solaris.smf.manage.ilb,solaris.smf.modify.application");
+		"daemon::::auths=solaris.smf.manage.ilb,solaris.smf.modify.application",
+		"root::::auths=solaris.*,solaris.grant;profiles=All;lock_after_retries=no"
+	);
 
 	// The following are standard cron jobs on Solaris, and won't be
 	// displayed on the secuirity audit page
 
 	public $omit_crons = array(
+		"uucp:48 8,12,16 * * * /usr/lib/uucp/uudemon.admin",
+		"uucp:20 3 * * * /usr/lib/uucp/uudemon.cleanup",
+		"uucp:0 * * * * /usr/lib/uucp/uudemon.poll",
+		"uucp:11,41 * * * * /usr/lib/uucp/uudemon.hour",
+			// Solaris 2.6
 		"lp:13 3 * * 0 cd /var/lp/logs; if [ -f requests ]; then if [ -f requests.1 ]; then /bin/mv requests.1 requests.2; fi; /usr/bin/cp requests requests.1; >requests; fi",
 		"root:10 3 * * * /usr/sbin/logadm",
 		"root:15 3 * * 0 [ -x /usr/lib/fs/nfs/nfsfind ] && /usr/lib/fs/nfs/nfsfind",

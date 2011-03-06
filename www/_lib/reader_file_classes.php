@@ -133,23 +133,21 @@ class GetServers extends GetServersBase {
 			// Catch non-running zones
 
 			$v = (isset($server["platform"]["virtualization"][0]))
-				? $server["platform"]["virtualization"][0]
+				? preg_replace("/ .*$/", "",
+				$server["platform"]["virtualization"][0])
 				: "zone";
 
-			if (in_array($hn, $map->list_globals())) {
+			if ($v != "zone")
 				$c_g = $hn;
-				$map->map[$hn] = array();
-			}
 
-			if (preg_match("/^VirtualBox/", $v))
+			if ($v == "VirtualBox")
 				$map->vbox[] = $hn;
-			elseif (preg_match("/^primary LDOM/", $v))
+			elseif ($v == "primary")
 				$map->pldoms[] = $hn;
-			elseif ($v == "guest LDOM")
+			elseif ($v == "guest")
 				$map->ldoms[] = $hn;
-			elseif(preg_match("/^zone/", $v)) {
+			elseif($v == "zone")
 				$map->locals[] = $map->servers[$c_g][] = $hn;
-			}
 			
 		}
 
