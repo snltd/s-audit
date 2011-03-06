@@ -2792,26 +2792,27 @@ function get_zpools
 
 			if [[ $st == "FAULTED" ]]
 			then
-				disp "zpool" "$zp [FAULTED]"
-				return
+				disp "zpool" $zp $st
+			else
+
+				if [[ -n $zpsup ]]
+				then
+					zpool get version,size $zp | sed '1d;$!N;s/\n/ /' \
+					| read a b zv c d e zs f
+					zpext="$zp (${zs}) [${zv}/${zpsup}]"
+				fi
+
+				# Add on the date of the last scrub
+
+				lscr=$(zpool status $zp | sed -n '/scrub:/s/^.*s on //p')
+
+				[[ -z $lscr ]] && lscr="none"
+
+				zpext="$zpext $st (last scrub: $lscr)"
+
+				disp "zpool" $zpext
 			fi
 
-			if [[ -n $zpsup ]]
-			then
-				zpool get version,size $zp | sed '1d;$!N;s/\n/ /' \
-				| read a b zv c d e zs f
-				zpext="$zp (${zs}) [${zv}/${zpsup}]"
-			fi
-
-			# Add on the date of the last scrub
-
-			lscr=$(zpool status $zp | sed -n '/scrub:/s/^.*s on //p')
-
-			[[ -z $lscr ]] && lscr="none"
-
-			zpext="$zpext [${st}] (last scrub: $lscr)"
-
-			disp "zpool" $zpext
 		done
 
 	fi
