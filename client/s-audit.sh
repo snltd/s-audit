@@ -817,8 +817,9 @@ function get_hardware
 	fi
 
 	[[ $HW_CHIP == "sparc" ]] && CH="SPARC"
+	can_has isainfo && BITS=$(isainfo -b)
 
-	disp hardware "$HW_OUT ($(isainfo -b)-bit ${CH:-x86})"
+	disp hardware "$HW_OUT (${BITS:-32}-bit ${CH:-x86})"
 }
 
 function get_os_dist
@@ -829,10 +830,15 @@ function get_os_dist
 
 	# Anything prior to 5.11 is standard Solaris
 
+	r="/etc/release"
+
 	if (($OSVERCMP < 511))
 	then
 		OS_D="Solaris"
-	elif $EGS Community /etc/release
+	elif $EGS Nevada $r
+	then
+		OS_D="Nevada"
+	elif $EGS Community $r
 	then
 		OS_D="SXCE"
 	elif [[ $KERNVER == Belen* ]]
@@ -841,16 +847,16 @@ function get_os_dist
 	elif [[ $KERNVER == Nexenta* ]]
 	then
 		OS_D="Nexenta"
-	elif $EGS OpenSolaris /etc/release
+	elif $EGS OpenSolaris $r
 	then
 		OS_D="OpenSolaris"
-	elif $EGS "Solaris 11 Express" /etc/release
+	elif $EGS "Solaris 11 Express" $r
 	then
 		OS_D="Solaris 11 Express"
-	elif $EGS "OpenIndiana" /etc/release
+	elif $EGS "OpenIndiana" $r
 	then
 		OS_D="OpenIndiana"
-	elif $EGS "Solaris 11" /etc/release
+	elif $EGS "Solaris 11" $r
 	then
 		OS_D="Oracle Solaris"
 	fi 2>/dev/null
@@ -882,9 +888,9 @@ function get_os_rel
 	if (($OSVERCMP < 511))
 	then
 		OS_R=$(sed '1!d;s/^.*Solaris [^ ]* \([^_ ]*\).*$/\1/' /etc/release)
-	elif [[ $OS_D == SXCE ]]
+	elif [[ $OS_D == SXCE || $OS_D == "Nevada" ]]
 	then
-		OS_R=$(sed '1!d;s/^.*ition \([^ ]*\).*$/\1/' /etc/release)
+		OS_R=$(sed '1!d;s/^.* \(snv[^ ]*\).*$/\1/' /etc/release)
 	elif [[ $OS_D == "OpenSolaris" ]]
 	then
 		[[ -f /etc/release ]] \
@@ -1693,9 +1699,9 @@ function get_uptime
 
 function get_scheduler
 {
-	# Get the scheduling class being used
+	# Get the default scheduling class, if supported
 
-	if can_has dispadmin && is_global
+	if can_has dispadmin && is_global && dispadmin -h 2>&1 | $EGS -- -d
 	then
 		SCL=$(dispadmin -d 2>&1)
 		[[ $SCL != *"class is not set"* ]]  && disp "scheduler"  $SCL
@@ -2781,8 +2787,14 @@ function get_zpools
 		# zpool's get command doesn't have the -H and -o options, so this is
 		# harder than it need be. 
 
-		zpool list -Ho name | while read zp
+		zpool list -Ho name,health | while read zp st
 		do
+
+			if [[ $st == "FAULTED" ]]
+			then
+				disp "zpool" "$zp [FAULTED]"
+				return
+			fi
 
 			if [[ -n $zpsup ]]
 			then
@@ -2797,7 +2809,7 @@ function get_zpools
 
 			[[ -z $lscr ]] && lscr="none"
 
-			zpext="$zpext (last scrub: $lscr)"
+			zpext="$zpext [${st}] (last scrub: $lscr)"
 
 			disp "zpool" $zpext
 		done
