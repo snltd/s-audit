@@ -3067,20 +3067,19 @@ function get_empty_passwd
 			[[ -z $pass ]] && disp "empty password" $user
 		done
 	fi
-
 }
 
 function get_ssh_root
 {
-	# Can you SSH in as root? I know those piped greps look a bit weird, but
-	# it's a decent way to remove comments and ignore case
-
-	CF=$(find_config sshd_config "/etc/ssh /usr/local/openssh/etc" sshd)
+	# Can you SSH in as root? 
+	
+	is_running sshd \
+	&& CF=$(find_config sshd_config "/etc/ssh /usr/local/openssh/etc" sshd)
 
 	if [[ -n $CF ]]
 	then
-		egrep -i permitrootlogin $CF | egrep -v "#" \
-		| $EGS yes && SSHRL="yes" || SSHRL="no"
+		egrep -i permitrootlogin $CF | egrep -v "#" | $EGS yes \
+			&& SSHRL="yes" || SSHRL="no"
 	else
 		SSHRL="unknown"
 	fi
