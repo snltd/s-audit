@@ -143,7 +143,7 @@ CL_LS=" platform os net fs app tool hosted security patch "
 # lists are always bookended by "hostname" and "time". 
 
 G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
-	optical lux_enclosures tape_drives pci_cards sbus_cards printers" 
+	optical lux_enclosures tape_drives cards printers" 
 L_PLATFORM_TESTS="virtualization printers"
 
 G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
@@ -1131,48 +1131,36 @@ function get_tape_drives
 }
 
 
-function get_pci_cards
+function get_cards
 {
-	# Have a go at finding PCI cards. This is not very reliable. It seems to
-	# work well enough on SPARC Solaris 10, but it's a dead loss on 8, and
-	# doesn't work on x86.
-
+	# Have a go at finding cards. 
+	
 	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
 	then
+		# SBUS first. Works on the Ultra 2, YMMV.  I'm not very confident
+		# about only checking below slot 14
+
+		$PRTDIAG | awk '{ if ($2 == "SBus" && $4 < 14) print $4,$5 }' | \
+		sort -u | while read slot type
+		do
+			disp "card" "$type (SBUS slot $slot)"
+		done
+
+		# Now PCI. This is not very reliable. It seems to work well enough
+		# on SPARC Solaris 10/11, but it's a dead loss on 8, and doesn't
+		# work at all on x86.
 
 		$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
 		while read pci hz slot name desc extra
 		do
 			desc=${desc#\(}
 			desc=${desc%\)}
-			disp "PCI card" "$desc ($extra $slot@${hz}MHz)"
+			disp "card" "$desc (PCI $extra $slot@${hz}MHz)"
 		done
 
 	fi
 
 }
-
-function get_sbus_cards
-{
-	# Have a go at finding SBUS cards. Works on the Ultra 2 with Solaris
-	# 2.6. Beyond that, I don't know. I'm not very confident about only
-	# checking below slot 14
-
-	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
-	then
-		$PRTDIAG | awk \
-			'{ if ($2 == "SBus" && $4 < 14)
-				print $4,$5
-			}' \
-		| sort -u | while read slot type
-		do
-			disp "SBUS card" "$type (slot $slot)"
-		done
-
-	fi
-	
-}
-
 
 function get_virtualization
 {
@@ -1766,10 +1754,9 @@ function get_ldoms
 	if is_root && can_has ldm
 	then
 
-		ldm ls -p | egrep -v "^VERSION|name=primary" | cut -d "|" -f2,3,5 \
-		| tr "|" " " | while read dname dstat dcons
+		ldm ls | sed 1d | while read n st fl co cp m x
 		do
-			disp "LDOM" "${dname#*=} (${dstat#*=}) [port ${dcons#*=}]"
+			disp LDOM "$n (${cp}vCPU/${m}:${st}) [port $co]"
 		done
 
 	fi
@@ -2953,19 +2940,19 @@ function get_exports
 	
 	# Now virtual disks in an LDOM primary
 
+
 	if can_has ldm && is_root
 	then
-		LDMS=$(ldm ls -p | sed -n \
-		'/name=primary/d;/DOMAIN/s/^.*name=\([^|]*\).*$/\1/p')
+		LDMS=$(ldm ls | sed '1,2d;s/ .*$//')
 
-		ldm list-services -p | sed -n \
-		'/vol=/s/^|vol=\([^|]*\).*dev=\([^|]*\).*$/\1 \2/p' | \
+		ldm ls-services -p \
+		| sed -n '/vol=/s/^|vol=\([^|]*\).*dev=\([^|]*\).*$/\1 \2/p' | \
 		while read vol dev
 		do
 
 			for ldm in $LDMS
 			do
-				ldm list-constraints -p $ldm | $EGS "^VDISK\|name=${vol}\|" \
+				ldm ls-constraints -p $ldm | $EGS "^VDISK\|name=${vol}\|" \
 					&& disp "export" "vdisk:${dev}:${vol}:$ldm"
 
 			done
