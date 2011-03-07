@@ -92,6 +92,12 @@ class colours {
 		"sparc" => "#c7a49c"
 	);
 
+	static $card_cols = array(
+		"pci" => "#7b7a94",
+		"sbus" => "#c7a49c"
+	);
+
+
 	public function get_col($colour)
 	{
 		// A function used to get the values above.

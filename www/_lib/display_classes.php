@@ -12,6 +12,7 @@
 //
 //============================================================================
 
+//echo mktime(0,0,0,1,1,2011);
 //============================================================================
 
 define("MY_VER", "3.0");
@@ -488,7 +489,7 @@ class HostGrid {
 		// This function informs the user that a zone audit failed part-way
 		// through. There probably won't even be an audit completed field
 
-		return $this->show_hostname($data["hostname"], $data) 
+		return $this->show_hostname($data["hostname"], "error") 
 		. new Cell("Audit errored. Message was &quot;" . $data["_err_"][0] .
 		"&quot;", "error", false, false, (sizeof($this->fields) - 1));
 	}
@@ -509,7 +510,7 @@ class HostGrid {
 		// This function informs the user that we got a zone in a state
 		// other than running. 
 
-		return $this->show_hostname($data["hostname"], $data) 
+		return $this->show_hostname($data["hostname"])
 		. new Cell("No information. Zone is in &quot;"
 		. $data["zone status"][0] .  "&quot; state.", "solidamber", false,
 		false, (sizeof($this->fields) - 2))
@@ -539,13 +540,16 @@ class HostGrid {
 		return $ret_str;
 	}
 
-	protected function show_hostname($data)
+	protected function show_hostname($data, $c = false)
 	{
 		// Ask the map if this is a global zone or not
 
-		$class = ($this->map->is_global($data[0]))
-			? "serverhn"
-			: "zonehn";
+		if ($c)
+			$class = "error";
+		elseif ($this->map->is_global($data[0]))
+			$class = "serverhn";
+		else
+			$class = "zonehn";
 
 		return new Cell($data[0], $class, false);
 
@@ -560,7 +564,6 @@ class HostGrid {
 		// We don't get an audit_completed for "placeholder" servers
 
 		if (sizeof($t_arr) == 2) {
-
 			$d_arr = explode("/", trim($t_arr[1]));
 
 			$time_str = preg_replace("/:\d{2}$/", "", $t_arr[0]);
@@ -568,7 +571,20 @@ class HostGrid {
 			$date = mktime(0, 0, 0, $d_arr[1], $d_arr[0], $d_arr[2]);
 			$now = mktime();
 
-			if (($now - $date) < 86400) {
+			// Flag up audits done in the future or impossibly early - help
+			// people catch machines with the wrong time
+
+			if($date < LOWEST_T) {
+				$class = "solidorange";
+				$date_str = "$t_arr[1]<br/><strong>IMPOSSIBLY
+				OLD</strong>";
+			}
+			elseif($date > $now) {
+				$class = "solidorange";
+				$date_str = "$t_arr[1]<br/><strong>FUTURE
+				TIME</strong>";
+			}
+			elseif (($now - $date) < 86400) {
 				$date_str = false;
 				$class = false;
 			}
@@ -607,9 +623,14 @@ class HostGrid {
 			}
 			else {
 				$sb = units::from_b(units::to_b($a[0]));
-				$txt = "$sb $a[1]";
+
+				$txt = ($a[1] == "physical")
+					? "<strong>$sb</strong> $a[1]"
+					: "$sb $a[1]";
+
 				$class = false;
 			}
+
 
 			$c_arr[] = array($txt, $class);
 
@@ -822,8 +843,9 @@ class HostGrid {
 
 		$speed = preg_replace("/M.*$/", "", $speed);
 
-		$speed = ($speed >= 1000) ? round($speed / 1000, 1) . "GHz" :
-		"${speed}MHz";
+		$speed = ($speed >= 1000)
+			? round($speed / 1000, 1) . "GHz"
+			: "${speed}MHz";
 
 		return new Cell("$physical $cores $speed");
 	}
@@ -858,14 +880,14 @@ class HostGrid {
 
 				case  "CD/DVD":
 
-					// CD/DVD has a coloured border indicating its state
+					// CD/DVD has a coloured field indicating its state
 
 					$class = "cd";
 
 					if (preg_match("/\(loaded\)/", $datum))
-						$ic = inlineCol::box("amber");
+						$ic = inlineCol::solid("amber");
 					elseif (preg_match("/\(mounted\)/", $datum))
-						$ic = inlineCol::box("green");
+						$ic = inlineCol::solid("green");
 					break;
 				
 				case "tape":
@@ -909,14 +931,57 @@ class HostGrid {
 		return new listCell($c_arr);
 	}
 
-	protected function show_pci_card($data)
+	protected function show_card($data)
 	{
-		return new listCell(preg_replace("/^(\S+) /",
-		"<strong>\\1</strong> ", $data), "smallaudit", 1, true);
-	}
+		// Display card information in a nice, easy to read way
 
-	protected function show_sbus_card($data) {
-		return $this->show_pci_card($data);
+		// "card" "$type (SBUS slot $slot)"
+		// "$desc ($extra $slot@${hz}MHz)"
+
+		$card_db =  array(
+
+			"sbus" => array(
+				"SUNW,qfe" => "Sun Quad Fast Ethernet",
+				"SUNW,socal/sf" => "Sun differential SCSI",
+				"QLGC,isp/sd" => "QLogic FCAL HBA"
+			),
+			
+			"pci" => array(
+				"QLA2342" => "QLogic FCAL HBA",
+				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet",
+				"LSI,1030" => "LSI diffrential SCSI"
+			)
+		);
+
+		$c_arr = array();
+
+		foreach($data as $datum) {
+
+			if (preg_match("/\(SBUS/", $datum)) { 
+				preg_match("/^(\S+) \((.*)\)$/", $datum, $a);
+				
+				$cname = (in_array($a[1], array_keys($card_db["sbus"])))
+					? "<strong>" . $card_db["sbus"][$a[1]] . "</strong> ($a[1])"
+					: "<strong>$a[1]</strong>";
+
+				$class = "sbus";
+				$txt = "$cname<br/>$a[2]";
+			}
+			else {
+				preg_match("/^(\S+) \((\S+) (.*)\)$/", $datum, $a);
+
+				$cname = (in_array($a[2], array_keys($card_db["pci"])))
+					? "<strong>" . $card_db["pci"][$a[2]] . "</strong>
+					($a[2] $a[1])"
+					: "<strong>$a[2] $a[1]</strong>";
+
+				$class = "pci";
+				$txt = "$cname<br/>$a[3]";
+			}
+
+			$c_arr[] = array($txt, $class);
+		}
+		return new listCell($c_arr, "smallaudit", false, 1);
 	}
 
 	//-- o/s -----------------------------------------------------------------
@@ -1137,6 +1202,32 @@ class HostGrid {
 		return new Cell($data[0], $class, $col);
 	}
 
+	protected function show_smf_services($data)
+	{
+		// show the SMF service counts
+		// input of the form
+		//   156 installed (97 online, 1 in maintenence)
+
+		$class = false;
+
+		preg_match("/^(\d+) installed \((\d+) online[, ]*(.*)\)/", $data[0],
+		$a);
+
+		// a[1] is the total number of services
+		// a[2] is the number of online services
+		// a[3] may by "x in maintenence"
+
+		$txt = "<ul><li><strong>$a[2] online</strong></li>"
+		. "<li>$a[1] installed</li>";
+
+		if ($a[3]) {
+			$class = "solidred";
+			$txt .= "<li>$a[3]</li>";
+		}
+
+		return new Cell($txt . "</ul>", $class);
+	}
+
 	protected function show_packages($data)
 	{
 		// Print the number of packages installed in the zone, and highlight
@@ -1218,26 +1309,40 @@ class HostGrid {
 		// yellow highlighting on the domain name means "bound"
 		// red highlighting on the domain name means "other" and the status is
 		// displayed
-
-		// cs-dev-02-lws01 (active) [port 5000]
+		// $data looks like this:
+		//    cs-dev-02l-nv1 (4vCPU/2G:active) [port 5000]
 
 		foreach($data as $row) {
-			$port_part = preg_replace("/^.* \[/", "[", $row);
-			$rarr = explode(" ", preg_replace("/[\(\[\]\)]/", "", $row));
+			$a = preg_split("/[\s\(\)\[\]]+/", $row);
 
-			// Get the colour to background the zone name
+			// Now have
+			// [0] => cs-dev-02l-nv1
+			// [1] => 4vCPU/2G:active
+			// [2] => port
+			// [3] => 5000// [0] => cs-dev-02l-nv1
 
-			if ($rarr[1] == "active")
+			$b = explode(":", $a[1]);
+
+			$txt = "<strong>$a[0]</strong> ($b[0]b)";
+
+			// Add on the port if it's not the SP (which it is for the
+			// primary)
+
+			if ($a[3] != "SP")
+				$txt .= " [port $a[3]]";
+
+			// background colour
+
+			if ($b[1] == "active")
 				$class = "solidgreen";
-			elseif($rarr[1] == "bound")
+			elseif($b[1] == "bound")
 				$class = "solidamber";
 			else {
 				$class = "solidred";
-				$rarr[0] = "$rarr[0] ($rarr[1])";
+				$txt ="<div>in state &quot;$b[1]&quot;</div>";
 			}
 
-			$c_arr[] =
-			array("<strong>$rarr[0]</strong><div>$port_part</div>", $class);
+			$c_arr[] = array($txt, $class);
 		}
 
 		return new listCell($c_arr, "smallaudit");
@@ -1982,6 +2087,7 @@ class HostGrid {
 		// nfs:/js/export:anon=0,sec=sys,ro
 		// iscsi:space/target
 		// smb:/export/software:software
+		// vdisk:dev:vol:domain
 
 		$c_arr = false;
 
@@ -1991,7 +2097,7 @@ class HostGrid {
 			$mntinfo = "";
 			$col = false;
 
-			$str = "<strong>$earr[1]</strong> ($fstyp)";
+			$txt = "<strong>$earr[1]</strong> ($fstyp)";
 
 			if ($fstyp == "nfs") {
 				// For NFS, we strip off the domain name, if it's defined in
@@ -2023,12 +2129,28 @@ class HostGrid {
 						$mntinfo = " ($mnts known mounts)";
 				}
 
-				$str .= "$mntinfo<div class=\"indent\">$earr[2]</div>";
+				$txt .= "$mntinfo<div class=\"indent\">$earr[2]</div>";
 			}
 			elseif ($fstyp == "smb")
-				$str .= "<div class=\"indent\">&quot;$earr[2]&quot;</div>";
+				$txt .= "<div class=\"indent\">&quot;$earr[2]&quot;</div>";
+			elseif ($fstyp == "vdisk") {
+				$b = explode(":", $earr[2]);
+				$txt .= "<div class=\"indent\">&quot;$b[0]&quot;";
 
-			$c_arr[] = array($str, $fstyp, $col);
+				// Put unassigned vdisks on an amber field
+	
+				if ($b[1] == "unassigned") {
+					$col = inlineCol::solid("amber");
+					$txt .= " (unassigned)";
+				}
+				else
+					$txt .= " on domain $b[1]";
+
+				$txt .= "</div>";
+			}
+
+
+			$c_arr[] = array($txt, $fstyp, $col);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -2900,14 +3022,16 @@ class SoftwareGrid extends HostGrid
 
 		if (is_string($data)) {
 			$vc = $this->ver_cols($data, $field, $subname);
-			$ret = new Cell($vc[0], $vc[1], $vc[2]);
+			$ret = new Cell($vc[0], $vc[1], $vc[2], $vc[3], $vc[4], $vc[5],
+			$vc[6]);
 		}
 		else {
 			$c_arr = array();
 
 			foreach($data as $datum) {
 				$vc = $this->ver_cols($datum, $field, $subname);
-				$c_arr[] = array($vc[0], $vc[1], $vc[2]);
+				$c_arr[] = array($vc[0], $vc[1], $vc[2], $vc[3], $vc[4],
+				$vc[5]);
 			}
 
 			$ret = new listCell($c_arr);
@@ -4313,7 +4437,6 @@ class listCell {
 		}
 
 		else {
-
 			$h = "\n\n<ul";
 
 			if ($lclass) $h .= " class=\"$lclass\"";
@@ -4325,10 +4448,14 @@ class listCell {
 				foreach($data as $arr) {
 					$h .= "\n  <li";
 
-					if (isset($arr[1]) && ($arr[1])) $h.= " class=\"$arr[1]\"";
+					if (isset($arr[1]) && ($arr[1]))	
+						$h.= " class=\"$arr[1]\"";
 
 					if (isset($arr[2]) && $arr[2])
 						$h .= " style=\"$arr[2]\"";
+
+					if (isset($arr[5]))
+						$h .= " title=\"$arr[5]\"";
 
 					$h .= ">$arr[0]</li>";
 				}

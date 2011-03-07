@@ -49,18 +49,22 @@ $grid_key = array(
 		false)
 	),
 
+	"card" => array(
+		array("PCI card", "pci", false),
+		array("SBUS card", "sbus", false)
+	),
+
 	"printer" => array(
 		array("default printer", "boxgreen", false),
 	),
-
 	
 	"storage" => array(
 		array("disk drive", "disk", false),
 		array("optical drive", "cd", false),
 		array("tape drive", "tp", false),
 		array("fibre array", "fc", false),
-		array("loaded CD/DVD", "boxamber", false),
-		array("mounted CD/DVD", "boxgreen", false)
+		array("loaded CD/DVD", "cd", inlineCol::solid("amber")),
+		array("mounted CD/DVD", "cd", inlineCol::solid("green"))
 	),
 
 );

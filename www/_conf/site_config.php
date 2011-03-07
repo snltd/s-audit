@@ -37,4 +37,10 @@ define("OMIT_PORT_THRESHOLD", 5000);
 define("SS_HOST_COLS", 6);
     // How many columns of local zones on the single server view page
 
+define("LOWEST_T", 1293840000);
+	// Assuming server clocks are correct, the earliest possible time at
+	// which an audit could have been performed, in seconds since the epoch.
+	// This should help you catch hosts with way-off clocks. Default is
+	// 00:00:00 01/01/2011
+
 ?>

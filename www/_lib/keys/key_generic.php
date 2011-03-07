@@ -25,7 +25,8 @@ $generic_key = array(
 
 	"audit completed" => array(
 		array("data &gt; 24h old", "solidamber", false),
-		array("data &gt; 1 week old", "solidred", false)
+		array("data &gt; 1 week old", "solidred", false),
+		array("impossible time", "solidorange", false)
 	)
 
 );

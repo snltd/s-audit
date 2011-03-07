@@ -95,12 +95,13 @@ if ($qs == "net.php") {
 // storage types aren't left-aligned. Just coloured
 
 if ($qs == "index.php" || $qs == "platform.php") {
-	echo "\n/* begin storcols */\n";
+	echo "\n/* begin platformcols */\n";
 
-	foreach(colours::$stor_cols as $name=>$hex)
-		echo "\n.$name { background: ${hex} }";
+	foreach(array_merge(colours::$stor_cols, colours::$card_cols) as
+	$name=>$hex)
+		echo "\n.$name { border: 2px solid ${hex} }";
 
-	echo "\n/* end storcols */\n";
+	echo "\n/* end platformcols */\n";
 }
 
 //----------------------------------------------------------------------------

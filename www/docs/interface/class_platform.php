@@ -183,33 +183,34 @@ $dh->doc_class_start();
 	echo $dh->colour_key($grid_key["storage"]);
 ?>
 
-	<dd>Disks, on a pale blue field, are grouped by size and bus type, for
-	instance, SCSI, VBOX, IDE (note that SATA disks are shown as
-	&quot;IDE&quot;), SCSI VHCI, SAS, etc. Optical disks are on a grey
-	field, again grouped by bus type. Optical drives which have disks loaded
-	or mounted are highlighted in green and amber respectively.</dd>
+	<dd>Disks are grouped by size and bus type, for instance, SCSI, VBOX,
+	IDE (note that SATA disks are shown as &quot;IDE&quot;), SCSI VHCI, SAS,
+	etc. Optical disk drives are again grouped by bus type, and those which
+	have disks loaded or mounted are highlighted by amber and green fields
+	respectively.</dd>
 	
-	<dd>Tape drives are shown on a red field.  Note that jukeboxes typically
-	contain multiple drives, and the drives are reported, not the
-	enclosures.</dd>
+	<dd>Note that tape jukeboxes typically contain multiple drives, and the
+	drives are reported, not the enclosures.</dd>
 	
-	<dd>Optical storage arrays, for instance T3s and 3510s are shown on a
-	dark blue field. If they can be retrieved, the model name and firmware
+	<dd>For some optical storage arrays, for instance T3s and 3510s 
+	shown on a dark blue field. If they can be retrieved, the model name and
+	firmware
 	revision are shown. Note that the disks the array contains will be
 	listed AS WELL AS the array itself.</dd>
 
-	<dt>PCI card</dt>
-	<dd>Lists PCI cards. The type of card, e.g. network, SCSI, etc, is shown
-	in <strong>bold face</strong>, with roughly human-readable details of
-	the card following it in parentheses. For instance, &quot;SUNW,pci-qfe
-	PCI0@33MHz&quot; can be interpreted as a Sun PCI Quad Fast Ethernet card
-	in PCI slot 0, which has a 33MHz bus speed.</dd>
+	<dt>card</dt>
+	<dd>Lists PCI and SBUS cards. The type of card, e.g. network, SCSI, etc,
+	is shown in <strong>bold face</strong>, with roughly human-readable
+	details of the card following it in parentheses. For instance,
+	&quot;SUNW,pci-qfe PCI0@33MHz&quot; can be interpreted as a Sun PCI Quad
+	Fast Ethernet card in PCI slot 0, which has a 33MHz bus speed.</dd>
 
-	<dd>This information can only be reliably retrieved on SPARC systems
+	<dd>PCI card information can only be reliably retrieved on SPARC systems
 	running Solaris 10 or later. If you see information for older, or x86
 	systems, you're lucky.</dd>
 
-	<dt>SBUS card</dt>
+	<dd>SBUS card auditing is supported on all SBUS equipped SPARC
+	systems.</dd>
 
 	<dt>printer</dt>
 	<dd>Lists any printers to which the host has access. They may or may not
@@ -220,4 +221,3 @@ $dh->doc_class_start();
 	$pg->close_page();
 
 ?>
-

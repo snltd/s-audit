@@ -1155,7 +1155,7 @@ function get_cards
 		do
 			desc=${desc#\(}
 			desc=${desc%\)}
-			disp "card" "$desc (PCI $extra $slot@${hz}MHz)"
+			disp "card" "$desc ($extra $slot@${hz}MHz)"
 		done
 
 	fi

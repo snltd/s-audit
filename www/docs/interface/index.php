@@ -66,6 +66,10 @@ display of local zones.</p>
 page</a>, which helps to display the IP address allocation on your
 network.</p>
 
+<p>When audit files are read, the interface verifies that they look complete
+and correct. If it finds errors, warnings are displayed at the top of the
+screen and the broken data is ignored.</p>
+
 <?php
 
 $pg->close_page();

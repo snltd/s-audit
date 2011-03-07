@@ -48,6 +48,9 @@ $grid_key = array(
 		array("local zone rebooted<br/>after global zone", "boxamber", false)
 	),
 
+	"SMF services" => array(
+		array("services in maintenence mode", "solidred", false)
+	),
 
 	"packages" => array(
 		array("partially installed<br/>packages", "solidamber", false)

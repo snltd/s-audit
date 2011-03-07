@@ -169,6 +169,12 @@ one thing.</p>
 are highlighted by amber field, those older than a week by a red
 field.</dd>
 
+<dd>Audits which, according to the clock on the host running the interface,
+were performed in the future, or audits performed before the time defined in
+<tt>LOWEST_T</tt> in <tt>_conf/site_config.php</tt> are highlighted by an
+orange field. This is intended to help the user spot machines with wildly
+innacurate clocks.</dd>
+
 	<?php
 		echo $this->colour_key($this->generic_key["audit completed"]),
 		"\n\n</dl>";

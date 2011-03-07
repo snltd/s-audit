@@ -31,13 +31,16 @@ $grid_key = array(
 	),
 
 	"fs" => array(
-		array("ZFS dataset can be upgraded", "solidorange", false),
-		array("NFS mount not in vfstab", "solidred", false),
+		array("ZFS dataset can be upgraded", "zfs",
+		inlineCol::solid("orange")),
+		array("NFS mount not in vfstab", "nfs", inlineCol::solid("red")),
 		array("read-only filesystem", "solidgrey", false),
 	),
 
 	"export" => array(
-		array("NFS filesystem with no known mounts", "solidamber", false)
+		array("NFS filesystem with no known mounts", "nfs",
+		inlineCol::solid("amber")),
+		array("unassigned VDISK", "vdisk", inlineCol::solid("amber"))
 	)
 
 );
