@@ -151,8 +151,8 @@ G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
 L_NET_TESTS=$G_NET_TESTS
 
 G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms
-	scheduler package_count patch_count uptime "
-L_OS_TESTS="os_dist os_ver os_rel kernel hostid
+	scheduler svc_count package_count patch_count uptime "
+L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
 	package_count patch_count uptime"
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
@@ -1696,6 +1696,20 @@ function get_scheduler
 	fi
 }
 
+function get_svc_count
+{
+	# Count services
+
+	if can_has svcs
+	then
+		m=$(svcs -x | grep -c "State:")
+		(( $m > 0 )) && x=", $m in maintenence"
+
+		disp "SMF services" "$(svcs -aH | sed -n '$=') installed ($(svcs -H \
+		| sed -n '$=') online${x})"
+	fi
+}
+
 function get_package_count
 {
 	# A simple count of the installed packages. Should be an indicator of
@@ -2927,7 +2941,7 @@ function get_exports
 
 	# Now iSCSI
 
-	if can_has zfs && zfs get 2>&1| $EGS iscsi
+	if can_has zfs && zfs get 2>&1 | $EGS iscsi
 	then
 
 		zfs get -H -po name,value shareiscsi \
@@ -2940,7 +2954,6 @@ function get_exports
 	
 	# Now virtual disks in an LDOM primary
 
-
 	if can_has ldm && is_root
 	then
 		LDMS=$(ldm ls | sed '1,2d;s/ .*$//')
@@ -2949,14 +2962,15 @@ function get_exports
 		| sed -n '/vol=/s/^|vol=\([^|]*\).*dev=\([^|]*\).*$/\1 \2/p' | \
 		while read vol dev
 		do
+			own=unassigned
 
 			for ldm in $LDMS
 			do
 				ldm ls-constraints -p $ldm | $EGS "^VDISK\|name=${vol}\|" \
-					&& disp "export" "vdisk:${dev}:${vol}:$ldm"
-
+					&& own=$ldm
 			done
-			
+
+			disp "export" "vdisk:${dev}:${vol}:$own"
 		done
 
 	fi
