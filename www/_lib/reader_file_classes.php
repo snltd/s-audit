@@ -87,7 +87,7 @@ class GetServers extends GetServersBase {
 	// Extend the GetServersBase class to get data from flat files
 	protected $globals;
 
-	public function __construct($map, $s_list = false, $cl)
+	public function __construct($map, $s_list = false, $cl = false)
 	{
 		// $map is the map created by ZoneFileMap
 		// $s_list can be an array of servers to get. 

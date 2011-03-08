@@ -36,8 +36,9 @@ if (($server)) {
 	// serverview object, passing only the relevant server array. (It's the
 	// entire contents of the array, just buried a couple of layers down.)
 
-	$data = new GetServerSingle($map, $server);
-	$view = new serverView($server, $data->all_data, $map);
+	$data = new GetServers($map, $server);
+	echo "<prE>", print_r($data), "</pre>";
+	//$view = new serverView($server, $data->all_data, $map);
 	define("SINGLE_VIEW", 1);
 }
 
@@ -46,6 +47,13 @@ else {
 //- list of servers view -------------------------------------------------------
 
 	$pg = new ssPage("single server view", 1);
+
+	// Create a getServers object to complete the map. We can destroy it
+	// straight away
+
+	$s = new getServers($map);
+	unset($s);
+
 	$view = new serverListGrid($map);
 	echo "<p class=\"center\">Click a server or zone name for a full
 	overview.</p>";
