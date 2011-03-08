@@ -365,7 +365,6 @@ class HostGrid {
 	{
 		// Returns a row of HTML which describes a single zone.
 
-		//echo "<pre>", print_r($data), "</pre>";
 		// If $data isn't an array, that's an indicator that parse_files hit
 		// a zero sized file. If it is, then we have useable data
 
@@ -934,24 +933,9 @@ class HostGrid {
 	protected function show_card($data)
 	{
 		// Display card information in a nice, easy to read way
-
+		// Input is of one of the following forms:
 		// "card" "$type (SBUS slot $slot)"
 		// "$desc ($extra $slot@${hz}MHz)"
-
-		$card_db =  array(
-
-			"sbus" => array(
-				"SUNW,qfe" => "Sun Quad Fast Ethernet",
-				"SUNW,socal/sf" => "Sun differential SCSI",
-				"QLGC,isp/sd" => "QLogic FCAL HBA"
-			),
-			
-			"pci" => array(
-				"QLA2342" => "QLogic FCAL HBA",
-				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet",
-				"LSI,1030" => "LSI diffrential SCSI"
-			)
-		);
 
 		$c_arr = array();
 
@@ -960,8 +944,10 @@ class HostGrid {
 			if (preg_match("/\(SBUS/", $datum)) { 
 				preg_match("/^(\S+) \((.*)\)$/", $datum, $a);
 				
-				$cname = (in_array($a[1], array_keys($card_db["sbus"])))
-					? "<strong>" . $card_db["sbus"][$a[1]] . "</strong> ($a[1])"
+				$cname = (in_array($a[1],
+				array_keys($this->card_db["sbus"])))
+					? "<strong>" . $this->card_db["sbus"][$a[1]] .
+					"</strong> ($a[1])"
 					: "<strong>$a[1]</strong>";
 
 				$class = "sbus";
@@ -970,9 +956,10 @@ class HostGrid {
 			else {
 				preg_match("/^(\S+) \((\S+) (.*)\)$/", $datum, $a);
 
-				$cname = (in_array($a[2], array_keys($card_db["pci"])))
-					? "<strong>" . $card_db["pci"][$a[2]] . "</strong>
-					($a[2] $a[1])"
+				$cname = (in_array($a[2],
+				array_keys($this->card_db["pci"])))
+					? "<strong>" .  $this->card_db["pci"][$a[2]] .
+					"</strong> ($a[2] $a[1])"
 					: "<strong>$a[2] $a[1]</strong>";
 
 				$class = "pci";
@@ -981,6 +968,7 @@ class HostGrid {
 
 			$c_arr[] = array($txt, $class);
 		}
+
 		return new listCell($c_arr, "smallaudit", false, 1);
 	}
 
@@ -1012,51 +1000,6 @@ class HostGrid {
 		// marketing type strings. We also flag up zones with different
 		// releases to their parents
 
-		// An array pairing update numbers with the months they were
-		// released. You have to update this by hand as new versions of
-		// Solaris come out
-
-		$updates = array(
-			"5.8" => array(
-				"6/00" => "update 1",
-				"10/00" => "update 2",
-				"1/01" => "update 3",
-				"4/01" => "update 4",
-				"7/01" => "update 5",
-				"10/01" => "update 6",
-				"2/02" => "update 7",
-				"12/02" => "HW1",
-				"5/03" => "HW2",
-				"7/03" => "HW3",
-				"2/04" => "HW4"
-				),
-
-			"5.9" => array(
-				"9/02" => "update 1",
-				"12/02" => "update 2",
-				"4/03" => "update 3",
-				"8/03" => "update 4",
-				"12/03" => "update 5",
-				"4/04" => "update 6",
-				"9/04" => "update 7",
-				"9/05" => "update 8",
-				"9/05 HW Update" => "u9/HW update"
-				),
-
-			"5.10" => array(
-				"03/05" => "GA",
-				"01/06" => "update 1",
-				"06/06" => "update 2",
-				"11/06" => "update 3",
-				"8/07" => "update 4",
-				"5/08" => "update 5",
-				"10/08" => "update 6",
-				"5/09" => "update 7",
-				"10/09" => "update 8",
-				"9/10" => "update 9"
-				)
-			);
-
 		$zn = $this->cz["hostname"][0];
 		$class = false;
 		$os_hr = $data[0];
@@ -1070,10 +1013,11 @@ class HostGrid {
 		if (isset($vi[1])) {
 			$sv = $vi[1];
 
-			if (in_array($sv, array_keys($updates))) {
+			if (in_array($sv, array_keys($this->sol_upds))) {
 				
-				if (in_array($os_hr, array_keys($updates[$sv])))
-					$os_hr .= "<div>(" . $updates[$sv][$os_hr] . ")</div>";
+				if (in_array($os_hr, array_keys($this->sol_upds[$sv])))
+					$os_hr .= "<div>(" . $this->sol_upds[$sv][$os_hr] .
+					")</div>";
 			}
 
 		}
@@ -1738,16 +1682,6 @@ class HostGrid {
 		// Parse a list of Sun CC versions, make them more human-readable,
 		// and colour them.
 
-		// Make Sun CC versions more understandable
-
-		$sun_cc_vers = array(
-			"5.0" => "5.0",
-			"5.8" => "11",
-			"5.9" => "12",
-			"5.10" => "12u1",
-			"5.11" => "12.2"
-			);
-
 		$c_arr = array();
 
 		foreach ($data as $datum) {
@@ -1767,9 +1701,9 @@ class HostGrid {
 			else
 				$bg_class = false;
 
-			$new_data = (in_array($sccver, array_keys($sun_cc_vers)))
-				? preg_replace("/^${sccver}/", "<b>$sun_cc_vers[$sccver]</b>",
-					$sccarr[1])
+			$new_data = (in_array($sccver, array_keys($this->sun_cc_vers)))
+				? preg_replace("/^${sccver}/", "<strong>" .
+				$this->sun_cc_vers[$sccver] . "</strong>", $sccarr[1])
 				: $sccarr[1];
 
 			$c_arr[] = array($new_data, $bg_class, false, false, false,
@@ -2727,14 +2661,24 @@ class PlatformGrid extends HostGrid
 	protected $key_filename = "key_platform.php";
 		// Helps us include they key file automatically
 
+	protected $card_db;	// Card definitions from defs.php
+
 	public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
 		// generates the $latest[] OBP and ALOM arrays
 	
 		parent::__construct($map, $servers, $c);
-		$this->latest_obps = $this->get_paired_list("platform", "hardware", "OBP");
-		$this->latest_aloms = $this->get_paired_list("platform", "hardware", "ALOM f/w");
+		$this->latest_obps = $this->get_paired_list("platform", "hardware",
+		"OBP");
+		$this->latest_aloms = $this->get_paired_list("platform",
+		"hardware", "ALOM f/w");
+
+		// We need the card definitions in defs.php
+
+		require_once(LIB . "/defs.php");
+		$defs = new defs();
+		$this->card_db = $defs->get_data("card_db");
 	}
 
 }
@@ -2754,6 +2698,8 @@ class OSGrid extends PlatformGrid
 
 	protected $key_filename = false;
 
+	protected $sol_upds;	// Solaris update dates, from defs.php
+
     public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
@@ -2761,6 +2707,12 @@ class OSGrid extends PlatformGrid
 
 		parent::__construct($map, $servers, $c);
 		$this->latest_kerns = $this->get_latest_kerns();
+
+		// We need the definition file
+
+		require_once(LIB . "/defs.php");
+		$defs = new defs();
+		$this->sol_upds = $defs->get_data("updates");
 	}
 
 	protected function mk_ver_arch_str($zn, $dist, $sver)
@@ -2958,6 +2910,8 @@ class SoftwareGrid extends HostGrid
 		"mod_php" => "Sun Web Server"
 		);
 
+	protected $sun_cc_vers;	// Sun Studio versions from defs.php
+
 	public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
@@ -2965,6 +2919,12 @@ class SoftwareGrid extends HostGrid
 
 		parent::__construct($map, $servers, $c);
 		$this->latest = $this->get_latest();
+
+		// We need the defs file for Sun Studio
+
+		require_once(LIB . "/defs.php");
+		$defs = new defs();
+		$this->sun_cc_vers = $defs->get_data("sun_cc_vers");
 	}
 
 	protected function ver_cols($data, $field, $subname = false)

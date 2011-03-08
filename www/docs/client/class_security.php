@@ -19,9 +19,10 @@ $pg = new docPage($menu_entry);
 </pre>
 
 <p>this audit type looks for things which may compromise the security of the
-system. <strong><em>This in no way makes s-audit a security tool, and it should not
-be treated as such</em></strong>, but it is a useful way to see if certain
-potentially undesirable services, users, or circumstances, exist.</p>
+system. <strong><em>This in no way makes s-audit a security tool, and it
+should not be treated as such</em></strong>, but it is a useful way to see
+if certain potentially undesirable services, users, or circumstances,
+exist.</p>
 
 <p>Some tests are not particularly security-related, but fit better here
 than in any of the other classes.</p>
@@ -62,7 +63,6 @@ than in any of the other classes.</p>
 	<dt>root_shell</dt>
 	<dd>Displays the root shell if it is anything other than
 	<tt>/sbin/sh</tt>.</dd>
-
 
 	<dt>dtlogin</dt>
 	<dd>Looks for the presence of a number of desktop login daemons, and

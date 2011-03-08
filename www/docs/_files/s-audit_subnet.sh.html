@@ -25,11 +25,7 @@
 <span class="Comment"># consistent results over multiple runs. Doing a slow scan was consistent,</span>
 <span class="Comment"># but took hours. (Literally.)</span>
 <span class="Comment">#</span>
-<span class="Comment"># Usage</span>
-<span class="Comment"># </span>
-<span class="Comment">#   s-audit_subnet.sh subnet ...</span>
-<span class="Comment">#</span>
-<span class="Comment"># where &quot;subnet&quot; is a network address. e.g. 10.10.8.0</span>
+<span class="Comment"># Usage: run with -h for all options.</span>
 <span class="Comment"># </span>
 <span class="Comment"># Requirements</span>
 <span class="Comment">#</span>
@@ -47,10 +43,10 @@
 <span class="Identifier">PATH</span>=/usr/bin:/usr/sbin
     <span class="Comment"># Always set your PATH</span>
 
-<span class="Identifier">DIG</span>=<span class="Statement">&quot;</span><span class="Constant">/opt/bin/dig</span><span class="Statement">&quot;</span>
+<span class="Identifier">DIG</span>=<span class="Statement">&quot;</span><span class="Constant">/usr/local/bin/dig</span><span class="Statement">&quot;</span>
     <span class="Comment"># Path to dig binary</span>
 
-<span class="Identifier">DNS_SRV</span>=<span class="Statement">&quot;</span><span class="Constant">cs-infra-01z-dns-i</span><span class="Statement">&quot;</span>
+<span class="Identifier">DNS_SRV</span>=<span class="Statement">&quot;</span><span class="Constant">dns-server</span><span class="Statement">&quot;</span>
     <span class="Comment"># DNS server to use for lookups</span>
 
 <span class="Identifier">PARL_PINGS</span>=<span class="Constant">25</span>
@@ -105,21 +101,90 @@
 <span class="Identifier">die()</span>
 <span class="Identifier">{</span>
     <span class="Statement">print</span><span class="Constant"> -u2 </span><span class="Statement">&quot;</span><span class="Constant">ERROR: </span><span class="PreProc">$1</span><span class="Statement">&quot;</span>
+    clean_up
     <span class="Statement">exit</span> <span class="PreProc">${</span><span class="PreProc">2</span><span class="Statement">:-</span>1<span class="PreProc">}</span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">clean_up()</span>
+<span class="Identifier">{</span>
+    <span class="Statement">rm</span> <span class="Special">-f</span> <span class="PreProc">$TMPFILE</span> <span class="PreProc">${</span><span class="PreProc">TMPFILE</span><span class="PreProc">}</span>.<span class="Constant">2</span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">usage()</span>
+<span class="Identifier">{</span>
+    <span class="Statement">cat</span><span class="Statement">&lt;&lt;-EOUSAGE</span>
+<span class="Constant">    usage:</span>
+<span class="Constant">      </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> [-R user@host:/path] [-s dns_server] [-D path] [-o file] subnet...</span>
+
+<span class="Constant">    where:</span>
+<span class="Constant">      -o :     path to output file. Default is standard out.</span>
+<span class="Constant">      -D :     path to dig binary</span>
+<span class="Constant">                 [Default is '</span><span class="PreProc">${</span><span class="PreProc">DIG</span><span class="PreProc">}</span><span class="Constant">'.]</span>
+<span class="Constant">      -R :     information for scp to copy audit files to remote host. Of</span>
+<span class="Constant">               form &quot;user@host:directory&quot;</span>
+<span class="Constant">      -s :     DNS server on which to do lookups</span>
+<span class="Constant">                 [Default is '</span><span class="PreProc">${</span><span class="PreProc">DNS_SRV</span><span class="PreProc">}</span><span class="Constant">'.]</span>
+
+<span class="Statement">    EOUSAGE</span>
+    <span class="Statement">exit</span> <span class="Constant">2</span>
 <span class="Identifier">}</span>
 
 <span class="Comment">#-----------------------------------------------------------------------------</span>
 <span class="Comment"># SCRIPT STARTS HERE</span>
 
+<span class="Statement">while </span><span class="Statement">getopts</span><span class="Statement"> </span><span class="Statement">&quot;</span><span class="Constant">D:o:R:s:</span><span class="Statement">&quot;</span><span class="Statement"> option </span><span class="Constant">2</span><span class="Statement">&gt;</span><span class="Statement">/dev/null</span>
+<span class="Statement">do</span>
+
+    <span class="Statement">case</span> <span class="PreProc">$option</span> <span class="Statement">in</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">D</span><span class="Statement">&quot;</span><span class="Statement">)</span>    <span class="Identifier">DIG</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">o</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">OUTFILE</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">R</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">REMOTE_STR</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">s</span><span class="Statement">&quot;</span><span class="Statement">)</span>    <span class="Identifier">DNS_SRV</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        *<span class="Statement">)</span>        usage
+                <span class="Statement">exit</span> <span class="Constant">2</span>
+
+    <span class="Statement">esac</span>
+
+<span class="Statement">done</span>
+
+<span class="Statement">shift</span> <span class="PreProc">$((</span><span class="PreProc">$OPTIND</span><span class="Special"> - </span><span class="Constant">1</span><span class="PreProc">))</span>
+
 <span class="Comment"># A few checks.</span>
 
-<span class="Statement">if </span><span class="Special">[[</span> <span class="PreProc">$#</span> <span class="Statement">==</span> <span class="Constant">0</span> <span class="Special">]]</span>
+<span class="Special">[[</span> <span class="PreProc">$#</span> <span class="Statement">==</span> <span class="Constant">0</span> <span class="Special">]]</span> &amp;&amp; usage
+
+<span class="Statement">if </span><span class="Special">[[</span> <span class="Statement">-n</span> <span class="PreProc">$REMOTE_STR</span> <span class="Special">]]</span>
 <span class="Statement">then</span>
-    <span class="Statement">print</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">usage: </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> subnet...</span><span class="Statement">&quot;</span><span class="Constant"> </span>
-    <span class="Statement">exit</span> <span class="Constant">2</span>
+    <span class="Special">[[</span> <span class="Statement">-n</span> <span class="PreProc">$OUTFILE</span> <span class="Special">]]</span> <span class="Statement">&amp;&amp;</span> die <span class="Statement">&quot;</span><span class="Constant">-o and -R options are mutally exclusive.</span><span class="Statement">&quot;</span>
+    <span class="Identifier">OUTFILE</span>=<span class="PreProc">${</span><span class="PreProc">TMPFILE</span><span class="PreProc">}</span>.<span class="Constant">2</span>
 <span class="Statement">fi</span>
 
-<span class="Special">[[</span> <span class="Statement">-x</span> <span class="PreProc">$DIG</span> <span class="Special">]]</span> || die <span class="Statement">&quot;</span><span class="Constant">can't execute dig.</span><span class="Statement">&quot;</span>
+<span class="Statement">if </span><span class="Special">[[</span> <span class="Statement">-n</span> <span class="PreProc">$OUTFILE</span> <span class="Special">]]</span>
+<span class="Statement">then</span>
+    <span class="Statement">exec</span> <span class="Constant">3</span><span class="Statement">&gt;</span><span class="PreProc">$OUTFILE</span>
+
+    <span class="Special">[[</span> <span class="PreProc">$OUTFILE</span> <span class="Statement">==</span> */* <span class="Special">]]</span> \
+        <span class="Statement">&amp;&amp;</span> <span class="Identifier">OUTDIR</span>=<span class="PreProc">$(</span><span class="Statement">pwd</span><span class="PreProc">)</span> \
+        <span class="Statement">||</span> <span class="Identifier">OUTDIR</span>=<span class="PreProc">${</span><span class="PreProc">OUTFILE</span><span class="Statement">%</span>/*<span class="PreProc">}</span>
+
+    <span class="Special">[[</span> <span class="Statement">-w</span> <span class="PreProc">$OUTDIR</span> <span class="Special">]]</span> \
+        <span class="Statement">||</span> die <span class="Statement">&quot;</span><span class="Constant">can't write to output directory [</span><span class="PreProc">${</span><span class="PreProc">OUTFILE</span><span class="Statement">%</span>/*<span class="PreProc">}</span><span class="Constant">]</span><span class="Statement">&quot;</span> <span class="Constant">2</span>
+
+<span class="Statement">else</span>
+    <span class="Statement">exec</span> <span class="Constant">3</span><span class="Statement">&gt;</span><span class="Statement">&amp;</span><span class="Constant">1</span>
+<span class="Statement">fi</span>
+
+<span class="Special">[[</span> <span class="Statement">-x</span> <span class="PreProc">$DIG</span> <span class="Special">]]</span> <span class="Statement">\</span>
+    || die <span class="Statement">&quot;</span><span class="Constant">can't run dig [</span><span class="PreProc">${</span><span class="PreProc">DIG</span><span class="PreProc">}</span><span class="Constant">]</span><span class="Statement">&quot;</span> <span class="Constant">1</span>
 
 <span class="Comment"># For all given subnets, do a reverse DNS lookup on all addresses, and put</span>
 <span class="Comment"># the results of that query  in a temporary file. Then ping every address on</span>
@@ -134,6 +199,8 @@
 <span class="Comment"># respond to a ping. Note. Both lists have to be sorted in the same way, or</span>
 <span class="Comment"># the join will fail</span>
 
+<span class="Statement">print</span><span class="Constant"> -u3 </span><span class="Statement">&quot;</span><span class="Constant">@@ </span><span class="PreProc">$(</span><span class="Special">uname -n</span><span class="PreProc">)</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="PreProc">$(</span><span class="Special">date </span><span class="Statement">&quot;</span><span class="Constant">+%H:%M %d/%m/%Y</span><span class="Statement">&quot;</span><span class="PreProc">)</span>
+
 <span class="Statement">for </span>subnet <span class="Statement">in</span> <span class="PreProc">$@</span>
 <span class="Statement">do</span>
     <span class="Identifier">net</span>=<span class="PreProc">${</span><span class="PreProc">subnet</span><span class="Statement">%</span>.0<span class="PreProc">}</span>
@@ -144,9 +211,18 @@
     resolve_subnet <span class="PreProc">$net</span> <span class="Statement">|</span> <span class="Statement">sort</span> <span class="Statement">&gt;</span><span class="PreProc">$TMPFILE</span>
     ping_subnet <span class="PreProc">$net</span> <span class="Statement">|</span> <span class="Statement">sed</span> <span class="Statement">-n</span> <span class="Statement">'</span><span class="Constant">/is alive$/s/ .*$//p</span><span class="Statement">'</span> <span class="Statement">|</span> <span class="Statement">sort</span> <span class="Statement">|</span> \
     join <span class="Statement">-e</span> - -a1 -a2 -o1.<span class="Constant">1</span>,<span class="Constant">2</span>.<span class="Constant">2</span>,<span class="Constant">2</span>.<span class="Constant">1</span> - <span class="PreProc">$TMPFILE</span>
-<span class="Statement">done</span>
+<span class="Statement">done</span> <span class="Statement">&gt;&amp;3</span>
 
-<span class="Statement">rm</span> <span class="Special">-f</span> <span class="PreProc">$TMPFILE</span>
+<span class="Comment"># Copy the file if required</span>
+
+<span class="Statement">if </span><span class="Special">[[</span> <span class="Statement">-n</span> <span class="PreProc">$REMOTE_STR</span> <span class="Special">]]</span>
+<span class="Statement">then</span>
+
+    scp -rqCp <span class="PreProc">$TMPFILE</span> <span class="PreProc">$REMOTE_STR</span> <span class="Statement">&gt;</span>/dev/null <span class="Constant">2</span><span class="Statement">&gt;</span><span class="Statement">&amp;</span><span class="Constant">1</span> \
+        <span class="Statement">||</span> die <span class="Statement">&quot;</span><span class="Constant">failed to copy data to </span><span class="PreProc">$REMOTE_STR</span><span class="Statement">&quot;</span>
+
+<span class="Statement">fi</span>
+
+clean_up
 
 <span class="Statement">exit</span>
-

@@ -12,16 +12,10 @@ $pg = new docPage("software tool audits");
 
 <h1>Tool Audits</h1>
 
-<p>Invoked by either of</p>
+<p>Invoked by</p>
 
 <pre class="cmd">
 # s-audit.sh tool
-</pre>
-
-<p>or</p>
-
-<pre class="cmd">
-# s-audit.sh tools
 </pre>
 
 <h2>Checks</h2>

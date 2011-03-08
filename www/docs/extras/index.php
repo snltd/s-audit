@@ -29,7 +29,7 @@ interface.</p>
 
 	<dt><a href="ip_list_file.php">the <tt>IP_LIST_FILE</tt></a></dt>
 	<dd>File created by <a
-	href="s-audit_subnet_wrapper.php"><tt>s-audit_subnet_wrapper.sh</tt></a>
+	href="s-audit_subnetr.php"><tt>s-audit_subnet.sh</tt></a>
 	which adds non-audited machines and DNS information to the <a
 	href="../interface/ip_listing.php">IP listing page</a>.</dd>
 
@@ -81,12 +81,6 @@ PHP interface.</p>
 	SMF framework. It is useful to have machines audit themselves on a
 	reboot, or to perform on-demand audits simply by refreshing the
 	service.</dd>
-
-	<dt><a
-	href="s-audit_subnet_wrapper.php"><tt>s-audit_subnet_wrapper.sh</tt></a></dt>
-	<dd>A simple wrapper scipt useful if you need to run <a
-	href="s-audit_subnet.php"><tt>s-audit_subnet.sh</tt></a> on a machine
-	other than the one running s-audit's PHP interface.</dd>
 
 </dl>
 

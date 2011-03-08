@@ -18,12 +18,6 @@ $pg = new docPage($menu_entry);
 # s-audit.sh app [-p]
 </pre>
 
-<p>or</p>
-
-<pre class="cmd">
-# s-audit.sh application [-p]
-</pre>
-
 <p>The line between &quot;<a href="class_tool.php">tools</a>&quot; and
 &quot;applications&quot; is blurred, but as a rough guide, things which run
 as a daemon, normally as services, are defined as <em>applications</em>,

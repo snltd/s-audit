@@ -42,7 +42,9 @@ $dh->doc_class_start();
 	face</strong>, with its capacity in parentheses. On the next line, the
 	version of the zpool is reported. If the system supports a higher
 	version than the pool is using, the available version is also given, and
-	the cell is coloured.</dd>
+	the cell is coloured. The state of the zpool is displayed, in upper
+	case, and zpools which are not &quot;ONLINE&quot; are highlighted by a
+	coloured field.</dd>
 
 	<?php
 		echo $dh->colour_key($grid_key["zpool"]);
@@ -114,8 +116,12 @@ $dh->doc_class_start();
 	highlighted by an amber field.</dd>
 
 	<dd>The second line differs for different export types. For NFS it shows
-	the export options. For SMB it shows the name of the export. No extra
-	information is currently displayed for ISCSI or VDISKs.</dd>
+	the export options. For SMB it shows the name of the export. For VDISKS
+	it shows the name of the VDISK, and the domain which is currently using
+	the VDISK. If the disk has not been bound to a domain,
+	&quot;unassigned&quot; is displayed, and the information is highlighted
+	by an amber field.  No extra information is currently displayed for
+	ISCSI or VDISKs.</dd>
 
 	<dd>Hostnames in NFS exports are typically fully qualified, which can
 	make the export field difficult to read. If you set a domain name in the
@@ -129,7 +135,6 @@ $dh->doc_class_start();
 	<?php
 		echo $dh->colour_key($grid_key["export"]);
 	?>
-
 
 <?php
 

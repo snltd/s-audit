@@ -12,18 +12,19 @@ $pg = new docPage("s-audit_subnet.sh");
 
 <h1>The <tt>s-audit_subnet.sh</tt> script</h1>
 
-<p>The interface's IP address listing page is put together by looking at
-audited machines, but it is unlikely that all the machines on your network
-will be Solaris hosts. At the very least there are likely to be routers and
-firewalls. For that reason, the interface is able to incorporate other,
-information into the IP listing, and this script generates that
-information.</p>
+<p><a href="../interface/ip_listing.php">The interface's IP address listing
+page</a>  is put together by looking at audited machines, but it is unlikely
+that all the machines on your network will be Solaris hosts. At the very
+least there are probably routers and firewalls. For that reason, the
+interface is able to incorporate other information into the IP listing, and
+this script generates that information.</p>
 
-<p>It performs a rudimentary network sweep, pinging all addresses (0-255)
-on any given subnet(s). It also queries a DNS server (defined in the
-script), to get names and addresses of everything in DNS on the same
-subnet(s). Then, it combines the information from both those sources into a
-file with the following format:</p>
+<p><tt>s-audit_subnet.sh</tt> performs a rudimentary network sweep, pinging
+all addresses (1-254) on any given subnet(s). It also queries a DNS server
+(named in the script, or through the <tt>-s</tt> option), to get names and
+addresses of everything in DNS on the same subnet(s). Then, it combines the
+information from both those sources into a file with the following
+format:</p>
 
 <pre>
 pinged_address  dns_hostname  dns_ip_address
@@ -45,22 +46,37 @@ certainly be improved and made more general, but it does work.</p>
 <tt>s-audit_subnet.sh</tt>, so you don't have to use it if you don't want
 to, or are unable to.</p>
 
-<p>If you do wish to use it, it is recommended that you use the
-<a href="s-audit_subnet_wrapper.sh"><tt>s-audit_subnet_wrapper.sh</tt></a>
-script, run through cron.</p>
-
 <h2>Usage</h2>
 
 <pre class="cmd">
-$ s-audit_subnet.sh subnet ...
+$ s-audit_subnet.sh [-R user@host:/path] [-s dns_server] [-D path] 
+                    [-o file] subnet...
 </pre>
+
+<dl>
+	<dt>-o</dt>
+	<dd>write to a file, using this path. Without this option, the script
+	writes to standard out.</dd>
+
+	<dt>-D</dt>
+	<dd>path to dig binary. Default is <tt>/usr/local/bin/dig</tt>.</dd>
+
+	<dt>-R</dt>
+	<dd>information for <tt>scp</tt> to copy audit files to a remote host.
+	Of form <tt>user@host:directory</tt>. Key exchange may be required,
+	please consult your SSH documentation.</dd>
+
+	<dt>-s</dt>
+	<dd>DNS server on which to do lookups.</dd>
+</dl>
 
 <p>You can use as many subnets as you wish. They should be of the form
 10.10.8.0, in which case 10.10.8.1 to 10.10.8.255 would be scanned.</p>
 
-<p>The script defines a DNS server in the <tt>DNS_SRV</tt> variable. Set
-this to the hostname of your internal DNS server, i.e. the one that
-describes the subnet(s) given as the script's arguments.</p>
+<p>The script defines a DNS server in the <tt>DNS_SRV</tt> variable, though
+this value can be overriden with the <tt>-s</tt> option. Set it to the
+hostname of your internal DNS server, i.e. the one that describes the
+subnet(s) given as the script's arguments.</p>
 
 <h2>Requirements</h2>
 

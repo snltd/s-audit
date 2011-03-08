@@ -50,13 +50,19 @@ $pg = new docPage($menu_entry);
 	<dd>Lists the local zones on the box, giving the brand and state of each
 	one, and the zonepath, or zone root. Only run in global zones.</dd>
 
-	<dt>ldoms</dt>
-	<dd>Lists the guest domains on the box, reporting the state and the
-	console port of each. Omitted in local zones.</dd>
+	<dt>LDOM</dt>
+	<dd>Lists the guest domains on the box, reporting the domain name,
+	state, number of assigned VCPUs, amount of assigned physical RAM, and
+	the console port of each. Omitted in local zones.</dd>
 
 	<dt>scheduler</dt>
 	<dd>If the system's process scheduler class has been altered, this check
 	gives the new class.</dd>
+
+	<dt>svc_count</dt>
+	<dd>On a machine running SMF, reports the number of services installed,
+	the number currently running, and the number currently in a maintenence
+	state. Reports as &quot;SMF services&quot;.</dd>
 
 	<dt>uptime</dt>
 	<dd>The uptime of the zone.</dd>

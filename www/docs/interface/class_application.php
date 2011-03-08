@@ -58,12 +58,52 @@ software, and helps you synchronize versions across machines. If
 <tt>s-audit.sh</tt> was not able to find the version of an application, it
 will say &quot;unkown&quot; and use a dark orange field.</dd>
 
+<?php
+	echo $dh->colour_key($grid_key["general"]);
+?>
+
 <dd>The applications presented on this page typically run as daemons. If
 <tt>s-audit.sh</tt> thought that a piece of software should be running, but
 found it wasn't, the interface will highlight this by putting a red box
 around that installation, and appending &quot;not running&quot; to the
 version string. Of course, you may not <em>want</em> some software to be
 running, for instance an X server, or an MTA.</dd>
+
+<dt>Exim and Sendmail</dt>
+<dd>If these programs are installed, but not running as daemons, their
+fields will be bordered with red. However, in many cases, not running them
+as a daemon will be the correct behaviour.</dd>
+
+<dt>sshd</dt>
+<dd>s-audit currently supports Sun SSH and OpenSSH. If you have both
+installed, the most recent version of <em>each</em> is highlighted.</dd>
+
+<dt>NB client</dd>
+<dd>If the Netbackup client is being run via <tt>inetd</tt>, that fact is
+noted.</dd>
+
+<dt>Apache</dt>
+<dd>This page simply shows the versions of any Apache installations. To see
+what sites those Apaches are running, please examine the <a
+href="class_hosted.php">hosted services page</a>.</dd>
+
+<dt>apache so</dt>
+<dd>Lists Apache modules loaded into a running server. Please refer to the
+<a href="../client/class_application.php">client page</a> for more
+information.</dd>
+
+<dt>mod_php</dt>
+<dd>If multiple versions of Apache are installed, each installed PHP module
+will show to which Apache it belongs.</dd>
+
+<dt>iPlanet web</dt>
+<dd>Displays the version of the admin server, and the number of HTTP
+servers.</dd>
+
+<dt>Samba</dt>
+<dd>This page simply shows the versions of any Samba installations. The
+filesystems which Samba is exporting are shown on the 
+<a href="class_fs.php">filesystem page</a>.</dd>
 
 <dt>X-Server</dt>
 <dd>Because XSun, which was used on older versions of Solaris, doesn't

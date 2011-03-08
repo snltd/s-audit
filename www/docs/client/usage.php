@@ -15,8 +15,8 @@ $pg = new docPage("s-audit.sh usage");
 <p><tt>s-audit.sh</tt> is invoked in the following ways</p>
 
 <pre class="cmd">
-# s-audit.sh [-f dir] [-z all|zone] [-qpP] [-D secs] 
-  [-R user@host:dir ] [-o test,test,...] [-e file]
+# s-audit.sh [-f dir] [-z all|zone] [-qpPM] [-D secs] [-L facility]
+  [-o test,test,...,test] [-R user@host:dir ] [-e file] [-u file]
   app|fs|hardware|hosted|os|plist|net|security|tool|machine|all
 </pre>
 
@@ -119,12 +119,12 @@ $ s-audit.sh -V
 be provided. The classes are:</p>
 
 <dl>
-	<dt><a href="class_application.php">app, application</a></dt>
+	<dt><a href="class_application.php">app</a></dt>
 	<dd>Looks for application software. Normally that means system software,
 	such as VxVm, or programs which run as a userland daemon, like
 	Apache.</dd>
 
-	<dt><a href="class_fs.php">fs, filesystem</a></dt>
+	<dt><a href="class_fs.php">fs</a></dt>
 	<dd>Looks at the storage on the box, above the physical level.
 	Filesystems, ZFS pools, NFS mounts and so-on.</dd>
 	
@@ -142,7 +142,7 @@ be provided. The classes are:</p>
 	<dt><a href="class_os.php">os</a></dt>
 	<dd>Looks at Solaris itself.</dd>
 	
-	<dt><a href="class_plist.php">patch, patches, plist</a></dt>
+	<dt><a href="class_plist.php">plist</a></dt>
 	<dd>Lists patches and packages.</dd>
 	
 	<dt><a href="class_security.php">security</a></dt>
@@ -150,7 +150,7 @@ be provided. The classes are:</p>
 	security. Things like non-standard users, SSH authorized keys, open
 	ports, and cron jobs.</dd>
 	
-	<dt><a href="class_tools.php">tool, tools</a></dt>
+	<dt><a href="class_tools.php">tool</a></dt>
 	<dd>Looks for userland tools and scripting languages. </dd>
 	
 	<dt>all</dt>

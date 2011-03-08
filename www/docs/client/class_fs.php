@@ -18,17 +18,22 @@ $pg = new docPage($menu_entry);
 # s-audit.sh fs
 </pre>
 
-<p>or</p>
-
-<pre class="cmd">
-# s-audit.sh filesystem
-</pre>
-
 <p>this audit type looks at filesytems and the data they hold.</p>
 
 <h3>Checks</h3>
 
 <dl>
+
+	<dt>zpool</dt>
+	<dd>Lists the names of all imported zpools along with their capacity,
+	their version, their state, and on recent versions of Solaris 10 and 11,
+	the highest zpool version supported on the machine. Not run in local
+	zones.</dd>
+
+	<dt>capacity</dt>
+	<dd>Adds up the available and used space on all local filesystems and
+	reports it as numbers and a percentage used. Omitted in local
+	zones.</dd>
 
 	<dt>root_fs</dt>
 	<dd>Reports the type of the root filesystem, which may be UFS or ZFS. In
@@ -37,7 +42,7 @@ $pg = new docPage($menu_entry);
 	on a mirrored root. Hardware RAID is not understood by this function,
 	only SVM or ZFS mirroring.</dd>
 
-	<dt>fses</dt>
+	<dt>fs</dt>
 	<dd>Produces a list of all filesystems known to the zone. Left to right,
 	it gives the mountpoint, the fstyp (e.g. zfs), special options (e.g. ro
 	for read-only) and the device (e.g. <tt>/dev/dsk/c0t0d0s0</tt> or
@@ -51,19 +56,9 @@ $pg = new docPage($menu_entry);
 
 	<dt>exports</dt>
 	<dd>Produces a list of all exported filesystems. The information begins
-	with the method of filesystem export (e.g. NFS, SMB or iSCSI), the path
-	of the exported directory or device, and any options,
+	with the method of filesystem export (e.g. NFS, SMB, iSCSI, or LDOM
+	VDISK), the path of the exported directory or device, and any options,
 	e.g. <tt>sec=sys,rw=@10.10,root=@10.10</tt>.</dd>
-
-	<dt>zpools</dt>
-	<dd>Lists the names of all imported zpools along with their capacity,
-	their version, and on recent versions of Solaris 10 and 11, the highest
-	zpool version supported on this machine. Not run in local zones.</dd>
-
-	<dt>capacity</dt>
-	<dd>Adds up the available and used space on all local filesystems and
-	reports it as numbers and a percentage used. Omitted in local
-	zones.</dd>
 
 </dl>
 
