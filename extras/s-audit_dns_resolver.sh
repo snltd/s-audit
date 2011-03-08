@@ -27,16 +27,19 @@ PATH=/usr/bin
 	# Always set your PATH
 
 AUDIT_DIR="/var/s-audit"
+	# s-audit's /var directory
+
+SRC_DIR="${AUDIT_DIR}/audit"
 	# Where we expect to find audit files
 
 OUTFILE="${AUDIT_DIR}/dns/uri_list.txt"
-	# Where to write the "uri=a.b.c.d" format list
+	# Where to write the "uri=a.b.c.d" format list. Override with -f
 
 DNS_SRV="dns-server"
-	# Which DNS server to use for lookups
+	# Which DNS server to use for lookups. Override with -s
 
 DIG="/usr/local/bin/dig"
-	# Path to dig executable
+	# Path to dig executable. Override with -d
 
 #-----------------------------------------------------------------------------
 # FUNCTIONS
@@ -47,8 +50,51 @@ die()
 	exit ${2:-1}
 }
 
+usage()
+{
+	cat<<-EOUSAGE
+	usage:
+	  ${0##*/} [-s dns_server] [-d dir] [-D path] [-o file]
+
+	where:
+	  -o :     path to output file.
+	             [Default is '${OUTFILE}'.]
+	  -D :     path to dig binary
+	             [Default is '${DIG}'.]
+	  -d :     directory containing audit files
+	             [Default is '${SRC_DIR}'.]
+	  -s :     DNS server on which to do lookups
+	             [Default is '${DNS_SRV}'.]
+
+	EOUSAGE
+}
+
 #-----------------------------------------------------------------------------
 # SCIRPT STARTS HERE
+
+while getopts "D:s:o:" option 2>/dev/null
+do
+
+	case $option in
+
+		"d")	SRC_DIR=$OPTARG
+				;;
+
+		"D")	DIG=$OPTARG
+				;;
+	
+		"o")	OUTFILE=$OPTARG
+				;;
+
+		"s")	DNS_SRV=$OPTARG
+				;;
+		
+		*)		usage
+				exit 2
+
+	esac
+
+done
 
 [[ -x $DIG ]] \
 	|| die "can't run dig [${DIG}]" 1
@@ -68,7 +114,7 @@ die()
 # just stick a -u in with the sort flags is left as an exercise for the
 # reader
 
-find $AUDIT_DIR -name audit.\*.hosted 2>/dev/null \
+find $SRC_DIR -name \*.saud 2>/dev/null \
 	| xargs grep "^website=" | cut -d\  -f2  | grep '\.' | sort -u \
 	| $DIG +noall +answer @$DNS_SRV -f - \
 	| sed '/^;/d;s/\.[ 	].*[ 	]/=/;s/\.$//' \

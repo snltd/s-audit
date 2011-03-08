@@ -25,11 +25,7 @@
 # consistent results over multiple runs. Doing a slow scan was consistent,
 # but took hours. (Literally.)
 #
-# Usage
-# 
-#   s-audit_subnet.sh subnet ...
-#
-# where "subnet" is a network address. e.g. 10.10.8.0
+# Usage: run with -h for all options.
 # 
 # Requirements
 #
@@ -47,10 +43,10 @@
 PATH=/usr/bin:/usr/sbin
 	# Always set your PATH
 
-DIG="/opt/bin/dig"
+DIG="/usr/local/bin/dig"
 	# Path to dig binary
 
-DNS_SRV="cs-infra-01z-dns-i"
+DNS_SRV="dns-server"
 	# DNS server to use for lookups
 
 PARL_PINGS=25
@@ -105,21 +101,90 @@ resolve_subnet()
 die()
 {
 	print -u2 "ERROR: $1"
+	clean_up
 	exit ${2:-1}
+}
+
+clean_up()
+{
+	rm -f $TMPFILE ${TMPFILE}.2
+}
+
+usage()
+{
+	cat<<-EOUSAGE
+	usage:
+	  ${0##*/} [-R user@host:/path] [-s dns_server] [-D path] [-o file] subnet...
+
+	where:
+	  -o :     path to output file. Default is standard out.
+	  -D :     path to dig binary
+	             [Default is '${DIG}'.]
+	  -R :     information for scp to copy audit files to remote host. Of
+	           form "user@host:directory"
+	  -s :     DNS server on which to do lookups
+	             [Default is '${DNS_SRV}'.]
+
+	EOUSAGE
+	exit 2
 }
 
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
+while getopts "D:o:R:s:" option 2>/dev/null
+do
+
+    case $option in
+
+        "D")    DIG=$OPTARG
+                ;;
+
+		"o")	OUTFILE=$OPTARG
+				;;
+
+		"R")	REMOTE_STR=$OPTARG
+				;;
+
+        "s")    DNS_SRV=$OPTARG
+                ;;
+
+		*)		usage
+				exit 2
+
+	esac
+
+done
+
+shift $(($OPTIND - 1))
+
 # A few checks.
 
-if [[ $# == 0 ]]
+[[ $# == 0 ]] && usage
+
+if [[ -n $REMOTE_STR ]]
 then
-	print "usage: ${0##*/} subnet..." 
-	exit 2
+	[[ -n $OUTFILE ]] && die "-o and -R options are mutally exclusive."
+	OUTFILE=${TMPFILE}.2
 fi
 
-[[ -x $DIG ]] || die "can't execute dig."
+if [[ -n $OUTFILE ]]
+then
+	exec 3>$OUTFILE
+
+	[[ $OUTFILE == */* ]] \
+		&& OUTDIR=$(pwd) \
+		|| OUTDIR=${OUTFILE%/*}
+
+	[[ -w $OUTDIR ]] \
+		|| die "can't write to output directory [${OUTFILE%/*}]" 2
+
+else
+	exec 3>&1
+fi
+
+[[ -x $DIG ]] \
+    || die "can't run dig [${DIG}]" 1
 
 # For all given subnets, do a reverse DNS lookup on all addresses, and put
 # the results of that query  in a temporary file. Then ping every address on
@@ -134,6 +199,8 @@ fi
 # respond to a ping. Note. Both lists have to be sorted in the same way, or
 # the join will fail
 
+print -u3 "@@ $(uname -n) "$(date "+%H:%M %d/%m/%Y")
+
 for subnet in $@
 do
 	net=${subnet%.0}
@@ -144,9 +211,19 @@ do
 	resolve_subnet $net | sort >$TMPFILE
 	ping_subnet $net | sed -n '/is alive$/s/ .*$//p' | sort | \
 	join -e - -a1 -a2 -o1.1,2.2,2.1 - $TMPFILE
-done 
+done >&3
 
-rm -f $TMPFILE
+# Copy the file if required
+
+if [[ -n $REMOTE_STR ]]
+then
+
+	scp -rqCp $TMPFILE $REMOTE_STR >/dev/null 2>&1 \
+		|| die "failed to copy data to $REMOTE_STR"
+	
+fi
+
+clean_up
 
 exit
 
