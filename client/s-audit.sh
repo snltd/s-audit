@@ -2921,49 +2921,6 @@ function get_fs
 
 		disp "fs" "$mpt $typ [$dfs] (${mdv}:${mo}$extra)$vf"
 	done
-
-	return
-
-	mount -p | sort -k 3 | while read dev o mpt typ j1 j2 j3
-	do
-		extra=""
-		unset no opts
-
-		if [[ $IGNOREFS == *" $typ "* || $mpt = *libc.so* ]]
-		then
-			continue
-		elif is_global && [[ $typ == "zfs" && -n $zsup ]]
-		then
-			extra=":$(zfs get -Ho value version $dev)/$zsup"
-
-			[[ $(zfs get -Ho value compression $dev) != "off" ]] \
-				&& extra="${extra}:comp"
-		elif [[ $typ == "nfs" || $typ == "lofs" || $typ == "smbfs" ]]
-		then
-			$EGS "^${dev}[$WSP]" /etc/vfstab && extra="${extra}:in_vfstab"
-			
-			# If we're in a global zone, don't report NFS, SMBFS or LOFS
-			# filesystems mounted under zone roots
-
-			for zr in $ZONEROOTS
-			do
-
-				if [[ $mpt == "$zr"* ]]
-				then
-					no=1
-					break
-				fi
-	
-			done
-
-			[[ -n $no ]] && continue
-
-		fi
-
-		[[ $j3 == *ro,* ]] && opts=ro
-
-		disp "fs" "$mpt (${typ}:${opts}:${dev}$extra)"
-	done
 }
 
 function get_exports
