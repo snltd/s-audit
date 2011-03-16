@@ -360,11 +360,15 @@ function msg
 
 function clean_up
 {
-	# Clean up lock file, output directory, and temporary copies of ourself
+	# Kill children, then clean up lock file, output directory, and
+	# temporary copies of ourself
 
 	rm -f $LOCKFILE
 	[[ -n $OD ]] && rm -fr ${OD}/$HOSTNAME
 	[[ -n $zf && -f $zf ]] && rm $zf
+
+	jobs=$(jobs -p)
+	[[ -n $jobs ]] && kill $jobs
 }
 
 function can_has
@@ -474,7 +478,7 @@ function timeout_job
 
 	typeset clear count=${2:-$T_MAX}
 
-	$1 2>/dev/null &
+	$1 &
 	BGP=$!
 
 	while (($count > 1))
@@ -497,7 +501,6 @@ function timeout_job
 
 		[[ -n $pl ]] && kill $pl
 
-		#print -u2 "TIMED OUT"
 		return 1
 	fi
 }
@@ -520,13 +523,16 @@ function get_disk_type
 		print "SCSI"
 	elif [[ $s == *sbus@* ]]
 	then
-		print "SBUS"
+		print "SBUS/SCSI"
 	elif [[ $s == *sas@* ]]
 	then
 		print "SAS"
 	elif [[ $s == *device@* || $s == *storage@* ]] # not sure this is 100% right
 	then
 		print "USB"
+	elif [[ $s == */iscsi/* ]]
+	then
+		print "iSCSI"
 	elif [[ $s == *virtual-devices@* ]]
 	then
 		print "virtual"
@@ -990,7 +996,7 @@ function get_optical
 	do
 		line=$(get_disk_type $dev)
 
-		if df | $EGS "/dev/dsk/$dev"
+		if df 2>/dev/null | $EGS "/dev/dsk/$dev"
 		then
 			x="(mounted)"
 		elif eject -q /dev/dsk/${dev}s2 >/dev/null 2>&1 
@@ -1010,20 +1016,16 @@ function get_optical
 
 function get_disks
 {
-	# Get the sizes of the disks on the system. Ignores things that look
-	# like optical, USB, or card drives. This is hard to do, because disks
-	# can report in so many different ways. I've written this function about
-	# five times now, and I can't guarantee it's perfect as it is
+	# Get the sizes of the disks on the system, ignoring optical drives.
 
 	# If we have a vendor line, tag the following "size" line on to it. This
 	# makes the lines look similar on SPARC and x86, with or without a
-	# Vendor: string. The [[check]] is necessary to screen out removable
-	# disks which are no longer connected
+	# Vendor: string. 
 
 	typeset -i i=0
 
 	iostat -En | sed -e'/^c[0-9]/{N;s/\n/ /;}' -e '/Revision/{N;s/\n/ /;}' \
-		-e '/Size/!d' | egrep -v "DV|CD|USB|Flash|SD|SM|MS|Size: 0" \
+		-e '/Size/!d' | egrep -v "DV|CD|Size: 0" \
 		| sed 's/^\([^ ]*\).*Size: \([^ ]*\).*$/\1 \2/;s/\.[0-9]*//' | \
 	while read dev size
 	do
@@ -2844,22 +2846,85 @@ function get_fs
 	# Get a list of filesystems on the box. We ignore anything "system"
 	# related, so we're only showing mounted filesystems which hold static
 	# data. Format is
-	#  mountpoint (fs_type:opts:dev or
-	#  dataset:opts:ver/supported_version:compression) 
-	# opts currently means "read only"
+	#  mount_point fs_type (device:options) [warning]
 
-	# First get the current highest supported zfs version, so we can flag
-	# filesystems running something different. Early vesions of ZFS don't
-	# support this.
+	# Get the current highest supported zfs version if possible, then a list
+	# of devices in vfstab and a list of zone roots.
 
-	can_has zfs && zfs help 2>&1 | $EGS upgrade \
-		&& zsup=$(zfs upgrade -v | sed '/^  *[0-9]/!d' \
-		| sed -n '$s/^  *\([0-9]*\).*$/\1/p')
+	if can_has zfs
+	then
+		ZPL="compression,quota"
+
+		zfs get help 2>&1 | $EGS dedup && ZPL="${ZPL},dedup"
+		zfs get help 2>&1 | $EGS zoned && ZPL="${ZPL},zoned"
+
+		if zfs help 2>&1 | $EGS upgrade
+		then
+			zsup="/$(zfs upgrade -v | sed '/^  *[0-9]/!d' \
+			| sed -n '$s/^  *\([0-9]*\).*$/\1/p')"
+			ZPL="${ZPL},version"
+		fi
+
+	fi
+
+	dftab="$(df -k 2>/dev/null)"
+	vfstab=" $(grep "^/" /etc/vfstab | cut -f1 | tr "\n" " ") "
 
 	is_global && can_has zoneadm && \
 		ZONEROOTS=" $(zoneadm list -cp | egrep -v ^0:global | cut -d: -f4) "
 
-	mount -p | while read dev o mpt typ j1 j2 j3
+	# Run through everything that's mounted
+
+	mount -p | sort -k 3 | while read mdv fdv mpt typ fp mab mo
+	do
+		unset extra vf brk zx
+
+		# ignore some fs types
+
+		[[ $IGNOREFS == *" $typ "* || $mpt == "platform" || \
+		$mpt = *libc.so* ]] && continue
+
+		print "$dftab" | grep "^$mdv " | read d k u a c m
+
+		[[ -n $a ]] && dfs="${u}/$k ($c) used" || dfs="unknown capacity"
+
+		# we get extra info for ZFS filesystems
+
+		if [[ $typ == "zfs" && $mdv != "/" ]]
+		then
+			zfs get -Hp -o property,value $ZPL $mdv | while read p v
+			do
+				zx="${zx}${p}=${v},"
+			done
+
+			extra="${extra}:${zx%,}$zsup"
+
+		# If we're in a global zone, don't report NFS, SMBFS or LOFS
+		# filesystems mounted under zone roots
+
+		elif is_global && [[ -n $ZONEROOTS ]]
+		then
+
+			for zr in $ZONEROOTS
+			do
+				[[ $mpt == "$zr"* ]] && brk=1
+			done
+
+			[[ -n $brk ]] && continue
+
+		fi
+
+		if [[ $typ != "zfs" && $typ != "lofs" ]]
+		then
+			[[ $vfstab == *" $mdv "* ]] || vf=" [not in vfstab]"
+		fi
+
+		disp "fs" "$mpt $typ [$dfs] (${mdv}:${mo}$extra)$vf"
+	done
+
+	return
+
+	mount -p | sort -k 3 | while read dev o mpt typ j1 j2 j3
 	do
 		extra=""
 		unset no opts
@@ -2906,22 +2971,23 @@ function get_exports
 	# Get exported filesystems. This is an amalgamation of the old Samba and
 	# NFS share functions, plus some extra
 	# Format is of the form
-	#   nfs:nfs options
-	#   smb:name of share
-	#   iscsi:
-	#   vdisk:dev:vol:domain
+	#   what_is_shared fs_type (options) [name]
 
 	# NFS first. Only global zones can export filesystems
 
 	if is_global
 	then
-		share | while read f1 f2 f3 junk
+		share | while read a dir opts desc
 		do
-			disp "export" "nfs:${f2}:$f3"
+			txt="$dir nfs (${opts})"
+			[[ $desc != '""' ]] && txt="$txt [${desc}]"
+			disp "export" $txt
 		done
 	fi
 
-	# Now Samba
+	# Now Samba. Query the config file, because smbclient may not be
+	# available, or may need a password. Just shows share name and path for
+	# now
 
 	if can_has smbd
 	then
@@ -2931,23 +2997,24 @@ function get_exports
 		then
 			sed -e '/\[global\]/d' -e '/^\[/b' -e '/path/b' -e d $SCF \
 			| sed -e :a -e '/\]$/N; s/\]\n//; ta' \
-			| sed 's/^\[//;s/path *= */ /' | while read share dir
+			| sed 's/^\[//;s/path *= */ /' | while read name dir
 			do
-				disp "export" "smb:${dir}:${share}"
+				disp "export" "$dir smb [${name}]"
 			done
 		fi
 
 	fi
 
-	# Now iSCSI
+	# Now iSCSI. Just shows the ZFS dataset and the value of the shareiscsi
+	# property
 
 	if can_has zfs && zfs get 2>&1 | $EGS iscsi
 	then
 
 		zfs get -H -po name,value shareiscsi \
-		| sed '/@/d;/off$/d' | while read fs a
+		| sed '/@/d;/off$/d' | while read fs st
 		do
-			disp "export" "iscsi:$fs"
+			disp "export" "$fs iscsi ($st)"
 		done
 
 	fi
@@ -2970,7 +3037,7 @@ function get_exports
 					&& own=$ldm
 			done
 
-			disp "export" "vdisk:${dev}:${vol}:$own"
+			disp "export" "$vol vdisk (${dev} bound to ${own})"
 		done
 
 	fi
@@ -3479,7 +3546,7 @@ then
 
 		{
 		class_head $HOSTNAME $myc
-		timeout_job "run_class $myc 2>/dev/null" $C_TIME \
+		timeout_job "run_class $myc" $C_TIME \
 			|| disp "_err_" "timed out"
 		class_foot $HOSTNAME $myc
 		} >&3
