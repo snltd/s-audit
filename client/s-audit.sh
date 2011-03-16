@@ -1714,8 +1714,7 @@ function get_svc_count
 
 function get_package_count
 {
-	# A simple count of the installed packages. Should be an indicator of
-	# how in-sync two paired servers are
+	# A simple count of installed packages
 
 	if can_has dpkg
 	then
@@ -1738,8 +1737,7 @@ function get_package_count
 
 function get_patch_count
 {
-	# A simple count of the installed patches. Should be an indicator of
-	# how in-sync two paired servers are
+	# A simple count of the installed patches
 
 	can_has patchadd \
 		&& PATCHES=$(patchadd -p 2>/dev/null | egrep -c ^Patch)
@@ -1749,15 +1747,28 @@ function get_patch_count
 
 function get_local_zone
 {
-	# A list of the zones this server knows about
+	# A list of the zones this server knows about. Display the brand, the
+	# state, any CPU or memory caps, and the zone root
 
 	if can_has zoneadm
 	then
 
 		zoneadm list -cp | cut -d: -f2,3,4,6 | sed '1d;s/:/ /g' | sort | \
-		while read zname zstat zpth zbrand
+		while read zn zstat zpth zbrand
 		do
-			disp "local zone" "$zname (${zbrand}:$zstat) [$zpth]"
+			unset ccpu dcpu phy swp xt
+			print $(zonecfg -z $zn info capped-cpu) | read a b ccpu
+			print $(zonecfg -z $zn info dedicated-cpu) | read a b dcpu
+			print $(zonecfg -z $zn info capped-memory) | read a b phy s swp
+
+			[[ -n $ccpu ]] && xt=" ${ccpu%]}CPU"
+			[[ -n $dcpu ]] && xt=" ${dcpu%]} dedicated CPU"
+
+			[[ -n "${phy}$swp" ]] && xt="$xt ${phy:-}/${swp:-}"
+
+			[[ -n $xt ]] && xt=":${xt# }"
+
+			disp "local zone" "$zn (${zbrand}:${zstat}${xt}) [$zpth]"
 		done
 
 	fi
