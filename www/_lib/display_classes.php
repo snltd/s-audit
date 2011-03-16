@@ -587,7 +587,7 @@ class HostGrid {
 				$date_str = false;
 				$class = false;
 			}
-			elseif(($now - $date) < 172800) {
+			elseif(($now - $date) < 680400) {
 				$date_str = "<div>yesterday</div>";
 				$class = "solidamber";
 			}
