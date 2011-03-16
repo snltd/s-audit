@@ -1661,8 +1661,9 @@ function get_nfs_domain
 {
 	# If it's been changed (and is supported) get the NFSv4 domain name
 
-	disp "NFS domain" $(sed -n "/^[$WSP]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p" \
-	/etc/default/nfs)
+	[[ -f /etc/default/nfs ]] && \
+		disp "NFS domain" \
+		$(sed -n "/^[$WSP]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p" /etc/default/nfs)
 }
 
 #-- O/S AUDITING FUNCTIONS ---------------------------------------------------
