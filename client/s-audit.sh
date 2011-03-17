@@ -891,20 +891,25 @@ function get_os_rel
 {
 	# Get the release of the operating environment/distribution
 
-	if (($OSVERCMP < 511))
+	r="/etc/release"
+
+	if [[ $OSVERCMP == "56" ]] && $EGS "Maintenance" $r
 	then
-		OS_R=$(sed '1!d;s/^.*Solaris [^ ]* \([^_ ]*\).*$/\1/' /etc/release)
+		OS_R="Maintenance Update 2"
+	elif (($OSVERCMP < 511))
+	then
+		OS_R=$(sed '1!d;s/^.*Solaris [^ ]* \([^_ ]*\).*$/\1/' $r)
 	elif [[ $OS_D == SXCE || $OS_D == "Nevada" ]]
 	then
-		OS_R=$(sed '1!d;s/^.* \(snv[^ ]*\).*$/\1/' /etc/release)
+		OS_R=$(sed '1!d;s/^.* \(snv[^ ]*\).*$/\1/' $r)
 	elif [[ $OS_D == "OpenSolaris" ]]
 	then
 		[[ -f /etc/release ]] \
-			&& OS_R=$(sed '1!d;s/^.*aris \([^ ]*\) .*$/\1/' /etc/release) \
+			&& OS_R=$(sed '1!d;s/^.*aris \([^ ]*\) .*$/\1/' $r) \
 			|| OS_R="unknown"
 	elif [[ $OS_D == "BeleniX" ]]
 	then
-		OS_R=$(sed '1!d;s/^.*iX \([^ ]*\) \(.*\)$/\1 \(\2\)/' /etc/release)
+		OS_R=$(sed '1!d;s/^.*iX \([^ ]*\) \(.*\)$/\1 \(\2\)/' $r)
 	elif [[ $OS_D == "Nexenta" ]]
 	then
 		OS_R=$(sed '1!d;s/NexentaCore //' /etc/issue)
