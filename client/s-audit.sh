@@ -360,14 +360,15 @@ function msg
 
 function clean_up
 {
-	# Kill children, then clean up lock file, output directory, and
-	# temporary copies of ourself
+	# clean up lock file, output directory, and temporary copies of ourself.
+	# Kill any backgrounded child processes
 
 	rm -f $LOCKFILE
 	[[ -n $OD ]] && rm -fr ${OD}/$HOSTNAME
 	[[ -n $zf && -f $zf ]] && rm $zf
 
 	jobs=$(jobs -p)
+	print -u2 jobs is $jobs
 	[[ -n $jobs ]] && kill $jobs
 }
 
@@ -3272,7 +3273,7 @@ log "${0##*/} invoked"
 
 # Clean up if we're "ctrl-c"ed
 
-trap 'clean_up; exit' 2 9 15
+trap 'die "user hit CTRL-C"' 2 
 
 # Get options
 
