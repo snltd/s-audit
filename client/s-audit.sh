@@ -368,7 +368,6 @@ function clean_up
 	[[ -n $zf && -f $zf ]] && rm $zf
 
 	jobs=$(jobs -p)
-	print -u2 jobs is $jobs
 	[[ -n $jobs ]] && kill $jobs
 }
 
