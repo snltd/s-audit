@@ -41,9 +41,9 @@ T_MAX=10
 	# The maximum time, in seconds, any individual timed job is allowed to
 	# take
 
-C_TIME=180
+C_TIME=0
 	# The maximum time, in seconds, any audit class is allowed to take.
-	# Override with -T option
+	# 0 means "for ever". Override with -T option
 
 VARBASE="/var/tmp/s-audit"
     # The directory we keep our data in
@@ -358,6 +358,25 @@ function msg
 	log "$1" ${2:-notice}
 }
 
+function kill_children
+{
+	# $1 is the process whose children we want to kill.
+
+	[[ -z $1 ]] && return
+
+	# If we have access to ptree, individually kill everyting in the PID's
+	# process tree. This might seem overkill (pun intended) but some things
+	# (like sneep) don't always terminate properly. On Solaris < 8, get a
+	# list of PIDs whose PPID is $1
+
+	can_has ptree \
+		&& pl=$(ptree $1 | sed -n "/ $1 /,\$s/^ *\([0-9]*\).*$/\1/p" \
+			| sed 1d) \
+		|| pl=$(ps -e -o pid,ppid | sed -n "/ $1$/s/^ *\([0-9]*\).*$/\1/p")
+
+	[[ -n $pl ]] && kill $pl 2>/dev/null
+}
+
 function clean_up
 {
 	# clean up lock file, output directory, and temporary copies of ourself.
@@ -367,13 +386,7 @@ function clean_up
 	[[ -n $OD ]] && rm -fr ${OD}/$HOSTNAME
 	[[ -n $zf && -f $zf ]] && rm $zf
 
-	jobs=$(jobs -p)
-
-	if [[ -n $jobs && $jobs != 0 ]]
-	then
-	print -u2 "killing $jobs"
-		kill $jobs 
-	fi
+	kill_children $$
 }
 
 function can_has
@@ -474,10 +487,7 @@ function is_run_ver
 function timeout_job
 {
 	# Run a job for a maximum specific length of time. If the job does not
-	# complete in $T_MAX seconds, it is terminated, along with all its child
-	# processes. This is necessary, because, with the backgrounded process,
-	# children sometimes (sneep) don't get cleaned up as you'd expect.
-
+	# complete in $T_MAX seconds, it is terminated,
 	# $1 is the job to run -- quote it!
 	# $2 is an optional timeout, in seconds
 
@@ -500,14 +510,8 @@ function timeout_job
 		sleep 1
 	done
 
-	if [[ -z $clear ]]
-	then
-		pl=$(ptree $BGP | sed -n "/$BGP/,\$s/^ *\([0-9]*\).*$/\1/p")
-
-		[[ -n $pl ]] && kill $pl
-
-		return 1
-	fi
+	kill_children $BGP
+	kill $BPG 2>/dev/null
 }
 
 function get_disk_type
@@ -718,8 +722,8 @@ function usage
 	usage:
 
 	    ${0##*/} [-f dir] [-z all|zone] [-qpPM] [-D secs] [-L facility]
-	    [-o test,test,...,test] [-R user@host:dir ] [-e file] [-u file]
-	    $(print $CL_LS | tr " " "|")|all|machine
+		[-T secs ] [-o test,test,...,test] [-R user@host:dir ] [-e file]
+		[-u file] $(print $CL_LS | tr " " "|")|all|machine
 
 	    ${0##*/} -l
 
@@ -3520,13 +3524,18 @@ then
 			prt_bar
 		fi >&2
 
-		# Run the audit class. If it's not come back after three minutes,
-		# log an error
+		# Run the audit class
 
 		{
 		class_head $HOSTNAME $myc
-		timeout_job "run_class $myc" $C_TIME \
-			|| disp "_err_" "timed out"
+
+		if [[ $C_TIME != 0 ]]
+		then
+			timeout_job "run_class $myc" $C_TIME || disp "_err_" "timed out"
+		else
+			run_class $myc
+		fi
+
 		class_foot $HOSTNAME $myc
 		} >&3
 	done
