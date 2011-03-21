@@ -16,8 +16,8 @@ $pg = new docPage("s-audit.sh usage");
 
 <pre class="cmd">
 # s-audit.sh [-f dir] [-z all|zone] [-qpPM] [-D secs] [-L facility]
-  [-o test,test,...,test] [-R user@host:dir ] [-e file] [-u file]
-  app|fs|hardware|hosted|os|plist|net|security|tool|machine|all
+  [ -T secs ] [-o test,test,...,test] [-R user@host:dir ] [-e file]
+  [-u file] app|fs|hardware|hosted|os|plist|net|security|tool|machine|all
 </pre>
 
 <pre class="cmd">
@@ -100,6 +100,30 @@ $ s-audit.sh -V
 	href="extras_file.php">extras file</a>, which can be used to enhance an
 	audit with information that <tt>s-audit.sh</tt> could not normally
 	deduce.</dd>
+
+	<dt>-T</dt>
+	<dd>Sets a maximum time that each audit class is allowed to take. This
+	can be useful if you are running <tt>s-audit.sh</tt> through cron, and
+	don't want to take the chance of certain checks hanging. If an audit
+	class is not completed within the time limit, that audit is recorded as
+	&quot;errorer&quot;, and will be displayed as such by the interface, if
+	the audit data is passed on to it.</dd>
+
+	<dd>Though <tt>s-audit.sh</tt> is well tested, and should never hang,
+	certain external programs which it requires, may. In the first four
+	years of using <tt>s-audit.sh</tt> I have seen <tt>netstat</tt>,
+	<tt>sneep</tt>, <tt>prtdiag</tt> and <tt>prtpicl</tt> fail to exit.
+	Audit checks which use these commands, and therefore are known to
+	potentially block other checks, use an internal timeout command whether
+	<tt>-T</tt> is supplied or not.</dd>
+
+	<dd>Note that, due to the &quot;watchdog&quot; mechanism used to catch
+	over-running audits, each audit class will take &lt;1s longer to
+	complete than if <tt>-T</tt> were not being used. This is simply due to
+	the granularity of Solaris's <tt>sleep</tt> command, and no extra load
+	is put on the machine. For instance, a full machine audit on a server
+	with twenty zones may take up to two minutes longer to run with
+	<tt>-T</tt>.</dd>
 
 	<dt>-V</dt>
 	<dd>Prints the version of the program and exits.</dd>
