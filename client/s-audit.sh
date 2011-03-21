@@ -2923,7 +2923,7 @@ function get_fs
 				zx="${zx}${p}=${v},"
 			done
 
-			extra="${extra}:${zx%,}$zsup"
+			extra="${extra};${zx%,}$zsup"
 
 		# If we're in a global zone, don't report NFS, SMBFS or LOFS
 		# filesystems mounted under zone roots
@@ -2945,7 +2945,7 @@ function get_fs
 			[[ $vfstab == *" $mdv "* ]] || vf=" [not in vfstab]"
 		fi
 
-		disp "fs" "$mpt $typ [$dfs] (${mdv}:${mo}$extra)$vf"
+		disp "fs" "$mpt $typ [$dfs] (${mdv};${mo}$extra)$vf"
 	done
 }
 
