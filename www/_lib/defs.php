@@ -22,6 +22,20 @@ class defs {
 
 	private $updates = array(
 
+			"5.6" => array(
+				"s297s" => "Initial Release",
+				"HW:2" => "3/98 (h/w 2)"
+				// Others are named as-per /etc/release
+			),
+
+			"5.7" => array(
+				"s998" => "Initial Release"
+
+				// All the others are just called 5/99, 8/99 etc, which is
+				// what comes out of /etc/release
+
+			),
+
 			"5.8" => array(
 				"6/00" => "update 1",
 				"10/00" => "update 2",
@@ -33,7 +47,8 @@ class defs {
 				"12/02" => "HW1",
 				"5/03" => "HW2",
 				"7/03" => "HW3",
-				"2/04" => "HW4"
+				"2/04" => "HW4",
+				"s_28" => "Maintenance update 1"
 				),
 
 			"5.9" => array(
