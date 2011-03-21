@@ -368,7 +368,12 @@ function clean_up
 	[[ -n $zf && -f $zf ]] && rm $zf
 
 	jobs=$(jobs -p)
-	[[ -n $jobs ]] && kill $jobs
+
+	if [[ -n $jobs && $jobs != 0 ]]
+	then
+	print -u2 "killing $jobs"
+		kill $jobs 
+	fi
 }
 
 function can_has
