@@ -1771,19 +1771,17 @@ function get_local_zone
 		zoneadm list -cp | cut -d: -f2,3,4,6 | sed '1d;s/:/ /g' | sort | \
 		while read zn zstat zpth zbrand
 		do
-			unset ccpu dcpu phy swp xt
-			print $(zonecfg -z $zn info capped-cpu) | read a b ccpu
-			print $(zonecfg -z $zn info dedicated-cpu) | read a b dcpu
-			print $(zonecfg -z $zn info capped-memory) | read a b phy s swp
+			sed="s/\[//;s/\]//;/^[^a-z]/s/^[$WSP]*\([^:]*\): \(.*\)$/\1=\2/p"
 
-			[[ -n $ccpu ]] && xt=" ${ccpu%]}CPU"
-			[[ -n $dcpu ]] && xt=" ${dcpu%]} dedicated CPU"
+			zmem=$(zonecfg -z $zn info capped-memory | sed -n "$sed")
+			zcpu=$(zonecfg -z $zn info capped-cpu | sed -n "$sed")
+			zdcpu=$(zonecfg -z $zn info dedicated-cpu | sed -n "$sed")
+			rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" , | tr -s ,)
+			rc=${rc#,}
 
-			[[ -n "${phy}$swp" ]] && xt="$xt ${phy:-}/${swp:-}"
+			[[ $rc != , ]] && xrc=" [${rc%,}]"
 
-			[[ -n $xt ]] && xt=":${xt# }"
-
-			disp "local zone" "$zn (${zbrand}:${zstat}${xt}) [$zpth]"
+			disp "local zone" "$zn (${zbrand}:${zstat}) [${zpth}]$xrc"
 		done
 
 	fi
@@ -3576,7 +3574,7 @@ do
 
 			if [[ -n $zlive ]] 
 			then
-				zlogin $z /${zf##*/} $Z_OPTS $c1 \
+				zlogin -S $z /${zf##*/} $Z_OPTS $c1 \
 				|| disp "error" "incomplete audit"
 			else
 				class_head $z $c1
@@ -3589,7 +3587,7 @@ do
 		done
 
 	else
-		zlogin $z /${zf##*/} $Z_OPTS $CL >&3 \
+		zlogin -S $z /${zf##*/} $Z_OPTS $CL >&3 \
 			|| disp "error" "incomplete audit"
 	fi
 
