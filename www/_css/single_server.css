@@ -1,0 +1,67 @@
+/*==========================================================================
+ *
+ * single_server.css
+ * -----------------
+ *
+ * Stylesheet for single-server audits.
+ *
+ * s-audit (c) 2011 SNLTD
+ *
+ *==========================================================================*/
+ 
+/*--------------------------------------------------------------------------*/
+/* List of servers view */
+
+.ssall a { /* global zone/server hostnames */
+	font-weight: bold;
+	color: #333;
+}
+
+.ssall td { /* all cells */
+	text-align: center;
+	vertical-align: top;
+	padding: 6px 0;
+}
+
+td.ldm, td.svhn, td.vb { /* left-hand column of global zone hostnames */
+	text-align: right;
+	padding-right: 5px;
+}
+
+/*--------------------------------------------------------------------------*/
+/* patch and package tables */
+
+.plist th {
+	border-bottom: 1px solid black;
+	border-right: 0;
+	text-align: center;
+}
+
+.plist td {
+	font-size: x-small;
+	text-align: center;
+	padding: 4px 0;
+}
+/*--------------------------------------------------------------------------*/
+/* Single server view */
+
+.sclh {
+	padding-top: 20px;
+	font-size: 14px;
+}
+
+td { /* padding for normal cells - must match the value in dynamic_css.php */
+	padding: 7px;
+	text-align: left;
+}
+
+th { /* leftmost column in server comparisons, analogous to th */
+	text-align: right;
+	padding: 7px 8px 5px 1px;
+	vertical-align: top;
+	border-right: 1px solid black;
+	border-bottom: 0;
+	width: 15%;
+
+}
+
