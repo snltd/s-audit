@@ -259,6 +259,18 @@ class singleOS extends singleGeneric {
 
 	protected $type = "O/S";
 	protected $one_cols = array("local zone", "LDOM");
+
+	public function __construct($type, $data, $map, $gzd)
+	{
+		// Get the Solaris version defs
+
+		require_once(LIB . "/defs.php");
+		$defs = new defs();
+		$this->sol_upds = $defs->get_data("updates");
+
+		parent::__construct($type, $data, $map, $gzd);
+	}
+
 }
 
 //----------------------------------------------------------------------------
@@ -288,6 +300,12 @@ class singleApp extends singleGeneric {
 	public function __construct($type, $data, $map, $gzd)
 	{
 		$d = (sizeof($data) - 2);
+
+		// We need the defs file for the Sun Studio version
+
+		require_once(LIB . "/defs.php");
+		$defs = new defs();
+        $this->sun_cc_vers = $defs->get_data("sun_cc_vers");
 
 		if ($d <= 4)
 			$this->cols = $d;
@@ -431,6 +449,9 @@ class singlePatch extends singleGeneric
 				$footnote = "Using definition file at $hover.";
 				include_once($hover);
 				$have_hover = true;
+				// Get a list of hover map keys
+
+				$hkeys = array_keys($hover_arr);
 			}
 			else {
 				$footnote = "No definition file at $hover.";
@@ -479,24 +500,30 @@ class singlePatch extends singleGeneric
 						? $p
 						: substr($p, 0, 6);
 
+					$pmnox = (preg_match("/x$/", $pm))
+						? preg_replace("/x$/", "", $pm)
+						: false;
+
 					// If we have the package hover map, highlight packages
 					// not in it. This should point to third-party software
 
-					if ($field == "package" && ! in_array($pm,
-					array_keys($hover_arr))) {
+					if ($field == "package" && ! in_array($pm, $hkeys))
+					{
 						
 						// Some packages have a .u and a .v version for
-						// SPARC. Look for those
+						// SPARC, or i for i386. Some versions of Solaris
+						// tagged "x" on for 64-bit. Look for those
 
-						if ((!in_array("${pm}.u", array_keys($hover_arr)) &&
-						(!in_array("${pm}.v", array_keys($hover_arr)))))
+						if (!in_array("${pm}.u", $hkeys) &&
+						!in_array("${pm}.v", $hkeys) && !in_array("${pm}.i",
+						$hkeys) && (($pmnox) && !in_array($pmnox, $hkeys)))
 							$fcol = "solidamber";
 					}
 
 					// Now look to see if there's an entry in  the hover
 					// map. We have to trim the revision off for patches
 
-					$hover = (in_array($pm, array_keys($hover_arr)))
+					$hover = (in_array($pm, $hkeys))
 						? $hover_arr[$pm]
 						: false;
 
