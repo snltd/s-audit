@@ -3244,13 +3244,13 @@ function get_package_list
 		# Get a list of partially installed packages so we can alert the
 		# user to them
 
-		PARTLIST=" $(pkginfo -p | tr -s \  | cut -d\  -f2) "
+		PARTLIST=" $(pkginfo -p | tr -s \  | cut -d\  -f2 | tr "\n" " ") "
 		PKGLIST=$(pkginfo | tr -s \  | cut -d\  -f2 | sort -u)
 	fi
 
 	for pkg in $PKGLIST	
 	do
-		[[ $PARTLIST == *" $pkg "* ]] \
+		[[ "$PARTLIST" == *" $pkg "* ]] \
 			&& disp "package" "$pkg (partially installed)" \
 			|| disp "package" $pkg
 	done
