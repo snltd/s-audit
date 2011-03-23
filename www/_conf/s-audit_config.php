@@ -44,6 +44,9 @@ define("IP_LIST_FILE", BASE_DIR . "/ip_list/ip_list.txt");
 define("IP_RES_FILE", BASE_DIR . "/ip_list/ip_list_reserved.txt");
 	// Path to hand-made list of "reserved" IP addresses
 
+define("EXTRA_DIR", BASE_DIR . "/extra");
+	// Path to directory holding extra static data files
+
 define("SITE_CONFIG", CONF_DIR . "/site_config.php");
 	// Path to omitted data file
 

@@ -66,6 +66,9 @@ class HostGrid {
 
 	protected $cz; 
 		// stores info on the current zone
+	
+	protected $audex;
+		// extra data from static files
 
 	//------------------------------------------------------------------------
 	// METHODS
@@ -78,7 +81,6 @@ class HostGrid {
 		$this->c = $class;
 		$this->servers = $servers;
 		$this->fields = $this->get_fields();
-		$this->fields = $this->sort_fields("audit completed");
 		$this->map = $map;
 
 		$this->show_zones = (isset($_GET["z"]) && ($_GET["z"] == "hide"))
@@ -86,6 +88,21 @@ class HostGrid {
 			: true;
 
 		$this->get_key();
+
+		if (file_exists(EXTRA_DIR . "/${class}.audex")) {
+			$this->audex = parse_ini_file(EXTRA_DIR . "/${class}.audex",
+			TRUE);
+
+			foreach($this->audex as $xf=>$xd) {
+				if (!in_array($xf, $this->fields))
+					$this->fields[] = $xf;
+			}
+
+			$this->audex_keys = array_keys($this->audex);
+		}
+
+		$this->fields = $this->sort_fields("audit completed");
+
 	}
 
 	public function get_parent_prop($zone, $class, $prop)
@@ -435,6 +452,13 @@ class HostGrid {
 							$ret_str .= $this->show_generic($data[$field],
 							$field);
 					}
+					elseif (isset($this->audex_keys) && in_array($field,
+					$this->audex_keys) && isset($this->audex[$field][$z])) {
+						$ret_str .=
+						new Cell ($this->audex[$field][$z],
+						"solidpink");
+					}
+
 
 					// There's no data for this field. Do we want to try to
 					// guess some? We do if a method called guess_$field
@@ -839,7 +863,7 @@ class HostGrid {
 
 		if (is_array($data))  {
 
-			$colfn = (is_array($guess))
+			$colfn = ($guess)
 				? "box"
 				: "solid";
 
