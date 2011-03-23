@@ -12,12 +12,6 @@
 //
 //============================================================================
 
-//echo mktime(0,0,0,1,1,2011);
-//============================================================================
-
-define("MY_VER", "3.0");
-    // Interface software version
-
 //- generic host grid base class ---------------------------------------------
 
 class HostGrid {
@@ -36,6 +30,10 @@ class HostGrid {
 	
 	//------------------------------------------------------------------------
 	// VARIABLES
+
+	private $t_start_grid;
+	private $t_end_grid;
+		// microtimings
 
 	protected $servers;
 		// The big data structure we get from the reader class
@@ -66,7 +64,7 @@ class HostGrid {
 
 	protected $show_zones = true;
 
-	private $cz; 
+	protected $cz; 
 		// stores info on the current zone
 
 	//------------------------------------------------------------------------
@@ -76,6 +74,7 @@ class HostGrid {
 	{
 		// A simple constructor which just populates a few arrays.
 
+		$this->t_start_grid = microtime(true);
 		$this->c = $class;
 		$this->servers = $servers;
 		$this->fields = $this->get_fields();
@@ -262,10 +261,26 @@ class HostGrid {
 		// creation is broken down into methods so different parts can be
 		// overriden by specialist classes
 
-		$ret = "";
-
-		return $ret .  $this->grid_head($width) .  $this->grid_body() .
+		$ret = $this->grid_head($width) .  $this->grid_body() .
 		$this->grid_key() . $this->grid_foot();
+
+		$this->t_end_grid = microtime(true);
+
+		if (isset($this->map))
+			$ret .= $this->display_timings();
+
+		return $ret;
+	}
+
+	private function display_timings()
+	{
+		// Show the time taken to collect and process audit data
+
+		$t_dc = round(($this->t_start_grid - $this->map->t_start_map), 3);
+		$t_p = round(($this->t_end_grid - $this->t_start_grid), 3);
+
+		return "\n\n<p class=\"center\">Data collection time: ${t_dc}s. Data
+		processing time: ${t_p}s.</p>";
 	}
 
 	public function grid_head($width)
@@ -550,8 +565,27 @@ class HostGrid {
 		else
 			$class = "zonehn";
 
-		return new Cell($data[0], $class, false);
+		return new Cell($this->ss_link($data[0]), $class, false);
 
+	}
+
+	protected function ss_link($zn, $as_global = false)
+	{
+		// return a link to the single-server view of the given host
+		// if $as_global is set, the zlink link class is not used
+
+		$class = false;
+
+		if ($this->map->is_global($zn))
+			$ref = $zn;
+		else {
+			$ref = "${zn}@" . $this->get_parent_prop($zn, "platform",
+			"hostname");
+
+			if (!$as_global) $class = "class=\"zlink\"";
+		}
+
+		return "<a ${class}href=\"single_server.php?s=$ref\">$zn</a>";
 	}
 
 	protected function show_audit_completed($data)
@@ -575,20 +609,18 @@ class HostGrid {
 
 			if($date < LOWEST_T) {
 				$class = "solidorange";
-				$date_str = "$t_arr[1]<br/><strong>IMPOSSIBLY
-				OLD</strong>";
+				$date_str = "$t_arr[1]<strong>IMPOSSIBLY OLD</strong>";
 			}
 			elseif($date > $now) {
 				$class = "solidorange";
-				$date_str = "$t_arr[1]<br/><strong>FUTURE
-				TIME</strong>";
+				$date_str = "$t_arr[1]<strong>FUTURE TIME</strong>";
 			}
 			elseif (($now - $date) < 86400) {
 				$date_str = false;
 				$class = false;
 			}
 			elseif(($now - $date) < 680400) {
-				$date_str = "<div>yesterday</div>";
+				$date_str = "yesterday";
 				$class = "solidamber";
 			}
 			else {
@@ -598,6 +630,11 @@ class HostGrid {
 		}
 		else
 			$time_str = $date_str = $col = false;
+
+		// Put a line break in if we're not in single server mode
+
+		if (!defined("SINGLE_SERVER") && $date_str)
+			$date_str = "<div>${date_str}</div>";
 
 		return new Cell("$time_str $date_str", $class);
 	}
@@ -630,9 +667,7 @@ class HostGrid {
 				$class = false;
 			}
 
-
 			$c_arr[] = array($txt, $class);
-
 		}
 
 		return new listCell($c_arr);
@@ -677,7 +712,13 @@ class HostGrid {
 			? false
 			: inlineCol::box(colours::$plat_cols["sparc"]);
 
-		return new Cell("${hw}<div>($a[2])</div>", $class, $frame);
+		// Put a line break in if we're not in single server mode
+
+		$arch = (!defined("SINGLE_SERVER"))
+			? "<div>($a[2])</div>"
+			: " ($a[2])";
+
+		return new Cell("${hw}${arch}", $class, $frame);
 	}
 
 	protected function show_virtualization($data)
@@ -1034,7 +1075,7 @@ class HostGrid {
 		return new Cell($os_hr, $class);
 	}
 
-	private function show_hostid($data)
+	protected function show_hostid($data)
 	{
 		// a zone has 
 
@@ -1213,33 +1254,69 @@ class HostGrid {
 		// yellow highlighting on the zone name means "installed"
 		// red highlighting on the zone name means "other" and the status is
 		// displayed
+		//local zone=cs-infra-02z-mailman (native:running:1.00CPU
+		//1000M/1000M]) [/zones/cs-infra-02z-mailman]
 
 		foreach($data as $row) {
 			$col = false;
-			$rarr = preg_split("/[ :]/", preg_replace("/[\(\[\]\)]/", "",
-			$row));
+			$a = preg_split("/[\s\[\]\(\):]+/", $row);
+			
+			// This gives us an array of the following form
+			//
+			// [0] => zone name
+			// [1] => zone brand
+			// [2] => zone state
+			// [3] => zone root
+			// [4] => resource caps, if any, key=value,key=value
 
-			// Get the colour to background the zone name
+			// do we have resource capping? If we do, $a will have 6
+			// elements
 
-			if ($rarr[2] == "running")
-				$class = "solidgreen";
-			elseif ($rarr[2] == "installed")
-				$class = "solidamber";
-			else {
-				$class = "solidred";
-				$rarr[0] = "$rarr[0] ($rarr[2])";
+			$txt = "<strong>" . $this->ss_link($a[0], 1) . "</strong>
+			($a[3])";
+
+			// do we print resource caps?
+
+			if ($a[4]) {
+				$txt .= "<div style=\"" . inlineCol::box("pink") . "\">";
+				$b = explode(",", $a[4]);
+
+				foreach($b as $cap) {
+					$c = explode("=", $cap);
+					$key = $c[0];
+
+					if ($c[0] == "swap" || $c[0] == "physical" || $c[0] ==
+					"locked") {
+						$val = units::from_b(units::to_b($c[1]));
+					}
+					else
+						$val = $c[1];
+
+					$txt .= "$val ${key}, ";
+				}
+
+				$txt = preg_replace("/, $/", "", $txt) . "</div>";
 			}
 
 			// do we print the zone type?
 
-			if ($rarr[1] == "native")
-				$z_type = false;
-			else {
-				$z_type = "<div>[$rarr[1] brand]</div>";
+			if ($a[1] != "native") {
+				$txt .= "<div>[$a[1] brand]</div>";
 				$col = inlineCol::box("amber");
 			}
+			
+			// Get the colour to background the zone name
 
-			$call[] = array("<strong>$rarr[0]</strong> ($rarr[3])$z_type",
+			if ($a[2] == "running")
+				$class = "solidgreen";
+			elseif ($a[2] == "installed")
+				$class = "solidamber";
+			else {
+				$class = "solidred";
+				$a[0] = "$a[0] ($a[2])";
+			}
+
+			$call[] = array($txt, 
 			$class, $col);
 		}
 
@@ -1267,7 +1344,11 @@ class HostGrid {
 
 			$b = explode(":", $a[1]);
 
-			$txt = "<strong>$a[0]</strong> ($b[0]b)";
+			$hn = ($a[0] == "primary")
+				? $a[0]
+				: $this->ss_link($a[0], 1);
+
+			$txt = "<strong>$hn</strong> ($b[0]b)";
 
 			// Add on the port if it's not the SP (which it is for the
 			// primary)
@@ -1412,7 +1493,6 @@ class HostGrid {
 	{
 		// Look at routes
 
-
 		foreach($data as $datum) {
 			$a = explode(" ", $datum);
 			$class = false;
@@ -1453,6 +1533,7 @@ class HostGrid {
 
 			$c_arr[] = array($txt, $class);
 		}
+
 
 		return new listCell($c_arr, "smallaudit");
 	}
@@ -1855,7 +1936,7 @@ class HostGrid {
 				$rarr[2]));
 
 				if ($varr[0] != $varr[1]) {
-					$vex = "v$varr[0] (v$varr[1] available)";
+					$vex = "v$varr[0] (v$varr[1] supported)";
 					$class = "solidorange";
 				}
 				else {
@@ -1923,89 +2004,148 @@ class HostGrid {
 		// filesystems not in the vfstab.
 		// All on a field given by the "known" array at the top of the class
 		// input is of the form
-		//  /  (ufs:opt:/dev/md/dsk/d20)
-		//  /zonedata/cs-db-01z-mysql41/data (zfs:opt:space/cs-db-01z-mysql41 \
-		//     /data:3/4:comp)
-		// /home/robertf (nfs:opt:cs-fs-01:/export/home/robertf)
+
+		// directory fs_type [b_used/b_avail (pc%) used] // (dev:opts:x_opts)
 
 		$c_arr = array();
-		$style = false;
 
 		foreach($data as $row) {
+			$class = false;
 
-			// Break up the string. rarr[0] is the mountpoint, earr[] is the
-			// "extra" data. fstype:opt:more
+			$a = preg_split("/[\[\]\(\)\s]+/", $row);
 
-			$exstyle = false;
-			$rarr = explode(" ", $row);
-			$earr = explode(":", preg_replace("/[\(\)]/", "", $rarr[1]));
-			$fstyp = $earr[0];
-			$out = "<strong>" . $this->fold_line(htmlentities($rarr[0]), 50)
-			. "</strong> ($earr[0])";
-			$row2 = $earr[2];
+			// Gives us an array where
+			// [0] = mountpoint
+			// [1] = fs type
+			// [2] = bytes_used/bytes_free
+			// [3] = percentage used
+			// [4] = "used" (literal string)
+			// [5] = options:extra options
+			// [6]= "not" (literal string)
+			// [7]= "in" (literal string)
+			// [8]= "vfstab" (literal string)
 
-			// We report the versions of ZFS filesystems, and inline colour
-			// the cell with an orange field if it can be upgraded
+			// A normal FS has 7 elements, some have "not in vfstab" tagged
+			// on, which means they have 10
 
-			if ($fstyp == "zfs") {
-				// earr[1] is the fs options
-				// earr[2] is the dataset
-				// earr[3] is version/available_version
-				// earr[4] is "comp" if the fs is compressed
-
-				// Look at the version part
-
-				if (isset($earr[3])) {
-					$varr = explode("/", $earr[3]);
-					$row2 .= ", v$varr[0]";
-
-					if ($varr[0] != $varr[1]) {
-						$style = inlineCol::solid("orange");
-						$row2 .= " <strong>upgradeable to $varr[1]</strong>";
-					}
-
-				}
-
-				if (isset($earr[4]) && $earr[4] == "comp")
-					$row2 .= ", compressed";
-
-			}
-			elseif ($fstyp == "nfs") {
-				
-				// NFS need the export path tagging on, and will put on a
-				// red field if the FS isn't in the vfstab.
-
-				$row2 .= ":" . $earr[3];
-
-				if (!isset($earr[4]) || $earr[4] != "in_vfstab") {
-					$row2 .= " (not in vfstab)";
-					$style = inlineCol::solid("red");
-				}
-
+			if (sizeof($a) != 7 && sizeof($a) != 10) {
+				$c_arr[] = array("ERROR", "error");
+				continue;
 			}
 
-			// Certain filesystems are of no interest to us
+			// Split up $a[5]
 
-			elseif ($fstyp == "lofs" &&
-			preg_match(":^/platform/|^/dev/|^/dev$|^/platform$|^/\.S:",
-			$rarr[0]))
+			$b = split(";", $a[5]);
+
+			// So now b is an array with
+			// [0] = device
+			// [1] = mount options
+			// [2] = ZFS options (if applicable)
+
+			// Certain filesystems are of no interest to us. Don't bother
+			// with anything mounted on /platform, /dev, or any mountpoint
+			// in / beginning .S. These are all system related things
+			// required for various zone types to run, and not relevant
+			// here.
+
+			if ($a[1] == "lofs" &&
+			preg_match(":^/platform\b|^/dev\b|^/\.S:", $a[0]))
 				continue;
 
-			// Don't display the device if it's the same as the mountpoint,
-			// as it is with zone roots
+			// If this isn't in the vfstab, put the first line on a blue
+			// field and add on "not in vfstab"
 
-			elseif ($earr[2] == $rarr[0])
-				unset($row2);
+			$txt = "<div";
+			
+			if (isset($a[8]))
+				$txt .= " style=\"" .inlineCol::solid("blue") . "\"";
 
-			if ($earr[2] == "ro") {
-				$out .= " [read only]";
-				$exstyle = inlineCol::solid("grey");
+			$txt .= "><strong>$a[0]</strong> (" . strtoupper($a[1]);
+
+			// In local zones, loopback mounted filesystems have the same
+			// device name as the mountpoint. Don't bother showing that.
+			
+			if ($a[0] != $b[0])
+				$txt .= ":$b[0]";
+
+			$txt .= ")";
+
+			if (isset($a[8]))
+				$txt .= " (not in vfstab)";
+
+			$txt .= "</div>";
+			$class = $a[1];
+
+			// Disk usage. Use amber and red fields for fses more than 80
+			// and 90% full respectively
+
+			$du = explode("/", $a[2]);
+			$used = str_replace("%", "", $a[3]);
+
+			if ($used > 90)
+				$duc = "style=\"" . inlineCol::solid("red") . "\"";
+			elseif ($used > 80)
+				$duc = "style=\"" . inlineCol::solid("amber") . "\"";
+			else
+				$duc = "";
+
+			$txt .= "<div class=\"indent\" $duc>$a[3] used (" .
+			units::from_b($du[0]) . "/" .  units::from_b($du[1]) . ")</div>";
+
+			// Options. Colour this if it's read-only. Other odd options we
+			// leave it to the viewer to spot (for now)
+
+			$txt .= "<div class=\"indent\"";
+
+			if (preg_match("/\bro\b/", $b[1]))
+				$txt .= " style=\"" . inlineCol::solid("grey") . "\"";
+			
+			$txt .= ">$b[1]</div>";
+
+			// Extended options. You get these for ZFS filesystems
+
+			if ($a[1] == "zfs" && isset($b[2])) {
+				$il = $row4 = "";
+
+				// If there's a disk quota, put it in human-readable form.
+				// If not, remove the reference to it.
+
+				$q = preg_replace("/^.*quota=(\d+).*$/", "$1", $b[2]);
+
+				$row4 = ($q > 0)
+					? preg_replace("/$q/", units::from_b($q), $b[2])
+					: preg_replace("/quota=0,/", "", $b[2]);
+
+				// If any of compression, dedup, or zoned are off, remove
+				// reference to them
+
+				$row4 =
+				preg_replace("/compression=off,|dedup=off,|zoned=off,/", "",
+				$row4);
+
+				// If the version is the highest supported, display it. If
+				// not, display the supported one and colour the field
+
+				preg_match("/^.*version=(\d+)\/(\d+)/", $row4, $v);
+
+				$row4 = preg_replace("/version=$v[1]\/$v[2]/",
+				"version=$v[1]", $row4);
+
+				if (!isset($v[1]))
+				echo "<br>$row4";
+
+				if ($v[1] != $v[2]) {
+					$row4 .= " (v$v[2] supported)";
+					$il = "style=\"" . inlineCol::solid("orange") . "\"";
+				}
+
+				$txt .= "<div $il class=\"indent\">$row4</div>";
+			}
+			elseif (isset($b[2])) {
+				$txt .= "<div class=\"indent\">$b[2]</div>";
 			}
 
-			if (isset($row2))
-				$out .= "\n  <div class=\"indent\">$row2</div>";
-
-			$c_arr[] = array($out, $fstyp, $style);
+			$c_arr[] = array($txt, $class);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -2016,17 +2156,97 @@ class HostGrid {
 		// Nicely present exported filesystems. At the moment they can be
 		// NFS, SMB, or iSCSI (yes, I know that's not strictly an exported
 		// filesystem...) Colouring is done from the dynamic stylesheet.
-		// Input is of the form:
-		//
-		// nfs:/js/export:anon=0,sec=sys,ro
-		// iscsi:space/target
-		// smb:/export/software:software
-		// vdisk:dev:vol:domain
+
+		$fold = (defined("SINGLE_SERVER"))
+			? 80
+			: 40;
 
 		$c_arr = false;
 
-		foreach($data as $datum) {
-			$earr = preg_split("/:/", $datum, 3);
+		foreach($data as $row) {
+			preg_match("/^(\S+) (\w+) (.*)$/", $row, $a);
+			$txt = $col = $sty = false;
+
+			// This gives us an array with
+			// [1] = share name
+			// [2] = export type
+			// [3] = options
+
+			$fstyp = ($a[2] == "iscsi")
+				? "iSCSI"
+				: strtoupper($a[2]);
+
+			$txt = "<strong>$a[1]</strong> ($fstyp)";
+
+			$opts = preg_replace("/^\(|\)$/", "", $a[3]);
+
+			if ($fstyp == "NFS") {
+
+				// For NFS, we strip off the domain name, if it's defined in
+				// STRIP_DOMAIN, and fold. 
+
+				if (STRIP_DOMAIN)
+					$l2 = $this->fold_line(str_replace("." .  STRIP_DOMAIN,
+					"", $opts), $fold);
+
+				// Now we look to see if anything else has mounted this
+				// filesystem. $mntd_nfs is an array which counts the number
+				// of times each NFS filesystem is mounted. If we don't have
+				// that array, skip this step
+
+				if (isset($this->mntd_nfs) && sizeof($this->mntd_nfs) > 0) {
+					$key = $this->cz["hostname"][0] . ":" . $a[1];
+	
+					$mnts = (in_array($key, array_keys($this->mntd_nfs)))
+						? $this->mntd_nfs[$key]
+						: 0;
+
+					if ($mnts == 0) {
+						$txt .= " (0 known mounts)";
+						$col = inlineCol::solid("amber");
+					}
+					elseif ($mnts == 1)
+						$txt .= " (1 known mount)";
+					else
+						$txt .= " ($mnts known mounts)";
+				}
+
+			}
+			elseif ($fstyp == "SMB") {
+
+				// For SMB exports, just put the export name in quotes
+
+				$l2 = preg_replace("/[\[\]]/", "&quot;", $a[3]);
+			}
+			elseif ($fstyp == "iSCSI") {
+				
+				// for iSCSI, just show the value of the shareiscsi property
+
+				$l2 = "shareiscsi=$opts";
+			}
+			elseif ($fstyp == "VDISK") {
+
+				// Unassigned VDISKS go on an amber field
+
+				if (preg_match("/bound to unassigned$/", $opts)) {
+					$l2 =preg_replace("/bound to unassigned$/", " -
+					UNASSINGED", $opts);
+					$col = inlineCol::solid("amber");
+				}
+				else
+					$l2 = $opts;
+			}
+
+			$txt .= "<div $sty class=\"indent\">$l2</div>";
+
+			$c_arr[] = array($txt, $a[2], $col);
+		}
+
+		return new listCell($c_arr, "smallauditl", false, 1);
+
+		return;
+
+			/*
 			$fstyp = $earr[0];
 			$mntinfo = "";
 			$col = false;
@@ -2034,35 +2254,6 @@ class HostGrid {
 			$txt = "<strong>$earr[1]</strong> ($fstyp)";
 
 			if ($fstyp == "nfs") {
-				// For NFS, we strip off the domain name, if it's defined in
-				// STRIP_DOMAIN, and fold. 
-
-				if (STRIP_DOMAIN)
-					$earr[2] = $this->fold_line(str_replace("." .
-					STRIP_DOMAIN, "", $earr[2]), 40);
-
-				// Now we look to see if anything else has mounted this
-				// filesystem. show_fs() will have taken a note if it's seen
-				// it anywhere. If it doesn't look like that has happened,
-				// skip this step
-
-				if (isset($this->mntd_nfs) && sizeof($this->mntd_nfs) > 0) {
-					$key = $this->cz["hostname"][0] . ":" . $earr[1];
-	
-					$mnts = (in_array($key, array_keys($this->mntd_nfs)))
-						? $this->mntd_nfs[$key]
-						: 0;
-
-					if ($mnts == 0) {
-						$mntinfo = " (0 known mounts)";
-						$col = inlineCol::solid("amber");
-					}
-					elseif ($mnts == 1)
-						$mntinfo = " (1 known mount)";
-					else
-						$mntinfo = " ($mnts known mounts)";
-				}
-
 				$txt .= "$mntinfo<div class=\"indent\">$earr[2]</div>";
 			}
 			elseif ($fstyp == "smb")
@@ -2084,10 +2275,9 @@ class HostGrid {
 			}
 
 
-			$c_arr[] = array($txt, $fstyp, $col);
 		}
+		*/
 
-		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	//-- hosted services -----------------------------------------------------
@@ -2159,6 +2349,7 @@ class HostGrid {
 				// Make the URI link coloured if it looks like we have a
 				// parsed IP list
 
+				
 				if (isset($this->ip_list) && sizeof($this->ip_list) > 0) {
 
 					$lc = (in_array($u, array_keys($this->ip_list)))
@@ -2269,6 +2460,8 @@ class HostGrid {
 		// Work on user data. If any user name comes up twice, but with a
 		// different UID the second time, flag it red
 
+		$c_arr = array();
+
 		// Discard username/uid pairs in the omit_users array
 
 		$arr = (isset($this->omit->omit_users))
@@ -2354,8 +2547,9 @@ class HostGrid {
 
 		// We're not interested in the ones in omit_attrs
 
-		if (isset($this->omit))
-			$ns = array_diff($data, $this->omit->omit_attrs);
+		$ns = (isset($this->omit))
+			? array_diff($data, $this->omit->omit_attrs)
+			: $data;
 
 		if (sizeof($data > 0) && sizeof($ns) == 0)
 			return new Cell("standard attrs");
@@ -2365,7 +2559,7 @@ class HostGrid {
 		foreach($ns as $attr)
 			$c_arr[] = array(preg_replace("/^([^:]*)/",
 			"<tt><strong>$1</strong>", $this->fold_line(htmlentities($attr),
-			50, "[,;]")) . "</tt>", false);
+			50, '[,;]')) . "</tt>", false);
 
 		return new listCell($c_arr, "smallindent", false, 1);
 	}
@@ -2375,8 +2569,9 @@ class HostGrid {
 		// List cron jobs. Put the user in bold and the time on the first
 		// line, the command folded underneath
 
-		if (isset($this->omit))
-			$ns = array_diff($data, $this->omit->omit_crons);
+		$ns = (isset($this->omit))
+			? array_diff($data, $this->omit->omit_crons)
+			: $data;
 
 		if (sizeof($data > 0) && sizeof($ns) == 0)
 			return new Cell("standard jobs");
@@ -2809,15 +3004,6 @@ class FSGrid extends HostGrid {
 		$this->mntd_nfs = $this->get_nfs_mounts();
 	}
 	
-	private function cb_nfs_mounts($row)
-	{
-
-		return (preg_match("/\(nfs:/", $row))
-			? true
-			: false;
-
-	}
-
 	protected function get_nfs_mounts()
 	{
 		// populate an array pairing NFS mounted filesystems, in the form
@@ -2828,25 +3014,23 @@ class FSGrid extends HostGrid {
 
 		$ta = array();
 
-		/*
 		foreach($this->map->list_all() as $srvr) {
 
-			if (!isset($this->servers[$srvr]["fs"]))
-				continue;
+			if (isset($this->servers[$srvr]["fs"]["fs"]))
+				$fslist = $this->servers[$srvr]["fs"]["fs"];
 
-			// filter out any non-NFS filesystem
+			if (!is_array($fslist)) continue;
 
-			$nfs_arr = array_filter($this->servers[$srvr]["fs"],
-			array($this, "cb_nfs_mounts"));
+			foreach(preg_grep("/^\S+ nfs /", $fslist) as $fs) {
+				preg_match("/^.*\(([^;]*).*$/", $fs, $a);
+				$ta = array_merge($ta, array($a[1]));
+			}
 
-			$ta = array_merge(
-				preg_replace("/^.* \(nfs:[^:]*:([^:]*):([^:\)]*).*$/",
-				"\\1:\\2", $nfs_arr), $ta);
 		}
-		*/
 
 		return array_count_values($ta);
 	}
+
 }
 
 //==============================================================================
@@ -3323,388 +3507,6 @@ class HostedGrid extends HostGrid
 	}
 }
 
-//==============================================================================
-// SINGLE SERVER VIEW GRIDS
-
-class serverView extends HostGrid {
-
-	// This class handles presentation of all audit files for a single
-	// server or zone. It doesn't do a great deal of work itself, but
-	// depends on the singleClasses to handle each audit type
-	
-	private $alldata;
-		// The parsed audit data, in a big-ass array
-
-	public function __construct($server, $alldata, $mmap)
-	{
-		$this->alldata = $alldata;
-		$this->server = $server;
-		$this->map = $mmap;
-	}
-
-	public function show_grid()
-	{
-		// The grid in this case is a list of tables, one for each audit
-		// type
-
-		$ret = false;
-
-		foreach($this->alldata as $type=>$data) {
-			$class = "single$type";
-
-			$ret .= (class_exists($class))
-				? new $class($type, $data, $this->map)
-				: new singleGeneric($type, $data, $this->map);
-		}
-
-		return $ret;
-	}
-}
-
-//----------------------------------------------------------------------------
-
-class singleGeneric extends HostGrid {
-
-	// This class isn't currently used, as I've created an extension class
-	// for each audit type. It's left as it is though, because if a new
-	// audit class is created, this class will automatically, if
-	// imperfectly, display it
-
-	protected $cols = 3;
-		// The default number of columns of properties. Each "column" is
-		// really two <table> columns, because there's name and value
-
-	protected $type;
-		// The type of audit. "platform", "fs" or whatever
-
-	protected $data;
-	protected $map;
-		
-	protected $one_cols = array();
-		// A list of server properties you want to span the whole table. For
-		// long data like cron jobs or filesystems
-
-	protected $html;
-		// We build up the HTML of audit data here, and pass it back with
-		// to_string.
-
-	public function __construct($type, $data, $map)
-	{
-		// The printed name of the audit class comes from capitalizing the
-		// first letter of the class name. This can be overriden by setting
-		// $type in the inheriting class
-
-		if (!isset($this->type))
-			$this->type = ucfirst($type);
-
-		// Set some class variables
-
-		$this->data = $data;
-		$this->map = $map;
-
-		// And start populating the $html variable with the title of this
-		// audit class
-
-		$this->html = "\n\n<table align=\"center\" width=\"700\">"
-		. "<tr><td class=\"sclh\">$this->type audit </td></tr>\n</table>\n";
-
-		// Now call show_class() to get the table 
-
-		$this->html .= $this->show_class();
-	}
-
-	public function __toString()
-	{
-		return $this->html;
-	}
-
-	protected function show_class()
-	{
-
-		$ret = "\n\n<table align=\"center\" width=\"700\">";
-
-		if (sizeof($this->data) == 2)
-			return $ret . "<tr><td class=\"comprow\" style=\"text-align:
-			center\">No data</td></tr>\n</table>\n";
-
-		// Each element of the data[] array is a property, like "hostname"
-		// or "exim". Step through them all. If there's a specific
-		// show_property() function, use it. If not, use show_generic()
-
-		$c = 0;	// column counter
-
-		foreach($this->data as $field=>$val) {
-
-			// Certain fields are skipped
-
-			if ($field == "hostname" || $field == "audit completed")
-				continue;
-
-			// If we're on the first column, start a new table row
-
-			if ($c == 0)
-				$ret .= "<tr class=\"zone\">";
-
-			// Some cells span the whole table. They're listed in the
-			// $one_cols array. If we hit one of those, we need to close off
-			// the existing row, then span the whole row with a single cell
-
-			if (in_array($field, $this->one_cols)) {
-
-				// Do we already have anything on this row? If we do, pad it
-				// out with a blank cell, close the row and start a new
-				// one.
-
-				if ($c != 0) 
-					$ret .= new Cell(false, "blank", false, false,
-					(($this->cols - $c) * 2)) . "</tr>\n<tr
-					class=\"zone\">";
-
-				$val_cell = preg_replace("/<td/", "<td colspan=\"" .
-				(($this->cols * 2) - 1) . "\"", $this->show_cell($field,
-				$val));
-				
-				$c = $this->cols;
-			}
-			else {
-				$val_cell = $this->show_cell($field, $val);
-				$c++;
-			}
-
-			$ret .= new Cell($field, "comprow") . $val_cell;
-
-			if ($c == $this->cols || in_array($field, $this->one_cols)) {
-				$ret .= "</tr>";
-				$c = 0;
-			}
-
-		}
-
-		if ($c !=0)
-			$ret .= "</tr>";
-
-		return $ret . $this->completed_footer($this->cols * 2);
-	}
-
-	protected function completed_footer($cols)
-	{
-		// Print an "audit completed" bar across the whole table
-	
-		return "\n<tr><td class=\"scompl\" colspan=$cols>audit completed: "
-		. $this->data["audit completed"][0] .  "</td></tr></table>";
-	}
-
-	protected function show_cell($field, $val)
-	{
-		// Split out because it was overriden in the app/tool class. Isn't
-		// any more, but still split out
-
-		$method = preg_replace("/\W/", "_", "show_$field");
-
-		return (method_exists($this, $method))
-			? $this->$method($val)
-			: $this->show_generic($val);
-	}
-
-}
-
-//----------------------------------------------------------------------------
-
-class singlePlatform extends singleGeneric {
-
-	// Platform doesn't need anything clever doing, but we spread the NIC
-	// information right across the table
-
-	protected $one_cols = array("NIC");
-}
-
-//----------------------------------------------------------------------------
-
-class singleOS extends singleGeneric {
-
-	// Change the name and put zones  and LDOMs in a single column
-
-	protected $type = "O/S";
-	protected $one_cols = array("local zone");
-
-}
-
-//----------------------------------------------------------------------------
-
-class singleFS extends singleGeneric {
-	protected $type = "Filesystem";
-	protected $one_cols = array("fs", "export");
-}
-
-//----------------------------------------------------------------------------
-
-class singleApp extends singleGeneric {
-	protected $cols = 4;
-	protected $type = "Application";
-
-	protected function show_generic($data)
-	{
-		return softwareGrid::show_generic($data, false);
-	}
-
-	public function ver_cols()
-	{
-		return false;
-	}
-
-}
-
-class singleTool extends singleApp {
-	protected $type = "Tool";
-}
-
-class singleHosted extends singleGeneric {
-	protected $type = "Hosted Services";
-	protected $one_cols = array("website", "database");
-}
-
-class singleSecurity extends singleGeneric {
-	protected $one_cols = array("port", "cron job", "user_attr");
-	protected $hard_fold = 130;
-}
-
-class singlePlist extends singleGeneric
-{
-	// Patches and packages are handled in a special way. They're typically
-	// very long lists
-
-	protected $type = "Patch and Package";
-
-	protected function show_class()
-	{
-
-		$ret = "";
-		$blocks = sizeof($this->data) / 2;
-		$i = 1;
-		$hn = $this->data["hostname"][0];
-		$pkg_arr = array();
-
-		$os = ($this->map->is_global($hn))
-			? $this->map->get_zone_prop($hn, "version", "os")
-			: $this->map->get_parent_prop($hn, "version", "os");
-
-		$os = preg_replace("/ .*$/", "", $os);
-
-		foreach($this->data as $field=>$val) {
-
-			if ($field == "hostname" || $field == "audit completed")
-				continue;
-
-
-			// Work out what the hover map is likely to be called
-
-			$fn = ($this->map->is_global($hn))
-				? "get_zone_prop"
-				: "get_parent_prop";
-
-			// The hover map only currently works for "proper" Solaris,
-			// versions 10 and earlier, so ignore everything else. (This
-			// will change.)
-
-			$dist = $this->map->$fn($hn, "distribution", "os");
-
-			if ($dist == "Solaris") {
-
-				// Work out the path to the patch or package definition file
-
-				$hw = (preg_match("/SPARC/", $this->map->$fn($hn,
-				"hardware", "platform")))
-					? "sparc"
-					: "i386";
-
-				$ver = preg_replace("/^.*SunOS ([0-9.]*).*$/", "\\1",
-				$this->map->$fn($hn, "version", "os"));
-			}
-
-			// How many columns? And do we have a "hover" map?
-
-			//-- package lists -----------------------------------------------
-
-			if ($field == "package") {
-				$pdef = 5 ;	// 5 columns for packages
-				$hover = PKG_DEF_DIR .  "/pkg_def-${dist}-${ver}-${hw}.php";
-			}
-			//-- patch lists -------------------------------------------------
-			else {
-				$pdef = 12;	// 12 columns for patches
-				$hover = PCH_DEF_DIR .  "/pch_def-${ver}-${hw}.php";
-			}
-
-			// Include the hover map, if we have it
-
-			if (file_exists($hover))
-				include($hover);
-
-			$cols = (sizeof($val) > $pdef)
-				? $pdef
-				: sizeof($val);
-
-			$ret .= "\n\n<table align=\"center\" width=\"700\">"
-			. "\n  <tr><th colspan=\"$cols\">$field</th></tr>";
-
-			$c = 0;
-
-			foreach($val as $p) {
-			
-				if ($c == 0) 
-					$ret .= "\n  <tr class=\"zone\">";
-
-				// Highlight partially installed packages with a red border
-
-				if (preg_match("/ \(/", $p)) {
-					$bcol = inlineCol::box("red");
-					$p = preg_replace("/ .*$/", "", $p);
-				}
-				else
-					$bcol = false;
-
-				// Highlight non-SUNW packages or patches that don't start
-				// with a 1
-
-				$fcol = ($field == "patch" && !preg_match("/^1/", $p) ||
-				($field == "package" && !preg_match("/^SUNW/", $p)))
-					? "smalldisk"
-					: "smallrow";
-
-				// Anything in the hover map? We have to trim the revision
-				// off for patches
-
-				$pm = ($field == "package")
-					? $p
-					: substr($p, 0, 6);
-
-				$hover = (in_array($pm, array_keys($hover_arr)))
-					? $hover_arr[$pm]
-					: false;
-
-				$ret .= new Cell($p, $fcol, $bcol, false, false, $hover);
-				$c++;
-
-				if ($c == $cols) {
-					$ret .= "</tr>";
-					$c = 0;
-				}
-
-			}
-
-			if ($c > 0)
-				$ret .= "</tr>";
-
-			$ret .= ($i++ == $blocks)
-				? $this->completed_footer($pdef)
-				: "\n</table>";
-		}
-
-		return $ret;
-	}
-
-}
-
 //- HTML and template stuff --------------------------------------------------
 
 class Page {
@@ -3797,7 +3599,7 @@ class Page {
 	{
 		$ret =  "\n\n<div id=\"footer\">This is &quot;" .  SITE_NAME 
 		. "&quot; | s-audit web interface " . "version " . MY_VER
-		. " | (c) 2010 <a href=\"http://snltd.co.uk\""
+		. " | (c) 2011 <a href=\"http://snltd.co.uk\""
 		. ">SNLTD</a>";
 
 		if (SHOW_SERVER_INFO)
@@ -3912,7 +3714,7 @@ class ssPage extends audPage {
 	
 	// Special class for single server view
 
-	protected $styles = array("basic.css", "audit.css", "server.css");
+	protected $styles = array("basic.css", "audit.css", "single_server.css");
 
 	public function __construct($title, $s_count) {
 		$this->s_count = $s_count;
@@ -4095,7 +3897,7 @@ class NavigationStaticHoriz {
 		"tools.php" => "tools",
 		"hosted.php" => "hosted services",
 		"security.php" => "security",
-		"server.php" => "single server view",
+		"single_server.php" => "single server view",
 		"compare.php" => "compare two servers",
 		"ip_listing.php" => "IP address listing"
 	);
@@ -4375,6 +4177,11 @@ class listCell {
 		//             into a list (that is, it won't be expanded to fill
 		//             the entire cell)
 
+		// Don't do "smallaudit" classes in single server view
+
+		if (defined("SINGLE_SERVER"))
+			$lclass = preg_replace("/^small/", "", $lclass);
+
 		// If there's only one element in the $data class and $noexpand
 		// isn't set, just do a plain cell
 
@@ -4424,7 +4231,7 @@ class listCell {
 				foreach($data as $txt) $h .= "\n  <li>$txt</li>";
 			}
 
-			$this->html = new Cell($h . "\n</ul>\n", false,
+			$this->html = new Cell($h . "\n</ul>\n", "nopad",
 			false, false, $span);
 		}
 
@@ -4437,4 +4244,8 @@ class listCell {
 
 }
 
+function pr($var)
+{
+	echo "<pre>", print_r($var), "</pre>";
+}
 ?>

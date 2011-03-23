@@ -34,6 +34,7 @@ $grid_key = array(
 		array("running zone", "solidgreen", false),
 		array("installed zone", "solidamber", false),
 		array("zone in other state", "solidred", false),
+		array("resource caps", "boxpink", false),
 		array("non-native zone", "boxamber", false)
 	),
 

@@ -5,17 +5,528 @@
 // server_view_classes.php
 // -----------------------
 //
-// Classes which display complete overviews of full servers and zones.
+// Classes to show everything we know about a single host. Extends classes
+// found in display_classes.php.
 //
-// R Fisher
-//
-// v1.0
-// Please record changes below.
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
 //
 //============================================================================
 
 //----------------------------------------------------------------------------
-// DATA DISPLAY
+// SINGLE SERVER VIEW
+
+class serverView extends HostGrid {
+
+	// This class handles presentation of all audit files for a single
+	// server or zone. It doesn't do a great deal of work itself, but
+	// depends on the singleClasses to handle each audit type
+	
+	protected $hostname;
+		// The name of this server or zone
+
+	protected $parent;
+		// if $hostname is a local zone, the name of the parent global
+
+	protected $data;
+		// The parsed audit data, in a big-ass array
+
+	protected $map;
+		// the usual map
+
+	protected $gzd;
+		// global zone platform and O/S audit data
+
+	public function __construct($data, $map)
+	{
+		// Populate the variables above
+
+		$this->hostname = $_GET["s"];
+
+		$this->map = $map;
+		$this->data &= $data;
+
+		if (preg_match("/@/", $this->hostname)) {
+			$zn = explode("@", $this->hostname);
+			$this->hostname = $zn[0];
+			$this->parent = $zn[1];
+		}
+		else
+			$this->parent = $this->hostname;
+
+		$this->zdata = $data[$this->hostname];
+		$this->gzd = $data[$this->parent];
+	}
+
+	public function show_grid()
+	{
+		// The grid in this case is a list of tables, one for each audit
+		// type. Each table is created by its own class
+
+		$ret = false;
+
+		foreach($this->zdata as $type=>$data) {
+			$class = "single$type";
+
+			$ret .= (class_exists($class))
+				? new $class($type, $data, $this->map, $this->gzd)
+				: new singleGeneric($type, $data, $this->map, $this->gzd);
+		}
+
+		return $ret;
+	}
+}
+
+//----------------------------------------------------------------------------
+
+class singleGeneric extends HostGrid {
+
+	// This class isn't currently used, as I've created an extension class
+	// for each audit type. It's left as it is though, because if a new
+	// audit class is created, this class will automatically, if
+	// imperfectly, display it
+
+	protected $width = "700px";
+		// the width of the table used to present the information
+
+	protected $cols = 2;
+		// The default number of columns of properties. Each "column" is
+		// really two <table> columns, because there's name and value
+
+	protected $type;
+		// The type of audit. "platform", "fs" or whatever
+
+	protected $data;
+	protected $map;
+		
+	protected $one_cols = array();
+		// A list of server properties you want to span the whole table. For
+		// long data like cron jobs or filesystems
+
+	protected $html;
+		// We build up the HTML of audit data here, and pass it back with
+		// to_string.
+
+	protected $gzd;
+		// global zone's platform audit data
+
+	public function __construct($type, $data, $map, $gzd)
+	{
+		// The printed name of the audit class comes from capitalizing the
+		// first letter of the class name. This can be overriden by setting
+		// $type in the inheriting class
+
+		if (!isset($this->type))
+			$this->type = ucfirst($type);
+
+		// Set some class variables
+
+		$this->gzd =& $gzd;
+
+		//if (isset($this->parent))
+			//$this->gzo = $this->server
+
+		$this->data = $data;
+		$this->map = $map;
+
+		// And start populating the $html variable with the title of this
+		// audit class
+
+		$this->html = "\n\n<table align=\"center\" width=\"$this->width\">"
+		. "\n<tr><td><h1>$this->type audit</h1></td></tr>\n</table>\n";
+
+		// Now call show_class() to get the table 
+
+		$this->html .= $this->show_class();
+	}
+
+	protected function show_class()
+	{
+
+		$ret = "\n\n<table class=\"audit\" align=\"center\"" .
+		" width=\"$this->width\">\n";
+
+		if (sizeof($this->data) == 2)
+			return $ret . "<tr>" . new Cell("No data") . "</tr>\n</table>\n";
+
+		// Each element of the data[] array is a property, like "hostname"
+		// or "exim". Step through them all. If there's a specific
+		// show_property() function, use it. If not, use show_generic()
+
+		$c = 0;	// column counter
+
+		foreach($this->data as $field=>$val) {
+
+			// Certain fields are skipped
+
+			if ($field == "hostname" || $field == "audit completed")
+				continue;
+
+			// If we're on the first column, start a new table row
+
+			if ($c == 0)
+				$ret .= "<tr class=\"zone\">";
+
+			// Some cells span the whole table. They're listed in the
+			// $one_cols array. If we hit one of those, we need to close off
+			// the existing row, then span the whole row with a single cell
+
+			if (in_array($field, $this->one_cols)) {
+
+				// Do we already have anything on this row? If we do, pad it
+				// out with a blank cell, close the row and start a new
+				// one.
+
+				if ($c != 0) 
+					$ret .= new Cell(false, false, false, false,
+					(($this->cols - $c) * 2)) . "</tr>\n<tr class=\"zone\">";
+
+				$val_cell = preg_replace("/<td/", "<td colspan=\"" .
+				(($this->cols * 2) - 1) . "\"", $this->show_cell($field,
+				$val));
+				
+				$c = $this->cols;
+			}
+			else {
+				$val_cell = $this->show_cell($field, $val);
+				$c++;
+			}
+
+			$ret .= "<th>$field</th>" . $val_cell;
+
+			if ($c == $this->cols || in_array($field, $this->one_cols)) {
+				$ret .= "</tr>";
+				$c = 0;
+			}
+
+		}
+
+		if ($c !=0)
+			$ret .= "</tr>";
+
+		return $ret . $this->completed_footer($this->cols * 2);
+	}
+
+	protected function completed_footer($cols)
+	{
+		// Print an "audit completed" bar across the whole table
+	
+		return "\n<tr class=\"zone\"><th colspan=\"" . ($cols - 1)
+		. "\">audit completed</th>"
+		. $this->show_audit_completed($this->data["audit completed"])
+		. "</tr>";
+	}
+
+	protected function show_cell($field, $val)
+	{
+		// Split out because it was overriden in the app/tool class. Isn't
+		// any more, but still split out
+
+		$method = preg_replace("/\W/", "_", "show_$field");
+
+		return (method_exists($this, $method))
+			? $this->$method($val)
+			: $this->show_generic($val);
+	}
+
+	public function __toString()
+	{
+		return $this->html;
+	}
+
+}
+
+//----------------------------------------------------------------------------
+
+class singlePlatform extends singleGeneric {
+
+	// Platform needs the card definition database
+	
+	public function __construct($type, $data, $map, $gzd)
+	{
+		require_once(LIB . "/defs.php");
+		$defs = new defs();
+		$this->card_db = $defs->get_data("card_db");
+		parent::__construct($type, $data, $map, $gzd);
+	}
+}
+
+//----------------------------------------------------------------------------
+
+class singleOS extends singleGeneric {
+
+	// Change the name and put zones  and LDOMs in a single column
+
+	protected $type = "O/S";
+	protected $one_cols = array("local zone", "LDOM");
+}
+
+//----------------------------------------------------------------------------
+
+class singleNet extends singleGeneric {
+
+	protected $one_cols = array("NIC");
+
+}
+
+//----------------------------------------------------------------------------
+
+class singleFS extends singleGeneric {
+	protected $type = "Filesystem";
+	protected $one_cols = array("fs", "export");
+}
+
+//----------------------------------------------------------------------------
+
+class singleApp extends singleGeneric {
+
+	// We use a flexible number of columns here, and override the ver_cols()
+	// function because we don't want to do any cell colouring
+
+	protected $type = "Application";
+
+	public function __construct($type, $data, $map, $gzd)
+	{
+		$d = (sizeof($data) - 2);
+
+		if ($d <= 4)
+			$this->cols = $d;
+		else
+			$this->cols = 4;
+
+		parent::__construct($type, $data, $map, $gzd);
+	}
+
+	protected function show_generic($data)
+	{
+		// Call the softwareGrid version, not the singleGeneric version
+
+		return softwareGrid::show_generic($data, false);
+	}
+
+	public function ver_cols($data)
+	{
+		// Break a prog@=/path into prog and path, and put in an uncoloured
+		// cell. Much simpler than the softwareGrid:: version
+
+		$ta = preg_split("/@=/", $data);
+		
+		$path = (isset($ta[1]))
+			? $ta[1]
+			: false;
+
+		return array($ta[0], false, false, false, false, $path);
+	}
+
+}
+
+//----------------------------------------------------------------------------
+
+class singleTool extends singleApp {
+
+	// Just change the displayed name.
+
+	protected $type = "Tool";
+}
+
+//----------------------------------------------------------------------------
+
+class singleHosted extends singleGeneric {
+
+	// Change the name and make websites and databases span the whole table
+
+	protected $type = "Hosted Services";
+	protected $one_cols = array("website", "database");
+}
+
+//----------------------------------------------------------------------------
+
+class singleSecurity extends singleGeneric {
+
+	// We have a few wide things to print and fold
+
+	protected $one_cols = array("port", "cron job", "user_attr");
+	protected $hard_fold = 80;
+
+	protected function show_user($data)
+	{
+		// This needs a special function. We show ALL users and highlight
+		// anything with UID 0
+
+		$ret = "<ul>";
+
+		foreach($data as $row) {
+
+			$cl = (preg_match("/\(0\)$/", $row))
+				? " class=\"solidred\""
+				: false;
+
+			$ret .= "\n  <li$cl>$row</li>";
+		}
+
+		return new Cell($ret . "</ul>");
+	}
+
+}
+
+//----------------------------------------------------------------------------
+
+class singlePatch extends singleGeneric
+{
+	// Patches and packages are handled in a special way. They're typically
+	// very long lists
+
+	protected $type = "Patch and Package";
+
+	protected function show_class()
+	{
+		// This function handles patches and packages
+
+		$ver = $hw = $ret = "";
+		$blocks = sizeof($this->data) / 2;
+		$i = 1;
+		$hn = $this->data["hostname"][0];
+		$pkg_arr = $hover_arr = array();
+
+		// Get the operating system from the global zone's O/S audit
+
+		$dist = $this->gzd["os"]["distribution"][0];
+
+		foreach($this->data as $field=>$val) {
+
+			if ($field == "hostname" || $field == "audit completed")
+				continue;
+
+			// Work out what the hover map is likely to be called
+
+			$fn = ($this->map->is_global($hn))
+				? "get_zone_prop"
+				: "get_parent_prop";
+
+			$hw = (preg_match("/SPARC/",
+			$this->gzd["platform"]["hardware"][0]))
+				? "sparc"
+				: "i386";
+
+			$ver = preg_replace("/^.*SunOS ([0-9.]*).*$/", "\\1",
+			$os = $this->gzd["os"]["version"][0]);
+
+			// How many columns? And do we have a "hover" map?
+
+			//-- package lists -----------------------------------------------
+
+			if ($field == "package") {
+				$pdef = 5 ;	// 5 columns for packages
+				$hover = PKG_DEF_DIR . "/pkg_def-${dist}-${ver}-${hw}.php";
+			}
+			//-- patch lists -------------------------------------------------
+			else {
+				$pdef = 7;	// 12 columns for patches
+				$hover = PCH_DEF_DIR . "/pch_def-${ver}-${hw}.php";
+			}
+
+			// Include the hover map, if we have it
+
+			if (file_exists($hover)) {
+				$footnote = "Using definition file at $hover.";
+				include_once($hover);
+				$have_hover = true;
+			}
+			else {
+				$footnote = "No definition file at $hover.";
+				$have_hover = false;
+			}
+
+			$ret .= "<p class=\"center\">$footnote</p>";
+
+			$cols = (sizeof($val) > $pdef)
+				? $pdef
+				: sizeof($val);
+
+			$ret .= "\n\n<table class=\"plist\" align=\"center\" "
+			. "width=\"$this->width\">"
+			. "\n  <tr><th colspan=\"$cols\">$field</th></tr>";
+
+			$c = 0;
+
+			foreach($val as $p) {
+				$fcol = false;
+			
+				if ($c == 0) 
+					$ret .= "\n  <tr class=\"zone\">";
+
+				// Highlight partially installed packages with a red border
+
+				if (preg_match("/ \(/", $p)) {
+					$bcol = inlineCol::box("red");
+					$p = preg_replace("/ .*$/", "", $p);
+				}
+				else
+					$bcol = false;
+
+				// Highlight patches which don't start with a 1. These are
+				// for things like NetBackup - i.e.  non-Sun products
+
+				if ($field == "patch" && !preg_match("/^1/", $p))
+					$fcol = "solidamber";
+
+				if ($have_hover) {
+
+					// Get ready to scan the hover map. Strip the revision
+					// number off patches
+
+					$pm = ($field == "package")
+						? $p
+						: substr($p, 0, 6);
+
+					// If we have the package hover map, highlight packages
+					// not in it. This should point to third-party software
+
+					if ($field == "package" && ! in_array($pm,
+					array_keys($hover_arr))) {
+						
+						// Some packages have a .u and a .v version for
+						// SPARC. Look for those
+
+						if ((!in_array("${pm}.u", array_keys($hover_arr)) &&
+						(!in_array("${pm}.v", array_keys($hover_arr)))))
+							$fcol = "solidamber";
+					}
+
+					// Now look to see if there's an entry in  the hover
+					// map. We have to trim the revision off for patches
+
+					$hover = (in_array($pm, array_keys($hover_arr)))
+						? $hover_arr[$pm]
+						: false;
+
+				}
+				else
+					$hover = false;
+
+				$ret .= new Cell($p, $fcol, $bcol, false, false, $hover);
+				$c++;
+
+				if ($c == $cols) {
+					$ret .= "</tr>";
+					$c = 0;
+				}
+
+			}
+
+			if ($c > 0)
+				$ret .= "</tr>";
+
+			$ret .= "\n</table>\n\n<div class=\"spacer\">&nbsp;</div>";
+		}
+
+		return $ret;
+	}
+
+}
+
+//============================================================================
+// LIST OF SERVERS VIEW
 
 Class serverListGrid
 {
@@ -30,7 +541,7 @@ Class serverListGrid
 	public function __construct($map)
 	{
 		$this->map = $map;
-		require_once(KEY_DIR . "/key_server.php");
+		require_once(KEY_DIR . "/key_single_server.php");
 		$this->gkey = $generic_key;
 
 		// See how many zones each server has. The maximum will be the
@@ -98,7 +609,7 @@ Class serverListGrid
 		if (in_array($server, $this->map->list_vbox()))
 			$class = "vb";
 		elseif (in_array($server, $this->map->list_ldoms()))
-			$class = "ldom";
+			$class = "ldm";
 		else
 			$class = "svhn";
 
@@ -107,7 +618,7 @@ Class serverListGrid
 		// Now do the local zones
 
 		foreach($zones as $z) {
-			$ret .= new Cell($this->s_link($z), "zhn");
+			$ret .= new Cell($this->s_link($z, $server), "zhn");
 
 			// handle row padding. This probably isn't scrictly necessary, I
 			// think all browsers handle short rows properly, but I like to
@@ -132,12 +643,16 @@ Class serverListGrid
 		return $ret;
 	}
 	
-	private function s_link($server)
+	private function s_link($server, $parent = false)
 	{
 		// Just returns an HTML link to this page, with the right query
 		// string to display the named server.
 
-		return "<a href=\"$_SERVER[PHP_SELF]?s=$server\">$server</a>";
+		$lserver= ($parent)
+			? "${server}@$parent"
+			: $server;
+
+		return "<a href=\"$_SERVER[PHP_SELF]?s=$lserver\">$server</a>";
 	}
 	
 	private function grid_key()

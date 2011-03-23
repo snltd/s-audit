@@ -77,22 +77,42 @@ $dh->doc_class_start();
 
 	<dt>fs</dt>
 	<dd>This field lists filesystems mounted on the host, with some
-	additional information. Each entry has two lines, the first giving the
-	mountpoint in <strong>bold face</strong> with the filesystem type in
-	parentheses. On the second, indented, line is the device file. For UFS
-	filesystems this is the /dev/dsk path, for ZFS it is the dataset name,
-	for NFS the remote path. NFS filesystems which are mounted, but do not
-	have entries in <tt>/etc/vfstab</tt> are highlighted.</dd>
+	additional information.  Each filesystem's information is displayed over
+	two to our lines.</dd>
+	
+	<dd>The first line shows the filesystem mountpoint in <strong>bold
+	face</strong> with the filesystem type and the device node following. If
+	the filesystem is not a ZFS dataset, and it is not listed
+	<tt>/etc/vfstab</tt>, then this information is shown on an amber field.
+	This is intended to help you track down filesystems mounted by hand, or
+	by automatic methods such as <tt>rmvolmgr</tt> or
+	<tt>automountd</tt>.</dd>
+	
+	<dd>On the second, line is information about filesystem usage. The
+	percentage of the filesystem in use comes first, followed by the amount
+	of data on the filesystem, and its formatted capacity, in human-readable
+	units. If the filesystem is more than 90% full, this information is
+	shown on a red field; if it is 80-89% full, then an amber field is
+	used.</dd>
 
-	<dd>ZFS filesystems have extra information. After the dataset name is
-	the version of the filesystem, and after that, if the filesystem is
-	compressed, it will say so. If the filesystem can be upgraded to a more
-	recent version, the available ZFS version will be given.</dd>
+	<dd>The third line shows the options used to mount the filesystem.
+	Consult your man pages if any of them are unknown to you. If the
+	filesystem is mounted read-only, the options are shown on a grey
+	field.</dd>
+
+	<dd>ZFS filesystems have extra information on a fourth line. If the
+	filesystem uses compression, deduplication, or zoning, then you will be
+	told here. If the filesystem has a quota set, then its size is given.
+	Finally, the ZFS version is displayed. If the machine supports a more
+	recent ZFS version than the one in use, then the supported version is
+	displayed, and the whole line is presented on an orange field.</dd>
 
 	<dd>Not all filesystems shown in a <tt>df</tt> command are shown.
 	Pseudo-filesystems of types <tt>dev</tt>, <tt>devfs</tt>, <tt>ctfs</tt>,
 	<tt>mntfs</tt>, <tt>sharefs</tt>, <tt>tmpfs</tt>, <tt>fd</tt>,
-	<tt>objfs</tt> and <tt>proc</tt> are ignored.</dd>
+	<tt>objfs</tt> and <tt>proc</tt> are ignored, as are loopback
+	filesystems mounted on <tt>/platform</tt> and <tt>/dev</tt> or on
+	mountpoints beginning with &quot;<tt>.</tt>&quot;.</dd>
 
 	<dd>The following colour coding is used.</dd>
 

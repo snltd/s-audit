@@ -35,6 +35,9 @@ $col_grp = $fscol_grp = $storcol_grp = $hscol_grp = "";
 $qs = preg_replace("/\?.*$/", "", $_SERVER["QUERY_STRING"]);
 $qs = str_replace("class_", "", $qs);
 
+if ($qs == "single_server.php")
+	define("ALL", 1);
+
 // Tell the browser what's coming, and open the stylesheet with a comment.
 
 header("Content-Type: text/css");
@@ -54,7 +57,13 @@ foreach(colours::$cols as $name=>$hex) {
 	$col_grp .= ".box$name, ";
 }
 
-echo "\n" . preg_replace("/, $/", " { padding: 0px }", $col_grp) . 
+// Cells on the single server view are well padded
+
+$pad = (defined("ALL"))
+	? "7px"
+	: "0";
+
+echo "\n" . preg_replace("/, $/", " { padding: $pad }", $col_grp) . 
 "\n\n/* end cols */\n";
 
 //----------------------------------------------------------------------------
@@ -65,7 +74,7 @@ echo "\n" . preg_replace("/, $/", " { padding: 0px }", $col_grp) .
 // or hsfs. boxcol is used in the "root fs" column, smallboxcol in the fs
 // column. These are only created if the calling page is fs.php
 
-if ($qs == "fs.php") {
+if ($qs == "fs.php" || defined("ALL")) {
 	echo "\n/* begin fscols */\n";
 
 	foreach(colours::$fs_cols as $name=>$hex)
@@ -77,7 +86,7 @@ if ($qs == "fs.php") {
 //----------------------------------------------------------------------------
 // networking audits - colours::nic_cols
 
-if ($qs == "net.php") {
+if ($qs == "net.php" || defined("ALL")) {
 	echo "\n/* begin nic_cols */\n";
 
 	foreach(colours::$nic_cols as $name=>$hex) {
@@ -94,7 +103,7 @@ if ($qs == "net.php") {
 
 // storage types aren't left-aligned. Just coloured
 
-if ($qs == "index.php" || $qs == "platform.php") {
+if ($qs == "index.php" || $qs == "platform.php" || defined("ALL")) {
 	echo "\n/* begin platformcols */\n";
 
 	foreach(array_merge(colours::$stor_cols, colours::$card_cols) as
@@ -109,7 +118,7 @@ if ($qs == "index.php" || $qs == "platform.php") {
 
 // Web server and DB server colours 
 
-if ($qs == "hosted.php") {
+if ($qs == "hosted.php" || defined("ALL")) {
 	echo "\n/* begin hosted */\n";
 
 	foreach(array_merge(colours::$db_cols, colours::$ws_cols) as

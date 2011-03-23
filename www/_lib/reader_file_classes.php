@@ -30,6 +30,10 @@ class ZoneMap extends ZoneMapBase {
 
 	public function __construct($audit_dir)
 	{
+		// Record the start time
+
+		$this->t_start_map = microtime(true);
+
 		// Get the offset, if we have one
 
 		$this->offset = (isset($_GET["o"])) ? $_GET["o"] : 0;
@@ -85,6 +89,7 @@ class ZoneMap extends ZoneMapBase {
 class GetServers extends GetServersBase {
 
 	// Extend the GetServersBase class to get data from flat files
+
 	protected $globals;
 
 	public function __construct($map, $s_list = false, $cl = false)
@@ -116,9 +121,30 @@ class GetServers extends GetServersBase {
 
 		foreach($s_list as $g) {
 			
-			if ($f = $map->get_fname($g))
+			// We might have been asked for a zone and told what server file
+			// to use
+
+			if (preg_match("/@/", $g)) {
+				$a = explode("@", $g);
+				$c_g = $srv_b = $a[1];
+				$hn = $a[0];
+			}
+			else {
+				$srv_b = $g;
+				$hn = false;
+			}
+
+			if ($f = $map->get_fname($srv_b)) {
 				$this->servers = array_merge($this->servers,
-				$this->parse_m_file($f, $cl));
+				$this->parse_m_file($f, $cl, $hn));
+
+				// If we were only asked for a local zone, also get the
+				// global zone's O/S audit data
+
+				if (isset($a))
+					$this->servers = array_merge($this->servers,
+					$this->parse_m_file($f, array("platform", "os"), $a[1]));
+			}
 		}
 
 		// Finish the map
@@ -153,9 +179,10 @@ class GetServers extends GetServersBase {
 
 	}
 
-	private function parse_m_file($file, $cl = false)
+	private function parse_m_file($file, $cl = false, $zone = false)
 	{
-		// Only get classes in the second arg
+		// Only get classes in the second arg and zones in the third (if
+		// supplied)
 
 		if ($cl && is_string($cl))
 			$cl = array($cl);
@@ -214,7 +241,8 @@ class GetServers extends GetServersBase {
 				$this_c = $a[1];
 
 				if (($cl && ! in_array($this_c, $cl)) ||
-				(defined("NO_ZONES") && !in_array($this_h, $this->globals)))
+				(defined("NO_ZONES") && !in_array($this_h, $this->globals))
+				|| ($zone && ($this_h != $zone)))
 					$skip = 1;
 				else {
 					$tmp = array();
@@ -246,8 +274,8 @@ class GetServers extends GetServersBase {
 					$tmp[$d[1]][] = $d[2];
 				else
 					continue;
-					}
-				
+
+			}
 
 		}
 

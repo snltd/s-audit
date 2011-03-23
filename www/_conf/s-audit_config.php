@@ -14,6 +14,9 @@
 //
 //============================================================================
 
+define("MY_VER", "3.0");
+    // Interface software version
+
 define("ROOT", $_SERVER["DOCUMENT_ROOT"]);
 	// Site root. Usually document root
 

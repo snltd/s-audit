@@ -31,10 +31,12 @@ $grid_key = array(
 	),
 
 	"fs" => array(
-		array("ZFS dataset can be upgraded", "zfs",
-		inlineCol::solid("orange")),
-		array("NFS mount not in vfstab", "nfs", inlineCol::solid("red")),
+		array("mount not in vfstab", "solidblue"),
+		array("&gt;85% of capacity used", "solidamber", false),
+		array("&gt;90% of capacity used", "solidred", false),
 		array("read-only filesystem", "solidgrey", false),
+		array("ZFS dataset can be upgraded", "zfs",
+		inlineCol::solid("orange"))
 	),
 
 	"export" => array(

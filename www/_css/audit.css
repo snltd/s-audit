@@ -62,31 +62,38 @@ th, td.comprow { /* table headings for audit grids */
 	border-bottom: 1px solid black;
 }
 
+.audit a {
+	color: black;
+}
+
+a.zlink {
+	color: #333;
+}
+
 /*-- backgrounds for rows --------------------------------------------------*/
 
 .server, td.svhn { /* global zones/servers. Used in <tr> and <td> */
 	background-color: #d0d4fe;
-	color: black;
 }
 
 .zone, td.zhn { /* analagous to .server, but for local zones */
 	background-color: #e5e5e5;
-	color: #333;
 }
 
-.ldmp, td.ldmp { /* analagous to .server, but for primary LDMs */
+.ldmp { /* analagous to .server, but for primary LDMs */
 	background-color: #c4d5cc;
-	color: #333;
 }
 
-.ldm, td.ldm { /* analagous to .server, but for LDMs */
+.ldm { /* analagous to .server, but for LDMs */
 	background-color: #c5ccb4;
-	color: #333;
 }
 
-.vb, td.vb { /* analagous to .server, but for VirtualBoxes */
+.vb { /* analagous to .server, but for VirtualBoxes */
 	background-color: #c6bdfe;
-	color: #333;
+}
+
+.ldm, .ldmp, .server .vb {
+	color: black;
 }
 
 /*-- hostnames -------------------------------------------------------------*/
@@ -118,18 +125,18 @@ td.serverhn { /* hostname for global zones/physical servers */
 
 /*-- embedded lists --------------------------------------------------------*/
 
-.audit ul, ul.smallaudit, ul.smallauditl, .ssall ul {
+.audit ul, ul.smallaudit, ul.smallauditl, .ssall ul, ul.auditl {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-.audit li, ul.smallaudit, ul.smallauditl, .ssall li {
+.audit li, ul.smallaudit, ul.smallauditl, .ssall li, ul.auditl {
 	margin-bottom: 1px;
 	padding: 1px;
 }
 
-ul.smallaudit, ul.smallauditl {
+ul.smallaudit, ul.smallauditl, ul.smallindent {
 	
 	/* smallaudit and smallauditl are centred and left-aligned lists with
 	 * small writing */
@@ -137,14 +144,17 @@ ul.smallaudit, ul.smallauditl {
 	font-size: 7pt;
 }
 
-ul.smallauditl, ul.smallindent {
+ul.smallauditl, ul.smallindent, ul.auditl, ul.indent {
 	text-align: left;
 }
 
-ul.smallindent { /* used for user_attr and cron */
-	font-size: 6pt;
+ul.smallindent, ul.indent { /* used for user_attr and cron */
 	padding-left: 20px;
 	text-indent: -20px;
+}
+
+td.nopad {
+    padding: 0;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -159,4 +169,3 @@ td.keyhead { /* table row which separtes the data from the key */
 	font-size: 13px;
 	font-weight: bold;
 }
-

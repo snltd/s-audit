@@ -20,7 +20,7 @@ else {
 
 		"col_1" => array(
 			array("physical server", "server", false),
-			array("logical domain", "ldmp", false),
+			array("guest logical domain", "ldm", false),
 			array("VirtualBox", "vb", false)
 		),
 	

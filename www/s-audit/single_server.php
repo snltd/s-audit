@@ -16,6 +16,8 @@ require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 require_once(LIB . "/server_view_classes.php");
 
+define("SINGLE_SERVER", 1);
+
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
@@ -32,14 +34,15 @@ if (($server)) {
 
 	$pg = new ssPage($server, false);
 	
-	// parse all the audit files relating to this server, and create a new
-	// serverview object, passing only the relevant server array. (It's the
-	// entire contents of the array, just buried a couple of layers down.)
+	// Get everything related to this server/zone. We don't want local zones
+	// if this is a global. If more audit classes are added, they need to go
+	// in this array. GetServers always gets platform data, so no need to
+	// specify it here
 
-	$data = new GetServers($map, $server);
-	echo "<prE>", print_r($data), "</pre>";
-	//$view = new serverView($server, $data->all_data, $map);
-	define("SINGLE_VIEW", 1);
+	$data = new GetServers($map, $server, array("os", "net", "fs", "app",
+	"tool", "hosted", "security", "patch" ));
+
+	$view = new serverView($data->get_array(), $map);
 }
 
 else {

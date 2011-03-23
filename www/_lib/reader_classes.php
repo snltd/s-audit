@@ -28,6 +28,9 @@ class ZoneMapBase {
 	// which define the way zones relate to each other. It also has a map of
 	// zones
 
+	private $t_start_map;
+		// microtime at which we begin creating the map
+
 	public $offset;
 		// The starting server to display, as a number
 

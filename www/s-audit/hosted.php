@@ -25,14 +25,18 @@ $grid->zone_toggle());
 $um = "<a href=\"" . DOC_URL . "/extras/uri_map_file.php" .
 "\">URI map file</a>";
 
-echo "\n<p class=\"center\">";
+if (file_exists(URI_MAP_FILE)) {
+	$f_info = stat(URI_MAP_FILE);
 
-echo (file_exists(URI_MAP_FILE))
-	? "This table incorporates data from a $um generated at "
-	. date("H:i D d/m/Y", filemtime(URI_MAP_FILE))
-	: "You do not have a $um";
+	$txt = (($f_info["size"]) == 0)
+		? "You have a $um file, but it contains no entries."
+		: "This table incorporates data from a $um generated at "
+		. date("H:i D d/m/Y", filemtime(URI_MAP_FILE));
+}
+else
+	$txt = "You do not have a $um";
 
-echo ".</p>", $grid->show_grid();
+echo "\n<p class=\"center\">${txt}.</p>", $grid->show_grid();
 
 $pg->close_page();
 
