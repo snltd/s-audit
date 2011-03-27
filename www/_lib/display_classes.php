@@ -769,7 +769,7 @@ class HostGrid {
 			// For local zones, we highlight whole-root with a red box, and
 			// put non-native zones on an amber field
 
-			$za = split("/", preg_replace("/zone \((.*)\)/", "\\1", $vz));
+			$za = explode("/", preg_replace("/zone \((.*)\)/", "\\1", $vz));
 
 			// za has elements [0] => whole/spare root, [1]=> brand
 
@@ -1128,7 +1128,7 @@ class HostGrid {
 		elseif (preg_match("/min/", $up))
 			$up = preg_replace("/ min.*$/", "", $up);
 		elseif (preg_match("/:/", $up)) {
-			$hm = split(":", $up);
+			$hm = explode(":", $up);
 			$up = (60 * $hm[0]) + $hm[1];
 		}
 
@@ -1336,12 +1336,12 @@ class HostGrid {
 			elseif ($a[2] == "installed")
 				$class = "solidamber";
 			else {
+				$txt .= "<div>zone &quot;$a[2]&quot;</div>";
 				$class = "solidred";
 				$a[0] = "$a[0] ($a[2])";
 			}
 
-			$call[] = array($txt, 
-			$class, $col);
+			$call[] = array($txt, $class, $col);
 		}
 
 		return new listCell($call, "smallaudit");
@@ -2059,7 +2059,7 @@ class HostGrid {
 
 			// Split up $a[5]
 
-			$b = split(";", $a[5]);
+			$b = explode(";", $a[5]);
 
 			// So now b is an array with
 			// [0] = device
