@@ -27,7 +27,7 @@
 // This array tells us how to colour NICs. The subnets and colours are
 // site-specific, so you will most likely want to change them.
 
-colours::$nic_cols = array(
+$nic_cols = array(
 	"10.0.2" => "#62A189",			// aqua (VirtualBox internal net)
 	"192.168.1" => "#c27fac",		// purple
 	"10.10.8" => "#967e4a",			// brown

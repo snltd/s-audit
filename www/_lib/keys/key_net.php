@@ -46,7 +46,7 @@ if (defined("OMIT_PORT_THRESHOLD"))
 
 // Generate the NIC key automatically
 
-foreach(colours::$nic_cols as $net=>$col) {
+foreach($this->cols->get_col_list("nic_cols") as $net=>$col) {
 	$class = "net$net";
 
     if ($net == "alom" || $net == "vlan")

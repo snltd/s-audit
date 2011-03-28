@@ -73,23 +73,23 @@ a.zlink {
 /*-- backgrounds for rows --------------------------------------------------*/
 
 .server, td.svhn { /* global zones/servers. Used in <tr> and <td> */
-	background-color: #d0d4fe;
+	background-color: #C0C9E4;
 }
 
 .zone, td.zhn { /* analagous to .server, but for local zones */
-	background-color: #e5e5e5;
+	background-color: #DCDCDC;
 }
 
 .ldmp { /* analagous to .server, but for primary LDMs */
-	background-color: #c4d5cc;
+	background-color: #A2B9A3;
 }
 
 .ldm { /* analagous to .server, but for LDMs */
-	background-color: #c5ccb4;
+	background-color: #C4D9CE;
 }
 
 .vb { /* analagous to .server, but for VirtualBoxes */
-	background-color: #c6bdfe;
+	background-color: #9D97CA;
 }
 
 .ldm, .ldmp, .server .vb {
@@ -116,11 +116,11 @@ td.serverhn { /* hostname for global zones/physical servers */
 /*-- versioning ------------------------------------------------------------*/
 
 .ver_l { /* latest version of something */
-	background: #acce9a
+	background: #B2C5AC;
 }
 
 .ver_o { /* old versions of something */
-	background: #cea596
+	background: #DC8A82;
 }
 
 /*-- embedded lists --------------------------------------------------------*/

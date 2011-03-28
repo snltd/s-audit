@@ -89,7 +89,7 @@ class singleGeneric extends HostGrid {
 	protected $width = "700px";
 		// the width of the table used to present the information
 
-	protected $cols = 2;
+	protected $columns = 2;
 		// The default number of columns of properties. Each "column" is
 		// really two <table> columns, because there's name and value
 
@@ -115,6 +115,8 @@ class singleGeneric extends HostGrid {
 		// The printed name of the audit class comes from capitalizing the
 		// first letter of the class name. This can be overriden by setting
 		// $type in the inheriting class
+
+		$this->cols = new Colours;
 
 		if (!isset($this->type))
 			$this->type = ucfirst($type);
@@ -179,13 +181,13 @@ class singleGeneric extends HostGrid {
 
 				if ($c != 0) 
 					$ret .= new Cell(false, false, false, false,
-					(($this->cols - $c) * 2)) . "</tr>\n<tr class=\"zone\">";
+					(($this->columns - $c) * 2)) . "</tr>\n<tr class=\"zone\">";
 
 				$val_cell = preg_replace("/<td/", "<td colspan=\"" .
-				(($this->cols * 2) - 1) . "\"", $this->show_cell($field,
+				(($this->columns * 2) - 1) . "\"", $this->show_cell($field,
 				$val));
 				
-				$c = $this->cols;
+				$c = $this->columns;
 			}
 			else {
 				$val_cell = $this->show_cell($field, $val);
@@ -194,7 +196,7 @@ class singleGeneric extends HostGrid {
 
 			$ret .= "<th>$field</th>" . $val_cell;
 
-			if ($c == $this->cols || in_array($field, $this->one_cols)) {
+			if ($c == $this->columns || in_array($field, $this->one_cols)) {
 				$ret .= "</tr>";
 				$c = 0;
 			}
@@ -204,14 +206,14 @@ class singleGeneric extends HostGrid {
 		if ($c !=0)
 			$ret .= "</tr>";
 
-		return $ret . $this->completed_footer($this->cols * 2);
+		return $ret . $this->completed_footer($this->columns * 2);
 	}
 
-	protected function completed_footer($cols)
+	protected function completed_footer($columns)
 	{
 		// Print an "audit completed" bar across the whole table
 	
-		return "\n<tr class=\"zone\"><th colspan=\"" . ($cols - 1)
+		return "\n<tr class=\"zone\"><th colspan=\"" . ($columns - 1)
 		. "\">audit completed</th>"
 		. $this->show_audit_completed($this->data["audit completed"])
 		. "</tr>";
@@ -308,9 +310,9 @@ class singleApp extends singleGeneric {
         $this->sun_cc_vers = $defs->get_data("sun_cc_vers");
 
 		if ($d <= 4)
-			$this->cols = $d;
+			$this->columns = $d;
 		else
-			$this->cols = 4;
+			$this->columns = 4;
 
 		parent::__construct($type, $data, $map, $gzd);
 	}
@@ -460,13 +462,13 @@ class singlePatch extends singleGeneric
 
 			$ret .= "<p class=\"center\">$footnote</p>";
 
-			$cols = (sizeof($val) > $pdef)
+			$columns = (sizeof($val) > $pdef)
 				? $pdef
 				: sizeof($val);
 
 			$ret .= "\n\n<table class=\"plist\" align=\"center\" "
 			. "width=\"$this->width\">"
-			. "\n  <tr><th colspan=\"$cols\">$field</th></tr>";
+			. "\n  <tr><th colspan=\"$columns\">$field</th></tr>";
 
 			$c = 0;
 
@@ -534,7 +536,7 @@ class singlePatch extends singleGeneric
 				$ret .= new Cell($p, $fcol, $bcol, false, false, $hover);
 				$c++;
 
-				if ($c == $cols) {
+				if ($c == $columns) {
 					$ret .= "</tr>";
 					$c = 0;
 				}
@@ -563,7 +565,7 @@ Class serverListGrid
 
 	private $map;		// map of all servers
 	private $gkey;		// grid key
-	private $cols; 		// columns in table
+	private $columns; 		// columns in table
 
 	public function __construct($map)
 	{

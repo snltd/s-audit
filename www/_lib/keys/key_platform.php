@@ -20,7 +20,7 @@ $grid_key = array(
 
 	"hardware" => array(
 		array("SPARC hardware", false,
-			inlineCol::box(colours::$plat_cols["sparc"])),
+			$this->cols->icol("box", "sparc", "plat_cols")),
 		array("32-bit O/S", "solidamber", false)
 	),
 
@@ -63,8 +63,8 @@ $grid_key = array(
 		array("optical drive", "cd", false),
 		array("tape drive", "tp", false),
 		array("fibre array", "fc", false),
-		array("loaded CD/DVD", "cd", inlineCol::solid("amber")),
-		array("mounted CD/DVD", "cd", inlineCol::solid("green"))
+		array("loaded CD/DVD", "cd", $this->cols->icol("solid", "amber")),
+		array("mounted CD/DVD", "cd", $this->cols->icol("solid", "green"))
 	),
 
 );

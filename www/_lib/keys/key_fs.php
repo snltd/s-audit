@@ -36,20 +36,21 @@ $grid_key = array(
 		array("&gt;90% of capacity used", "solidred", false),
 		array("read-only filesystem", "solidgrey", false),
 		array("ZFS dataset can be upgraded", "zfs",
-		inlineCol::solid("orange"))
+		$this->cols->icol("solid", "orange"))
 	),
 
 	"export" => array(
 		array("NFS filesystem with no known mounts", "nfs",
-		inlineCol::solid("amber")),
-		array("unassigned VDISK", "vdisk", inlineCol::solid("amber"))
+		$this->cols->icol("solid", "amber")),
+		array("unassigned VDISK", "vdisk", $this->cols->icol("solid",
+		"amber"))
 	)
 
 );
 
 // Automatically populate the fs and export fields.
 
-foreach (colours::$fs_cols as $f=>$col) {
+foreach ($this->cols->get_col_list("fs_cols") as $f=>$col) {
 
 	// most fstyps only make sense in one context
 

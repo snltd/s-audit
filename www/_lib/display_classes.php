@@ -70,6 +70,9 @@ class HostGrid {
 	protected $audex;
 		// extra data from static files
 
+	protected $cols;
+		// Colours
+
 	//------------------------------------------------------------------------
 	// METHODS
 
@@ -82,6 +85,7 @@ class HostGrid {
 		$this->servers = $servers;
 		$this->fields = $this->get_fields();
 		$this->map = $map;
+		$this->cols = new Colours;
 
 		$this->show_zones = (isset($_GET["z"]) && ($_GET["z"] == "hide"))
 			? false
@@ -734,7 +738,7 @@ class HostGrid {
 
 		$frame = ($a[1] == "i86pc")
 			? false
-			: inlineCol::box(colours::$plat_cols["sparc"]);
+			: $this->cols->icol("box", "sparc", "plat_cols");
 
 		// Put a line break in if we're not in single server mode
 
@@ -784,7 +788,7 @@ class HostGrid {
 				// already used the class doing a box
 				
 				if ($za[1] != "native") {
-					$col = inlineCol::solid("amber");
+					$col = $this->cols->icol("solid", "amber");
 					$str .= " (<strong>$za[1]</strong> brand)";
 				}
 				
@@ -863,17 +867,25 @@ class HostGrid {
 
 		if (is_array($data))  {
 
-			$colfn = ($guess)
-				? "box"
-				: "solid";
+			$ct = ($guess)
+				? "boxnet"
+				: "net";
 
-			$sn = (isset(colours::$nic_cols["alom"]))
-				? "alom"
-				: PlatformGrid::get_subnet($ip[0]);
+			// If we have an alom colour, use that. If not, try to get a
+			// subnet colour
 
-			$col = colours::$nic_cols[$sn];
+			if ($this->cols->get_col("alom", "nic_cols"))
+				$class = $ct . "alom";
+			else {
+				$sn = PlatformGrid::get_subnet($data[0]);
 
-			$c = new Cell($data[0], false, inlineCol::$colfn($col));
+				$class = ($sn)
+					? $ct . preg_replace("/\./", "", $sn)
+					: false;
+
+			}
+
+			$c = new Cell($data[0], $class);
 		}
 		else
 			$c = new Cell();
@@ -949,9 +961,9 @@ class HostGrid {
 					$class = "cd";
 
 					if (preg_match("/\(loaded\)/", $datum))
-						$ic = inlineCol::solid("amber");
+						$ic = $this->cols->icol("solid", "amber");
 					elseif (preg_match("/\(mounted\)/", $datum))
-						$ic = inlineCol::solid("green");
+						$ic = $this->cols->icol("solid", "green");
 					break;
 				
 				case "tape":
@@ -1206,7 +1218,7 @@ class HostGrid {
 
 		if (!$this->map->is_global($zn) && ($data[0] !=
 		$this->get_parent_prop($zn, "os", "kernel")))
-			$col = inlineCol::box("amber");
+			$col = $this->cols->icol("box", "amber");
 			
 		return new Cell($data[0], $class, $col);
 	}
@@ -1302,7 +1314,8 @@ class HostGrid {
 			// do we print resource caps?
 
 			if ($a[4]) {
-				$txt .= "<div style=\"" . inlineCol::box("pink") . "\">";
+				$txt .= "<div " . $this->cols->icol("box", "black", false, 1)
+				. ">";
 				$b = explode(",", $a[4]);
 
 				foreach($b as $cap) {
@@ -1326,7 +1339,7 @@ class HostGrid {
 
 			if ($a[1] != "native") {
 				$txt .= "<div>[$a[1] brand]</div>";
-				$col = inlineCol::box("amber");
+				$col = $this->cols->icol("box", "amber");
 			}
 			
 			// Get the colour to background the zone name
@@ -1416,7 +1429,7 @@ class HostGrid {
 				$class = "false";
 
 			$col = (preg_match("/not running/", $datum))
-				? inlineCol::box("red")
+				? $this->cols->icol("box", "red")
 				: false;
 			
 			$c_arr[] = array(preg_replace("/ \(.*$/", "", $datum), $class,
@@ -1496,7 +1509,7 @@ class HostGrid {
 				: "solidamber";
 
 			$col = ($a[2] == "inetd")
-				? inlineCol::box("red")
+				? $this->cols->icol("box", "red")
 				: false;
 
 			$txt .= ($a[1] != "")
@@ -2082,7 +2095,7 @@ class HostGrid {
 			$txt = "<div";
 			
 			if (isset($a[8]))
-				$txt .= " style=\"" .inlineCol::solid("blue") . "\"";
+				$txt .= $this->cols->icol("solid", "blue", false, 1);
 
 			$txt .= "><strong>$a[0]</strong> (" . strtoupper($a[1]);
 
@@ -2107,9 +2120,9 @@ class HostGrid {
 			$used = str_replace("%", "", $a[3]);
 
 			if ($used > 90)
-				$duc = "style=\"" . inlineCol::solid("red") . "\"";
+				$duc = $this->cols->icol("solid", "red", false, 1);
 			elseif ($used > 80)
-				$duc = "style=\"" . inlineCol::solid("amber") . "\"";
+				$duc = $this->cols->icol("solid", "amber", false, 1);
 			else
 				$duc = "";
 
@@ -2122,7 +2135,7 @@ class HostGrid {
 			$txt .= "<div class=\"indent\"";
 
 			if (preg_match("/\bro\b/", $b[1]))
-				$txt .= " style=\"" . inlineCol::solid("grey") . "\"";
+				$txt .= $this->cols->icol("solid", "grey", false, 1);
 			
 			$txt .= ">$b[1]</div>";
 
@@ -2227,7 +2240,7 @@ class HostGrid {
 
 					if ($mnts == 0) {
 						$txt .= " (0 known mounts)";
-						$col = inlineCol::solid("amber");
+						$col = $this->cols->icol("solid", "amber");
 					}
 					elseif ($mnts == 1)
 						$txt .= " (1 known mount)";
@@ -2255,7 +2268,7 @@ class HostGrid {
 				if (preg_match("/bound to unassigned$/", $opts)) {
 					$l2 =preg_replace("/bound to unassigned$/", " -
 					UNASSINGED", $opts);
-					$col = inlineCol::solid("amber");
+					$col = $this->cols->icol("solid", "amber");
 				}
 				else
 					$l2 = $opts;
@@ -2416,7 +2429,7 @@ class HostGrid {
 						$col = "amber";
 
 					if (isset($col)) {
-						$row2 .= " style=\"" . inlineCol::solid($col) . "\"";
+						$row2 .= $this->cols->icol("solid", $col, false, 1);
 						break;
 					}
 
@@ -2436,8 +2449,7 @@ class HostGrid {
 			else {
 
 				if (!preg_match("|\.conf$|", $cf))
-					$row3 .= " style=\"" . inlineCol::solid("amber") .
-					"\"";
+					$row3 .= $this->cols->icol("solid", "amber", false, 1); 
 
 				$row3 .= ">config: $cf</div>";
 			}
@@ -2468,7 +2480,7 @@ class HostGrid {
 			if ($arr[3]) {
 				$str .= "<div class=\"indent\">last updated: 
 				$arr[3]</div>";
-				$col = inlineCol::solid("amber");
+				$col = $this->cols->icol("solid", "amber"); 
 			}
 				
 			$c_arr[] = array($str, $arr[0], $col);
@@ -3173,7 +3185,7 @@ class SoftwareGrid extends HostGrid
 		// And box the cell in red if something's not running
 
 		if (preg_match("/not running/", $ta[0]))
-			$style = inlineCol::box("red");
+			$style = $this->cols->icol("box", "red");
 
 		return array($ta[0], $class, $style, false, false, $path);
 	}
