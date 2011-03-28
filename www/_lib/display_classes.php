@@ -503,7 +503,7 @@ class HostGrid {
 				$err_str = "Missing information for global zone. Local zones
 				below.";
 			else
-				$err_str = "expected file not found _ERR_";
+				$err_str = "expected data not found _ERR_";
 
 			$ret_str = "\n<tr>" . new Cell("ERROR: " . str_replace("_ERR_",
 			"[${data}]", $err_str), "error", false, false,
