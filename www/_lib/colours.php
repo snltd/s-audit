@@ -112,18 +112,20 @@ class colours {
 		if ($class) {
 			$cl = $this->$class;
 
-			$col = (isset($cl[$col]))
+			$ret = (isset($cl[$col]))
 				? $cl[$col]
 				: false;
 		}
 		else
-			$col = $this->cols[$col];
+			$ret = $this->cols[$col];
 
-		return $col;
+		return $ret;
 	}
 
 	public function get_col_list($cl)
 	{
+		// Return a whole colour array
+
 		return $this->$cl;
 	}
 
@@ -141,8 +143,8 @@ class colours {
 			: "";
 			
 		$ret .= ($type == "box")
-			?  "border: 2px solid $col"
-			: "background: $col";
+			?  "border: 2px solid $chex"
+			: "background: $chex";
 
 		if ($html)
 			$ret .= "\"";

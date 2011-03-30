@@ -93,12 +93,52 @@ class HostGrid {
 
 		$this->get_key();
 
-		if (file_exists(EXTRA_DIR . "/${class}.audex")) {
-			$this->audex = parse_ini_file(EXTRA_DIR . "/${class}.audex",
-			TRUE);
+		// We may have static data. This is in ini file format, to make life
+		// easier for me. If the file is there, read it and parse it. It
+		// will be names class.audex, and in the EXTRA_DIR directory. We
+		// want it as an associative array
 
+		$stat_f = EXTRA_DIR . "/${class}.audex";
+
+		if (file_exists($stat_f)) {
+			$this->audex = parse_ini_file($stat_f, TRUE);
+
+			// Fields in static files can contain an AFTER definition, which
+			// tells us where to put that fields.
+		
 			foreach($this->audex as $xf=>$xd) {
-				if (!in_array($xf, $this->fields))
+
+				// If we already have this field, do nothing
+
+				if (in_array($xf, $this->fields))
+					continue;
+
+				// We have an AFTER
+
+				elseif (in_array("AFTER", array_keys($xd))) {
+					$to_follow = $xd["AFTER"];
+
+					// Do we have the field we're supposed to follow? If so,
+					// put xf in the fields array. If not, tag it on the
+					// end. There aren't many fields, so I don't feel too
+					// bad about the for() loop
+
+					if (in_array($to_follow, $this->fields)) {
+					
+						foreach($this->fields as $f) {
+							$newf[] = $f;
+							if ($f == $to_follow) $newf[] = $xf;
+						}
+						$this->fields = $newf;
+					}
+					else
+						$this->fields[] = $xf;
+
+				}
+				
+				// If there's no AFTER, just tag the field on the end
+
+				else
 					$this->fields[] = $xf;
 			}
 
@@ -106,7 +146,6 @@ class HostGrid {
 		}
 
 		$this->fields = $this->sort_fields("audit completed");
-
 	}
 
 	public function get_parent_prop($zone, $class, $prop)
@@ -355,6 +394,13 @@ class HostGrid {
 
 		foreach($this->fields as $field) {
 
+			// If we've used a static file, say so in the key
+
+			if (isset($this->audex_keys) && in_array($field,
+			$this->audex_keys))
+				$this->grid_key[$field][] = array("data from static file",
+				"solidpink", false);
+
 			$ret .= (in_array($field, array_keys($this->grid_key))) 
 				? $this->grid_key_col($this->grid_key[$field])
 				: new Cell();
@@ -456,10 +502,12 @@ class HostGrid {
 							$ret_str .= $this->show_generic($data[$field],
 							$field);
 					}
+
+					// There may be static data
+
 					elseif (isset($this->audex_keys) && in_array($field,
 					$this->audex_keys) && isset($this->audex[$field][$z])) {
-						$ret_str .=
-						new Cell ($this->audex[$field][$z],
+						$ret_str .= new Cell ($this->audex[$field][$z],
 						"solidpink");
 					}
 
@@ -717,19 +765,15 @@ class HostGrid {
 	protected function show_hardware($data) 
 	{
 		// Print the hardware platform. Some things don't report exactly
-		// what is printed on the front.
+		// what is printed on the front, so we look up the name in the
+		// hw_names[] array
 
-		// Put 32-bit OSes on an amber field.
-		// Outline x86
+		// Put 32-bit OSes on an amber field.  Outline SPARC.
 	
-		$hwnames = array(
-			"Sun Fire T200" => "Sun T2000"
-			);
-
 		preg_match("/^(.*) \((.*)\)/", $data[0], $a);
 
-		$hw = (in_array($a[1], array_keys($hwnames)))
-			? $hwnames[$a[1]]
+		$hw = (in_array($a[1], array_keys($this->hw_db)))
+			? $this->hw_db[$a[1]]
 			: $a[1];
 
 		$class = (preg_match("/^32-bit/", $a[2]))
@@ -2893,6 +2937,7 @@ class PlatformGrid extends HostGrid
 		// Helps us include they key file automatically
 
 	protected $card_db;	// Card definitions from defs.php
+	protected $hw_db;	// Card definitions from defs.php
 
 	public function __construct($map, $servers, $c)
 	{
@@ -2910,6 +2955,7 @@ class PlatformGrid extends HostGrid
 		require_once(LIB . "/defs.php");
 		$defs = new defs();
 		$this->card_db = $defs->get_data("card_db");
+		$this->hw_db = $defs->get_data("hw_db");
 	}
 
 }

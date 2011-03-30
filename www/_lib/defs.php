@@ -20,7 +20,7 @@ class defs {
 	// The names machines identify themselves as, mapped to the names we
 	// call them
 
-	private $hw_names = array(
+	private $hw_db = array(
 		"Sun Fire T200" => "Sun T2000"
 	);
 
