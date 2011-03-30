@@ -2583,7 +2583,7 @@ class HostGrid {
 
 		// We're not interested in the ones in omit_attrs
 
-		$ns = (isset($this->omit))
+		$ns = (isset($this->omit->omit_attrs))
 			? array_diff($data, $this->omit->omit_attrs)
 			: $data;
 

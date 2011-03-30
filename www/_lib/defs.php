@@ -16,6 +16,13 @@
 //----------------------------------------------------------------------------
 
 class defs {
+	
+	// The names machines identify themselves as, mapped to the names we
+	// call them
+
+	private $hw_names = array(
+		"Sun Fire T200" => "Sun T2000"
+	);
 
 	// Solaris releases by date, converted to update number and/or hardware
 	// release
@@ -104,7 +111,6 @@ class defs {
 				"LSI,1030" => "LSI diffrential SCSI"
 			)
 		);
-
 
 	public function get_data($type)
 	{

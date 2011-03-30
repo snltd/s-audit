@@ -145,46 +145,12 @@ class ZoneMapBase {
 		return $ret;
 	}
 
-	/*
-
-	public function get_pairs()
+	public function has_data($zone)
 	{
-		// Returns a list of paired servers
-
-		// There's no way we could work some pairs out, so you can hard-code
-		// them here, in the $friends[] array
-
-		//$friends = array("stephen" => "stanley");
-		$friends = array();
-		
-		$all = $this->list_all();
-
-		foreach($all as $zone) {
-
-			// We may already have found a match for this zone
-
-			if (array_key_exists($zone, $friends) || (in_array($zone,
-			array_values($friends))))
-				continue;
-
-			// Try to work out what the paired zone should be called
-
-			if(strpos("01", $zone))
-				$pair =  preg_replace("/01/", "02", $zone);
-			elseif(strpos("02", $zone))
-				$pair =  preg_replace("/02/", "01", $zone);
-
-			if (isset($pair) && in_array($pair, $all) &&
-				($this->has_data($zone) && $this->has_data($pair)))
-				$friends[$zone] = $pair;
-
-		}
-
-		ksort($friends);
-
-		return $friends;
+		return in_array($zone, $this->list_all())
+			? true
+			: false;
 	}
-	*/
 
 }
 
@@ -217,48 +183,4 @@ class GetServersBase {
 
 }
 
-//----------------------------------------------------------------------------
-// SERVER COMPARISON
-
-/*
-class GetServersCompare extends GetServers
-{
-	public function __construct($map, $slist)
-	{
-		$call = array("platform", "os", "fs", "app", "tool", "plist",
-		"hosted");
-
-		parent::__construct($map, $call, $slist);
-	}
-}
-*/
-
-//----------------------------------------------------------------------------
-// SINGLE SERVER VIEW
-
-/*
-class GetServerSingle extends GetServers {
-
-	public $all_data;
-
-	// Make an array of arrays. Each sub-array is of the normal "platform",
-	// "tool", "fs" type.
-
-	public function __construct($map, $server)
-	{
-	
-		$types = array("platform", "os", "fs", "app", "tool", "hosted",
-		"security", "plist");
-
-		foreach ($types as $type) {
-			$this->all_data[$type] =
-			$this->get_zone($map->get_base($server), $type);
-		}
-
-	}
-
-
-}
-
-*/
 ?>

@@ -68,9 +68,10 @@ class serverView extends HostGrid {
 		foreach($this->zdata as $type=>$data) {
 			$class = "single$type";
 
-			$ret .= (class_exists($class))
-				? new $class($type, $data, $this->map, $this->gzd)
-				: new singleGeneric($type, $data, $this->map, $this->gzd);
+			if (!class_exists($class))
+				$class = "singleGeneric";
+
+			$ret .= new $class($type, $data, $this->map, $this->gzd);
 		}
 
 		return $ret;

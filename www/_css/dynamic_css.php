@@ -37,7 +37,9 @@ $col_grp = $fscol_grp = $storcol_grp = $hscol_grp = "";
 $qs = preg_replace("/\?.*$/", "", $_SERVER["QUERY_STRING"]);
 $qs = str_replace("class_", "", $qs);
 
-if ($qs == "single_server.php")
+// single server and compare views potentially need everything
+
+if ($qs == "single_server.php" || $qs == "compare.php")
 	define("ALL", 1);
 
 // Tell the browser what's coming, and open the stylesheet with a comment.
