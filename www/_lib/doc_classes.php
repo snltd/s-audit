@@ -81,9 +81,27 @@ class docHelper {
 	private $generic_key;
 		// where we hold a copy of the generic_key
 
-	function __construct($cname = false, $generic_key = false)
+	protected $cols;
+
+	function __construct($cname = false)
 	{
 		$this->cname = $cname;
+		$this->cols = new Colours;
+
+		// We're likely to want to include a key
+
+		$class_key = KEY_DIR . "/" . preg_replace("/class/", "key",
+		basename($_SERVER["PHP_SELF"]));
+
+		if (file_exists($class_key)) {
+			include_once($class_key);
+			$this->grid_key = $grid_key;
+		}
+
+		// And we definitely want the generic key
+
+		include(KEY_DIR . "/key_generic.php");
+
 		$this->generic_key = $generic_key;
 	}
 

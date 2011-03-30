@@ -1988,33 +1988,31 @@ class HostGrid {
 		$c_arr = false;
 
 		foreach($data as $row) {
-			$rarr = preg_split("/[ :]/", $row);
+			$a = preg_split("/[ :]/", $row, 5);
 
-			// for a normal zpool we'll have 7 fields
+			// for a normal zpool we'll have 5 fields
 			//
 			// 0 - pool name
 			// 1 - raw capacity
 			// 2 - zpool version/highest available version
 			// 3 - zpool state
-			// 4 - "last"
-			// 5 - "scrub"
-			// 6 - date of last scrub
+			// 4 - (last scrub: ddd mmm DD HH:MM:SS YYYY)
 
 			// A faulted pool just has two
 			//
 			// 0 - pool name
 			// 1 - "FAULTED"
 
-			$txt = "<strong>$rarr[0]</strong> $rarr[1]";
+			$txt = "<strong>$a[0]</strong> $a[1]";
 
-			if ($rarr[1] == "FAULTED")
+			if ($a[1] == "FAULTED")
 				$class = "solidred";
 			else {
 
 				// We deal with the version part separately
 
 				$varr = explode("/", preg_replace("/[\[\]]/", "",
-				$rarr[2]));
+				$a[2]));
 
 				if ($varr[0] != $varr[1]) {
 					$vex = "v$varr[0] (v$varr[1] supported)";
@@ -2025,13 +2023,41 @@ class HostGrid {
 					$class = false;
 				}
 
-				$txt .= "<div>$vex $rarr[3]</div>";
+				$txt .= "<div>$vex $a[3]</div>";
+			
+				// Time of last scrub. This comes in a form we can't really
+				// use
+
+				$ls = preg_split("/[\W]/ ", $a[4]);
+
+				if ($ls[4] == "none")
+					$txt .= "<div>not scrubbed</div>";
+				else {
+
+					// So ls is of the form:
+					// [0] => 
+					// [1] => last
+					// [2] => scrub
+					// [3] => 
+					// [4] => Sun
+					// [5] => Mar
+					// [6] => 20
+					// [7] => 01
+					// [8] => 44
+					// [9] => 28
+					// [10] => 2011
+					// [11] => 
+
+					$txt .= "<div>scrubbed: $ls[7]:$ls[8] "
+					. "$ls[6] $ls[5] $ls[10]</div>";
+				}
+
 			}
 
 			// if the pool is in a degrated state, override the background
 			// colour
 
-			if ($rarr[1] == "DEGRADED")
+			if ($a[3] == "DEGRADED")
 				$class = "solidamber";
 
 			$c_arr[] = array($txt, $class);
@@ -2133,13 +2159,13 @@ class HostGrid {
 			preg_match(":^/platform\b|^/dev\b|^/\.S:", $a[0]))
 				continue;
 
-			// If this isn't in the vfstab, put the first line on a blue
+			// If this isn't in the vfstab, put the first line on a pink
 			// field and add on "not in vfstab"
 
-			$txt = "<div";
+			$txt = "<div ";
 			
 			if (isset($a[8]))
-				$txt .= $this->cols->icol("solid", "blue", false, 1);
+				$txt .= $this->cols->icol("solid", "pink", false, 1);
 
 			$txt .= "><strong>$a[0]</strong> (" . strtoupper($a[1]);
 

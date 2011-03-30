@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "security audits";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 
 ?>
@@ -56,7 +49,7 @@ the local <tt>/etc/shadow</tt> file, not external password maps such as NIS
 or LDAP. If you have no empty passwords, this field is not displayed.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["empty password"]);
+	echo $dh->colour_key($dh->grid_key["empty password"]);
 ?>
 
 <dd>As the interface produces this column, it keeps track of usernames and
@@ -67,7 +60,7 @@ different username, then that username is highlighted with a red box. This
 can help you find username/UID clashes across your system.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["user"]);
+	echo $dh->colour_key($dh->grid_key["user"]);
 ?>
 
 <dt>authorized key</dt>
@@ -80,7 +73,7 @@ local user is root, a red field is used.</dd>
 displayed.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["authorized key"]);
+	echo $dh->colour_key($dh->grid_key["authorized key"]);
 ?>
 
 <dt>SSH root</dt>
@@ -89,7 +82,7 @@ logins. Please refer to the <a href="../client/class_security.php">client
 security class page</a> for limitations on this information.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["SSH root"]);
+	echo $dh->colour_key($dh->grid_key["SSH root"]);
 ?>
 
 <dt>user_attr</dt>
@@ -117,7 +110,7 @@ privilges is in <strong>bold face</strong>.</dd>
 highlighted by an amber field, if not, by a red box.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["dtlogin"]);
+	echo $dh->colour_key($dh->grid_key["dtlogin"]);
 ?>
 
 <dt>cron job</dt>

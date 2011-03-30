@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "platform audit";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 
 ?>
@@ -46,7 +39,7 @@ for local zones.</dd>
 <dd>The following colour-coding is used:</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["hardware"]);
+	echo $dh->colour_key($dh->grid_key["hardware"]);
 ?>
 
 <dt>virtualization</dt>
@@ -117,7 +110,7 @@ with different contents. In that case each shows the highest currently
 installed OBP version for that particular server type.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["OBP"]);
+	echo $dh->colour_key($dh->grid_key["OBP"]);
 ?>
 
 <dt>ALOM f/w</dt>
@@ -128,7 +121,7 @@ Blank in local zones.</dd>
 installed version numbers for each hardware type.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["ALOM f/w"]);
+	echo $dh->colour_key($dh->grid_key["ALOM f/w"]);
 ?>
 
 <dt>ALOM IP</dt>
@@ -172,7 +165,7 @@ orange cable. This system colour codes authoritative and &quot;guessed&quot;
 ALOM addresses as follows:</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["ALOM IP"]);
+	echo $dh->colour_key($dh->grid_key["ALOM IP"]);
 ?>
 
 <dt>storage</dt>
@@ -180,7 +173,7 @@ ALOM addresses as follows:</dd>
 colour-coding is used to highlight different storage types:</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["storage"]);
+	echo $dh->colour_key($dh->grid_key["storage"]);
 ?>
 
 <dd>Disks are grouped by size and bus type, for instance, SCSI, VBOX, IDE
@@ -217,7 +210,7 @@ systems, you're lucky.</dd>
 <dd>SBUS card auditing is supported on all SBUS equipped SPARC systems.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["storage"]);
+	echo $dh->colour_key($dh->grid_key["storage"]);
 ?>
 
 <dt>printer</dt>

@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "networking audits";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 
 ?>
@@ -44,7 +37,7 @@ NTP server, &quot;broadcasting as server&quot; is displayed on an orange
 field. NTP services not running are denoted by a red box.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["NTP"]);
+	echo $dh->colour_key($dh->grid_key["NTP"]);
 ?>
 
 <dt>name service</dt>
@@ -72,7 +65,7 @@ shown in <strong>bold face</strong>.</dd>
 displayed.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["name server"]);
+	echo $dh->colour_key($dh->grid_key["name server"]);
 ?>
 
 <dt>port</dt>
@@ -114,7 +107,7 @@ system
 displayed.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["port"]);
+	echo $dh->colour_key($dh->grid_key["port"]);
 ?>
 
 <dt>route</dt>
@@ -127,7 +120,7 @@ box. Where applicable, the interface to which a route applies is given after
 the route, in parentheses.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["route"]);
+	echo $dh->colour_key($dh->grid_key["route"]);
 ?>
 
 <dt>NIC</dt>
@@ -162,7 +155,7 @@ physical interface to which they are bound is displayed.</dd>
 following colours:</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["NIC"])
+	echo $dh->colour_key($dh->grid_key["NIC"])
 ?>
 
 <dd>Solid colour fields are used for physical NICs, excludsive IP instances,

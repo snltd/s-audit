@@ -31,7 +31,7 @@ $grid_key = array(
 	),
 
 	"fs" => array(
-		array("mount not in vfstab", "solidblue"),
+		array("mount not in vfstab", "solidpink"),
 		array("&gt;85% of capacity used", "solidamber", false),
 		array("&gt;90% of capacity used", "solidred", false),
 		array("read-only filesystem", "solidgrey", false),
@@ -66,7 +66,6 @@ foreach ($this->cols->get_col_list("fs_cols") as $f=>$col) {
 
 	if ($f == "nfs")
 		$grid_key["export"][] = array("$txt export", $f, false);
-		
 
 }
 

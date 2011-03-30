@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "tool audits";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 
 ?>

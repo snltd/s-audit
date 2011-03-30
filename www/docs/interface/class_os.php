@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "O/S audits";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 
 ?>
@@ -70,7 +63,7 @@ number, in which case no information will be displayed.</dd>
 parent, it will be highlighted by an amber box.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["release"]);
+	echo $dh->colour_key($dh->grid_key["release"]);
 ?>
 
 <dt>kernel</dt>
@@ -92,14 +85,14 @@ parent are highlighted by an amber box. Note that branded zones display
 their kernel version as &quot;Virtual&quot;</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["kernel"]);
+	echo $dh->colour_key($dh->grid_key["kernel"]);
 ?>
 
 <dt>hostid</dt>
 <dd>Displays the hostid of the server or zone.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["hostid"]);
+	echo $dh->colour_key($dh->grid_key["hostid"]);
 ?>
 
 <dt>SMF services</dt>
@@ -120,7 +113,7 @@ brackets.</dd>
 <dd>The following colour-coding is used.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["local zone"]);
+	echo $dh->colour_key($dh->grid_key["local zone"]);
 ?>
 
 <dd>This field is blank for local zones. If you do not have any zoned
@@ -136,7 +129,7 @@ square brackets. The domain's state is highlighted by the following
 colour-coding.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["local zone"]);
+	echo $dh->colour_key($dh->grid_key["local zone"]);
 ?>
 
 <dd>If you do not have any logical domains, this field will not be
@@ -153,7 +146,7 @@ highlighted, as are local zones which have been rebooted since the local
 zone last booted.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["uptime"]);
+	echo $dh->colour_key($dh->grid_key["uptime"]);
 ?>
 
 <dt>packages</dt>
@@ -164,7 +157,7 @@ are highlighted, and the number of partial installs is displayed in
 parentheses.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["packages"]);
+	echo $dh->colour_key($dh->grid_key["packages"]);
 ?>
 
 <dd>You can see exactly which packages are installed on the zone's
@@ -180,7 +173,7 @@ its global parent, it is highlighted on an amber field.</dd>
 methods.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["patches"]);
+	echo $dh->colour_key($dh->grid_key["patches"]);
 
 	$dh->doc_class_end();
 	$pg->close_page();

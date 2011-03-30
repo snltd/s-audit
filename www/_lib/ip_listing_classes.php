@@ -5,9 +5,15 @@
 // ip_listing_classes.php
 // ----------------------
 //
-// Classes used in the IP listing page
+// Classes used to make the IP listing page.
+//
+// Part of s-audit. (c) 2011 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
 //
 //============================================================================
+
+//----------------------------------------------------------------------------
+// DATA COLLECTION
 
 class GetIpList {
 
@@ -172,8 +178,7 @@ class GetIpList {
 	}
 
 }
-		
-		
+
 //----------------------------------------------------------------------------
 // DATA DISPLAY
 
@@ -190,12 +195,11 @@ class IPGrid extends HostGrid{
 		// The fields are the subnets we know about. We have to manually
 		// include the key since we don't call the parent::__construct()
 
-		//echo "<pre>", print_r($this->addrs), "</pre>";
-
 		$this->fields = $s->subnets;
 		$this->l = $s->addrs;
 		include_once(KEY_DIR . "/key_ip_listing.php");
 		$this->grid_key = $grid_key;
+		$this->cols = new Colours;
 	}
 
 	public function grid_header()
@@ -254,8 +258,8 @@ class IPGrid extends HostGrid{
 					&& file_exists(IP_LIST_FILE)) {
 
 					$ic = (in_array($a, array_keys($this->l["IP_DNS"]))) 
-						? inlineCol::box("green")
-						: inlineCol::box("red");
+						? $this->cols->icol("box", "green")
+						: $this->cols->icol("box", "red");
 				}
 
 				// Bold hosts we have audits for
@@ -275,14 +279,13 @@ class IPGrid extends HostGrid{
 
 	protected function grid_key()
 	{
+		// Print the key at the foot of the page
+
 		$nf = sizeof($this->fields);
 
-		$ret = "\n<tr><td class=\"keyhead\" colspan=\"${nf}\">key</td>" .
-		"</tr>\n<tr>";
-
-        $ret .= $this->grid_key_col($this->grid_key["general"], $nf);
-
-		return $ret;
+		return "\n<tr><td class=\"keyhead\" colspan=\"${nf}\">key</td>" .
+		"</tr>\n<tr>" . $this->grid_key_col($this->grid_key["general"],
+		$nf);
 	}
 
 }

@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "filesystem audits";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 
 ?>
@@ -47,7 +40,7 @@ $dh->doc_class_start();
 	coloured field.</dd>
 
 	<?php
-		echo $dh->colour_key($grid_key["zpool"]);
+		echo $dh->colour_key($dh->grid_key["zpool"]);
 	?>
 
 	<dt>capacity</dt>
@@ -58,7 +51,7 @@ $dh->doc_class_start();
 	capacity are highlighted.</dd>
 
 	<?php
-		echo $dh->colour_key($grid_key["capacity"]);
+		echo $dh->colour_key($dh->grid_key["capacity"]);
 	?>
 
 	<dt>root fs</dt>
@@ -72,7 +65,7 @@ $dh->doc_class_start();
 	zone or primary domain.</dd>
 
 	<?php
-		echo $dh->colour_key($grid_key["root fs"]);
+		echo $dh->colour_key($dh->grid_key["root fs"]);
 	?>
 
 	<dt>fs</dt>
@@ -117,7 +110,7 @@ $dh->doc_class_start();
 	<dd>The following colour coding is used.</dd>
 
 	<?php
-		echo $dh->colour_key($grid_key["fs"]);
+		echo $dh->colour_key($dh->grid_key["fs"]);
 	?>
 
 	<dt>export</dt>
@@ -153,7 +146,7 @@ $dh->doc_class_start();
 	<dd>The following colour-coding is used.</dd>
 
 	<?php
-		echo $dh->colour_key($grid_key["export"]);
+		echo $dh->colour_key($dh->grid_key["export"]);
 	?>
 
 <?php

@@ -19,19 +19,12 @@
 
 include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 
-// Include the key file for this page to help us document the colour-coding.
-// This help keep things consistent.
-
-include(KEY_DIR . "/" . preg_replace("/class/", "key",
-basename($_SERVER["PHP_SELF"])));
-include(KEY_DIR . "/key_generic.php");
-
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
 $menu_entry = "application audits";
 $pg = new docPage($menu_entry);
-$dh = new docHelper($menu_entry, $generic_key);
+$dh = new docHelper($menu_entry);
 $dh->doc_class_start();
 ?>
 
@@ -59,7 +52,7 @@ software, and helps you synchronize versions across machines. If
 will say &quot;unkown&quot; and use a dark orange field.</dd>
 
 <?php
-	echo $dh->colour_key($grid_key["general"]);
+	echo $dh->colour_key($dh->grid_key["general"]);
 ?>
 
 <dd>The applications presented on this page typically run as daemons. If
