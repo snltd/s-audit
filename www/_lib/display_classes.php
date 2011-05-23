@@ -42,10 +42,6 @@ class HostGrid {
 		// A numbered list, starting at 0, of the fields we will print,
 		// pulled out of a global zone audit file
 
-	protected $audit_dir = LIVE_DIR;
-		// The top level audit directory. This holds a directory for every
-		// known server
-
 	protected $hidden_fields = array("zone status", "_err_");
 		// These fields are never shown in its own column, but handled
 		// elsewhere
@@ -87,7 +83,7 @@ class HostGrid {
 		$this->map = $map;
 		$this->cols = new Colours;
 
-		$this->show_zones = (isset($_GET["z"]) && ($_GET["z"] == "hide"))
+		$this->show_zones = (isset($_GET["h"]))
 			? false
 			: true;
 
@@ -98,7 +94,7 @@ class HostGrid {
 		// will be names class.audex, and in the EXTRA_DIR directory. We
 		// want it as an associative array
 
-		$stat_f = EXTRA_DIR . "/${class}.audex";
+		$stat_f = $this->map->get_path("extra_dir") . "/${class}.audex";
 
 		if (file_exists($stat_f)) {
 			$this->audex = parse_ini_file($stat_f, TRUE);
@@ -339,8 +335,8 @@ class HostGrid {
 		$t_dc = round(($this->t_start_grid - $this->map->t_start_map), 3);
 		$t_p = round(($this->t_end_grid - $this->t_start_grid), 3);
 
-		return "\n\n<p class=\"center\">Data collection time: ${t_dc}s. Data
-		processing time: ${t_p}s.</p>";
+		return "\n\n<div class=\"t_info\">Data collection time: ${t_dc}s. "
+		. "Data processing time: ${t_p}s.</div>";
 	}
 
 	public function grid_head($width)
@@ -376,6 +372,13 @@ class HostGrid {
 		return $ret_str;
 	}
 
+	protected function grid_key_header($cols = 1)
+	{
+		return "\n\n<tr><td class=\"keygap\" colspan=\"$cols\">&nbsp;</td>"
+		. "</tr>\n\n<tr><td class=\"keyhead\" colspan=\"$cols\">"
+		. "grid key</td></tr>\n";
+	}
+
 	protected function grid_key()
 	{
 		// Put in the key. The information for it is held in a file specific
@@ -384,9 +387,10 @@ class HostGrid {
 		
 		// There's also a generic key that goes on every page
 
-		$ret = "\n\n<tr><td class=\"keyhead\" colspan=\"" .
-		sizeof($this->fields) . "\">key</td></tr>\n";
+		$cols = count($this->fields);
 
+		$ret = $this->grid_key_header($cols);
+		
 		// Loop through the grid_key data, filling in columns as we go. Each
 		// cell can have arbitrarily many key values
 
@@ -1229,6 +1233,36 @@ class HostGrid {
 
 		return new Cell($up, $class);
 	}
+	
+	protected function show_boot_env($data)
+	{
+		// Display boot environments. "Active now" in a green box, active
+		// on reboot on amber
+
+		foreach($data as $row) {
+			
+			$a = explode(" ", $row);
+
+			// [0] = BE name
+			// [1] = (mount point)
+			// [2] = flags
+
+			if (preg_match("/N/", $a[2]))
+				$class = "boxgreen";
+			elseif (preg_match("/R/", $a[2]))
+				$class = "solidamber";
+			else
+				$class = false;
+
+			$mp = ($a[1] == "()")
+				? "(not mounted)"
+				: $a[1];
+
+			$c_arr[] = array("$a[0] $mp", $class);
+		}
+
+		return new listCell($c_arr);
+	}
 
 	protected function show_kernel($data)
 	{
@@ -1303,6 +1337,27 @@ class HostGrid {
 			: false;
 
 		return new Cell($data[0], $class);
+	}
+
+	protected function show_publisher($data)
+	{
+		// Publisher info. Put the preferred publisher in a green box, and
+		// link to the repository
+
+		foreach($data as $row) {
+			$a = explode(" ", $row);
+
+			$class = (sizeof($a) == 3)
+				? "boxgreen"
+				: false;
+
+			$url = preg_replace("/[\(\)]/", "", $a[1]);
+			$lt = preg_replace("/^\(http:\/\/|\/\)$/", "", $a[1]);
+
+			$c_arr[] = array("$a[0] (<a href=\"$url\">$lt</a>)", $class);
+		}
+
+		return new listCell($c_arr);
 	}
 
 	protected function show_patches($data)
@@ -1401,7 +1456,7 @@ class HostGrid {
 			$call[] = array($txt, $class, $col);
 		}
 
-		return new listCell($call, "smallaudit");
+		return new listCell($call, "smallaudit", false, true);
 	}
 
 	protected function show_ldom($data) 
@@ -1903,9 +1958,12 @@ class HostGrid {
 
 		$data = preg_replace("/\(\)/", "(unknown)", $data);
 
-		$data = (sizeof($this->cz["Apache"]) == 1)
-			? preg_replace("/\(apache.*$/", "(apache)", $data)
-			: preg_replace("/module\) \(/", "", $data);
+		if (isset($this->cz["Apache"])) {
+
+			$data = (sizeof($this->cz["Apache"]) == 1)
+				? preg_replace("/\(apache.*$/", "(apache)", $data)
+				: preg_replace("/module\) \(/", "", $data);
+			}
 
 		foreach($data as $datum) {
 			$ver = preg_replace("/ .*$/", "", $datum);
@@ -2114,35 +2172,42 @@ class HostGrid {
 
 		// directory fs_type [b_used/b_avail (pc%) used] // (dev:opts:x_opts)
 
+		$head = array(
+			2 => "storage",
+			3 => "mount opts",
+			4 => "ZFS opts");
+
 		$c_arr = array();
 
 		foreach($data as $row) {
+			$out = $ic = array();
+
 			$class = false;
 
-			$a = preg_split("/[\[\]\(\)\s]+/", $row);
+			preg_match("/^(\S+) (\w+) \[([^\]]+)\] \(([^\)]+)\)(.*)$/",
+			$row, $a);
 
+			//echo "<br>", count($a);
+			//pr($a);
+			//continue;
+
+			//pr($a);
 			// Gives us an array where
-			// [0] = mountpoint
-			// [1] = fs type
-			// [2] = bytes_used/bytes_free
-			// [3] = percentage used
-			// [4] = "used" (literal string)
-			// [5] = options:extra options
-			// [6]= "not" (literal string)
-			// [7]= "in" (literal string)
-			// [8]= "vfstab" (literal string)
+			// [0] = whole string from s-audit.sh
+			// [1] = mountpoint
+			// [2] = fs type
+			// [3] = space used. Usually "x/y (z%) used"
+			// [4] = device;mount options;zfs options (if applicable)
+			// [5] = "not in vfstab" or empty
 
-			// A normal FS has 7 elements, some have "not in vfstab" tagged
-			// on, which means they have 10
-
-			if (sizeof($a) != 7 && sizeof($a) != 10) {
+			if (count($a) != 6) {
 				$c_arr[] = array("ERROR", "error");
 				continue;
 			}
 
-			// Split up $a[5]
+			// expand the mount options
 
-			$b = explode(";", $a[5]);
+			$b = explode(";", $a[4]);
 
 			// So now b is an array with
 			// [0] = device
@@ -2155,101 +2220,138 @@ class HostGrid {
 			// required for various zone types to run, and not relevant
 			// here.
 
-			if ($a[1] == "lofs" &&
-			preg_match(":^/platform\b|^/dev\b|^/\.S:", $a[0]))
+			if ($a[2] == "lofs" &&
+			preg_match(":^/platform\b|^/dev\b|^/\.S:", $a[1]))
 				continue;
 
-			// If this isn't in the vfstab, put the first line on a pink
-			// field and add on "not in vfstab"
+			// The cell's class comes from the filesystem type
 
-			$txt = "<div ";
-			
-			if (isset($a[8]))
-				$txt .= $this->cols->icol("solid", "pink", false, 1);
+			$class = $a[2];
 
-			$txt .= "><strong>$a[0]</strong> (" . strtoupper($a[1]);
+			// ROW 1 is the mountpoint followed by the fs type and device
+			// path
+
+			$out[1] = "<strong>$a[1]</strong> (" . strtoupper($a[2]);
 
 			// In local zones, loopback mounted filesystems have the same
 			// device name as the mountpoint. Don't bother showing that.
+			// Otherwise, add on the device path/zfs dataset name
 			
-			if ($a[0] != $b[0])
-				$txt .= ":$b[0]";
+			if ($a[1] != $b[0])
+				$out[1] .= ":$b[0]";
 
-			$txt .= ")";
+			$out[1] .= ")";
 
-			if (isset($a[8]))
-				$txt .= " (not in vfstab)";
+			// Again, if not in vfstab, this time just say so
 
-			$txt .= "</div>";
-			$class = $a[1];
+			if (!empty($a[5]))
+				$out[1] .= " (not in vfstab)";
+			
+			// If this isn't in the vfstab, put the first line on a pink
+			// field
 
-			// Disk usage. Use amber and red fields for fses more than 80
-			// and 90% full respectively
+			if (!empty($a[5]))
+				$ic[1] = $this->cols->icol("solid", "pink", false, 1);
 
-			$du = explode("/", $a[2]);
-			$used = str_replace("%", "", $a[3]);
+			// ROW 2 is disk usage. Use amber and red fields for fses more
+			// than 80 and 90% full respectively
 
-			if ($used > 90)
-				$duc = $this->cols->icol("solid", "red", false, 1);
-			elseif ($used > 80)
-				$duc = $this->cols->icol("solid", "amber", false, 1);
-			else
-				$duc = "";
+			if ($a[3] == "unknown capacity")
+				$out[2] = $a[3];
+			else {
+				preg_match("/(\d+)\/(\d+) \((\d+)%\).*$/", $a[3], $c);
 
-			$txt .= "<div class=\"indent\" $duc>$a[3] used (" .
-			units::from_b($du[0]) . "/" .  units::from_b($du[1]) . ")</div>";
+				// c is now an array with
+				// [0] full string of $a[3]
+				// [1] bytes used
+				// [2] bytes available
+				// [3] percentage used
 
-			// Options. Colour this if it's read-only. Other odd options we
-			// leave it to the viewer to spot (for now)
+				$out[2] = units::from_b($c[1]) . "/" .
+				units::from_b($c[2]) . " ($c[3]%) used";
 
-			$txt .= "<div class=\"indent\"";
+				if ($c[3] > 90)
+					$ic[2] = $this->cols->icol("solid", "red", false, 1);
+				elseif ($c[3] > 80)
+					$ic[2] = $this->cols->icol("solid", "amber", false, 1);
+			}
+
+			// ROW 3 is mount options. Colour this if it's read-only. Other
+			// odd options we leave it to the viewer to spot (for now)
+
+			$out[3] = preg_replace("/,/", " ", $b[1]);
 
 			if (preg_match("/\bro\b/", $b[1]))
-				$txt .= $this->cols->icol("solid", "grey", false, 1);
-			
-			$txt .= ">$b[1]</div>";
+				$ic[3] = $this->cols->icol("solid", "grey", false, 1);
 
 			// Extended options. You get these for ZFS filesystems
 
-			if ($a[1] == "zfs" && isset($b[2])) {
-				$il = $row4 = "";
+			if ($a[2] == "zfs" && isset($b[2])) {
 
-				// If there's a disk quota, put it in human-readable form.
-				// If not, remove the reference to it.
+				$d = explode(",", $b[2]);
+				$out[4] = "";
 
-				$q = preg_replace("/^.*quota=(\d+).*$/", "$1", $b[2]);
+				foreach($d as $e) {
+					$f = explode("=", $e);
 
-				$row4 = ($q > 0)
-					? preg_replace("/$q/", units::from_b($q), $b[2])
-					: preg_replace("/quota=0,/", "", $b[2]);
+					$key = $f[0];
+					$val = $f[1];
 
-				// If any of compression, dedup, or zoned are off, remove
-				// reference to them
+					// Don't print anything that's "off"
 
-				$row4 =
-				preg_replace("/compression=off,|dedup=off,|zoned=off,/", "",
-				$row4);
+					if ($val == "off")
+						continue;
 
-				// If the version is the highest supported, display it. If
-				// not, display the supported one and colour the field
+					// If the quota is non-zero, make it human-readable and
+					// display it
 
-				preg_match("/^.*version=(\d+)\/(\d+)/", $row4, $v);
+					if ($key == "quota") {
+						
+						if ($val != 0)
+							$out[4] .= " quota=" . units::from_b($val);
+					}
+	
+					// If the version isn't the maximum supported version,
+					// put up a warning
 
-				$row4 = preg_replace("/version=$v[1]\/$v[2]/",
-				"version=$v[1]", $row4);
+					elseif ($key == "version") {
+						$v = explode("/", $val);
+						$out[4] .= " version=$v[0]";
 
-				if (!isset($v[1]))
-				echo "<br>$row4";
+						if ($v[0] != $v[1]) {
+							$out[4] .= " (v$v[1] supported)";
+							$ic[4] = $this->cols->icol("solid", "orange",
+							false, 1);
+						}
 
-				if ($v[1] != $v[2]) {
-					$row4 .= " (v$v[2] supported)";
-					$il = "style=\"" . inlineCol::solid("orange") . "\"";
+					}
+
+					// Print the key/value of anything else. This way if
+					// anything's added to the client, it will be displayed,
+					// even if it isn't processed
+
+					else
+						$out[4] .= " $e";
+
 				}
 
-				$txt .= "<div $il class=\"indent\">$row4</div>";
 			}
-			elseif (isset($b[2])) {
-				$txt .= "<div class=\"indent\">$b[2]</div>";
+			elseif (isset($b[2]))
+				$out[4] = $b[2];
+
+			$txt = $out[1];
+			
+			for($i = 2; $i < 5; $i++) {
+
+				if (empty($out[$i]))
+					continue;
+
+				$txt .= "<div class=\"indent\"";
+
+				if (isset($ic[$i]))
+					$txt .= $ic[$i];
+					
+				$txt .= "><strong>$head[$i]:</strong> $out[$i]</div>";
 			}
 
 			$c_arr[] = array($txt, $class);
@@ -2271,7 +2373,7 @@ class HostGrid {
 		$c_arr = false;
 
 		foreach($data as $row) {
-			preg_match("/^(\S+) (\w+) (.*)$/", $row, $a);
+			preg_match("/^(\S+) ([\/\w]+) (.*)$/", $row, $a);
 			$txt = $col = $sty = false;
 
 			// This gives us an array with
@@ -2279,9 +2381,12 @@ class HostGrid {
 			// [2] = export type
 			// [3] = options
 
-			$fstyp = ($a[2] == "iscsi")
-				? "iSCSI"
-				: strtoupper($a[2]);
+			if ($a[2] == "iscsi")
+				$fstyp = "iSCSI";
+			elseif (preg_match("/^smb/", $a[2]))
+				$fstyp = preg_replace("/smb/", "SMB", $a[2]);
+			else
+				$fstyp = strtoupper($a[2]);
 
 			$txt = "<strong>$a[1]</strong> ($fstyp)";
 
@@ -2319,11 +2424,12 @@ class HostGrid {
 				}
 
 			}
-			elseif ($fstyp == "SMB") {
+			elseif (preg_match("/^SMB/", $fstyp)) {
 
 				// For SMB exports, just put the export name in quotes
 
 				$l2 = preg_replace("/[\[\]]/", "&quot;", $a[3]);
+				$a[2] = "smb";
 			}
 			elseif ($fstyp == "iSCSI") {
 				
@@ -2350,41 +2456,6 @@ class HostGrid {
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
-
-		return;
-
-			/*
-			$fstyp = $earr[0];
-			$mntinfo = "";
-			$col = false;
-
-			$txt = "<strong>$earr[1]</strong> ($fstyp)";
-
-			if ($fstyp == "nfs") {
-				$txt .= "$mntinfo<div class=\"indent\">$earr[2]</div>";
-			}
-			elseif ($fstyp == "smb")
-				$txt .= "<div class=\"indent\">&quot;$earr[2]&quot;</div>";
-			elseif ($fstyp == "vdisk") {
-				$b = explode(":", $earr[2]);
-				$txt .= "<div class=\"indent\">&quot;$b[0]&quot;";
-
-				// Put unassigned vdisks on an amber field
-	
-				if ($b[1] == "unassigned") {
-					$col = inlineCol::solid("amber");
-					$txt .= " (unassigned)";
-				}
-				else
-					$txt .= " on domain $b[1]";
-
-				$txt .= "</div>";
-			}
-
-
-		}
-		*/
-
 	}
 
 	//-- hosted services -----------------------------------------------------
@@ -2849,20 +2920,13 @@ class HostGrid {
 
 		// Are zones currently shown or hidden? Offer the alternative.
 
-		if (defined("NO_ZONES")) {
-			$qs = "?" . preg_replace("/(&*)no_zones/", "\\1",
-			$_SERVER["QUERY_STRING"]);
-			$txt = "show";
-		}
-		else {
-			$qs = (empty($_SERVER["QUERY_STRING"]))
-				? "?no_zones"
-				: "?" . $_SERVER["QUERY_STRING"] . "&amp;no_zones";
+		$qs = new queryString(1);
 
-			$txt = "hide";
-		}
+		$txt = (defined("NO_ZONES"))
+			? "show"
+			: "hide";
 
-		return "${prev_str}<a href=\"$_SERVER[PHP_SELF]"
+		return "${prev_str}<a href=\"" . $_SERVER["PHP_SELF"]
 		. "${qs}\">$txt local zones</a>${next_str}";
 	}
 
@@ -3493,14 +3557,10 @@ class SoftwareGrid extends HostGrid
 		
 		$nf = sizeof($this->fields);
 
-		$ret = "\n<tr><td class=\"keyhead\" colspan=\"${nf}\">key</td>"
-		. "</tr>\n<tr>";
-
-		$ret .= $this->grid_key_col($this->grid_key["hostname"])
-		. $this->grid_key_col($this->grid_key["general"], ($nf - 2))
-		. $this->grid_key_col($this->grid_key["audit completed"]);
-
-		return $ret . "</tr>";
+		return $this->grid_key_header($nf) .
+		$this->grid_key_col($this->grid_key["hostname"]) .
+		$this->grid_key_col($this->grid_key["general"], ($nf - 2)) .
+		$this->grid_key_col($this->grid_key["audit completed"]) . "</tr>";
 	}
 
 }
@@ -3562,7 +3622,7 @@ class HostedGrid extends HostGrid
 		
 		// Let's see if the map file is there. If not, exit now.
 
-		$map_file = URI_MAP_FILE;
+		$map_file = $this->map->get_path("uri_map");
 
 		if (!file_exists($map_file))
 			return array();
@@ -3619,9 +3679,8 @@ class HostedGrid extends HostGrid
 
 class Page {
 	
-	// Classes used to generate HTML pages. Each audit display page should
-	// begin by creating an instance of this class. Documentation pages use
-	// the docPage class, which extends this one
+	// Classes used to generate HTML pages. This is an abstract class, and
+	// all page types extend it
 
 	protected $title;
 		// The page title. Used in the <title> tag 
@@ -3634,16 +3693,32 @@ class Page {
 
 	private $metas = array(
 		"Content-Type" => "text/html; charset=utf-8",
-		"pragma" => "no-cache");
+		"pragma" => "no-cache"
+	);
 		// HTTP meta tags. Key/value pairs
+	
+	protected $verstr;
+		// string describing version of interface or documentation
+
+	protected $mystring = "interface";
+		// What kind of pages we're doing. In a variable so it can be
+		// overridden
+
+	protected $link_to = "/";
+		// Where the s-audit in the top left corner links to
+
+	protected $no_class_link = false;
+		// set this to true on non-audit class pages
+
+	protected $link_root = "";
 
 	public function __construct($title)
 	{
 		$this->type = $title;
-		$this->title = SITE_NAME . " :: $title";
-		$this->styles[] = "dynamic_css.php?" .
-		basename($_SERVER["PHP_SELF"]);
-		echo $this-> open_page();
+		$this->title = SITE_NAME . " s-audit $this->mystring :: $title";
+		$this->verstr = "interface version " . MY_VER;
+		$this->styles[] = "dynamic_css.php?" . basename($_SERVER["PHP_SELF"]);
+		echo $this->open_page();
 	}
 
 	protected function open_page()
@@ -3653,15 +3728,9 @@ class Page {
 		// the close_page() method. I have put the <head> tags in to make it
 		// clear what functions make what part of the page.
 
-		return 
-			$this->start_page()			// open html
-			. "\n<head>"
-				. $this->add_styles()	// add stylesheets
-				. $this->add_metas()	// add <meta> tags
-				. "\n  <title>$this->title</title>"
-			. "\n</head>\n"
-			. "\n<body>"
-			. $this->add_header(); 		// horizontal title/navigation
+		return $this->start_page() . "\n<head>" . $this->add_styles()
+		. $this->add_metas() . "\n  <title>$this->title</title>\n</head>\n"
+		. "\n<body>" . $this->add_header();
 	}
 
 	private function start_page()
@@ -3689,6 +3758,8 @@ class Page {
 
 	private function add_metas()
 	{
+		// HTML for meta tags
+
 		$ret = "\n";
 
 		foreach($this->metas as $key=>$val) {
@@ -3698,6 +3769,39 @@ class Page {
 		return $ret;
   	}
 
+	protected function add_header()
+	{
+		// The banner at the top of all pages
+
+		$fn = basename($_SERVER["PHP_SELF"]);
+
+		$ret = "\n<div id=\"header\"><span id=\"logo\"><a href=\"" 
+		. $this->link_to . "\">s-audit</a></span> ::"
+		. " $this->type";
+				
+		if (isset($this->s_count))
+			$ret .= " :: $this->s_count";
+
+		if (method_exists($this, "add_doc_links"))
+			$ret .= $this->add_doc_links($fn);
+
+		return $ret . "\n</div> <!-- end header -->" . $this->add_content();
+	}
+
+	protected function add_content()
+	{
+		// Open up DIV(s) for the page content. The corresponing
+		// close_page() function must remember to close them
+
+		$nav = new navigateHoriz($this->h_links, $this->link_root);
+		return $nav->display_navbar() . "\n<div id=\"content\">";
+	}
+
+	public function spacer()
+	{
+		return "\n\n<div class=\"spacer\">&nbsp;</div>";
+	}
+
 	public function close_page()
 	{
 		echo "</div>" . Page::add_footer() . "\n</body>\n</html>";
@@ -3705,13 +3809,18 @@ class Page {
 
 	protected function add_footer()
 	{
-		$ret =  "\n\n<div id=\"footer\">This is &quot;" .  SITE_NAME 
-		. "&quot; | s-audit web interface " . "version " . MY_VER
-		. " | (c) 2011 <a href=\"http://snltd.co.uk\""
-		. ">SNLTD</a>";
+		// The bar at the bottom of every page
+
+		$ret = "\n\n<div id=\"footer\">This is &quot;" .  SITE_NAME 
+		. "&quot; s-audit web interface ::";
+
+		if (isset($this->verstr))
+			$ret .= " $this->verstr ::";
+			
+		$ret .= " (c) " . C_YEAR . " <a href=\"http://snltd.co.uk\">SNLTD</a>";
 
 		if (SHOW_SERVER_INFO)
-			$ret .= " | Running under PHP " . phpversion() . " on " .
+			$ret .= " :: Running under PHP " . phpversion() . " on " .
 			php_uname("n");
 
 		return $ret . "</div>";
@@ -3735,37 +3844,7 @@ class Page {
 
 }
 
-class ipPage extends Page {
-
-	// Generates the IP listing page
-
-	protected $styles = array("basic.css", "audit.css", "ip_listing.css");
-		// Stylesheets to apply
-
-	protected function add_header()
-	{
-		$nav = new NavigationStaticHoriz;
-
-		$fn = basename($_SERVER["PHP_SELF"]);
-
-		return "\n
-		<div id=\"header\">
-			<div id=\"headerl\">
-				<div id=\"logo\">s-audit</div>
-				<div id=\"sublogo\">IP address listing</div>
-			</div>
-			<div id=\"headerr\">
-				<div>documentation ::
-				<a href=\"" . DOC_URL . "/index.php\">main</a> /
-				<a href=\"" . DOC_URL
-				. "/interface/${fn}\">this page</a>
-				</div>
-			</div>
-		</div>"
-		. $nav->display_navbar() . "\n<div id=\"content\">";
-	}
-
-}
+//----------------------------------------------------------------------------
 
 class audPage extends Page {
 
@@ -3780,104 +3859,133 @@ class audPage extends Page {
 	protected $z_tog = false;
 		// the "show zones" string in the header
 
-	public function __construct($title, $s_count, $z_tog) {
+	protected $h_links = array(
+		"index.php" => "platform",
+		"os.php" => "O/S",
+		"net.php" => "networking",
+		"fs.php" => "filesystem",
+		"application.php" => "applications",
+		"tools.php" => "tools",
+		"hosted.php" => "hosted services",
+		"security.php" => "security",
+		"single_server.php" => "single server view",
+		"compare.php" => "compare two servers",
+		"ip_listing.php" => "IP address listing"
+	);
+		// static links
+
+	public function __construct($title, $s_count, $z_tog = false) {
 		$this->s_count = $s_count;
 		$this->z_tog = $z_tog;
+		$this->link_root = dirname($_SERVER["PHP_SELF"]);
 		parent::__construct($title);
 	}
 
-	protected function add_header()
+	protected function add_doc_links($fn)
 	{
-		$nav = new NavigationStaticHoriz;
-
-		$fn = basename($_SERVER["PHP_SELF"]);
+		// Links to documentation
 
 		$class_link = ($fn == "index.php")
 			? "class_platform.php"
 			: "class_$fn";
 
-		return "\n
-		<div id=\"header\">
-			<div id=\"headerl\">
-				<div id=\"logo\">s-audit</div>
-				<div id=\"sublogo\">$this->type :: $this->s_count</div>
-			</div>
-			<div id=\"headerr\">
-				<div>documentation ::
-				<a href=\"" . DOC_URL . "/index.php\">main</a> /
-				<a href=\"" . DOC_URL
-				. "/interface/${class_link}\">this page</a> /
-				<a href=\"" . DOC_URL
-				. "/client/${class_link}\">this class</a>
-				</div>
-				<div>$this->z_tog</div>
-			</div>
-		</div>"
-		. $nav->display_navbar() . "\n<div id=\"content\">";
+		$dl = DOC_URL;
+
+		$ret = "\n<div id=\"headerr\">\n<strong>documentation</strong>"
+		. ":: <a href=\"${dl}/index.php\">main</a> / <a href=\"$dl"
+		. "/interface/${class_link}\">this page</a>";
+		
+		if (!$this->no_class_link)
+			$ret .= "/ <a href=\"${dl}/client/${class_link}\">this class</a>";
+		
+		if (method_exists($this, "add_zt_link"))
+			$ret .= $this->add_zt_link();
+		
+		$ret .= "</div>";
+
+		return $ret;
+	}
+
+	protected function add_zt_link()
+	{
+		return "<br/>$this->z_tog";
 	}
 
 }
+
+//----------------------------------------------------------------------------
+
+class ipPage extends audPage {
+
+	// Generates the IP listing page
+
+	protected $no_class_link = true;
+		// There's no "this class" documentation link for IP listing pages
+
+	protected $styles = array("basic.css", "audit.css", "ip_listing.css");
+		// Stylesheets to apply
+
+}
+
+//----------------------------------------------------------------------------
 
 class ssPage extends audPage {
 	
 	// Special class for single server view
 
+	protected $no_class_link = true;
+		// There's no "this class" documentation link 
+
 	protected $styles = array("basic.css", "audit.css", "single_server.css");
-
-	public function __construct($title, $s_count) {
-		$this->s_count = $s_count;
-		parent::__construct($title, $s_count, false);
-	}
-
-	protected function add_header()
-	{
-		$nav = new NavigationStaticHoriz;
-
-
-		return "\n
-		<div id=\"header\">
-			<div id=\"headerl\">
-				<div id=\"logo\">s-audit</div>
-				<div id=\"sublogo\">$this->type</div>
-			</div>
-			<div id=\"headerr\">
-				<div>documentation ::
-				<a href=\"/docs/index.php\">main</a> /
-				<a href=\"/docs/interface/" . basename($_SERVER["PHP_SELF"])
-				. "\">this page</a> /
-				</div>
-			</div>
-		</div>"
-		. $nav->display_navbar() . "\n<div id=\"content\">";
-	}
 
 }
 
+//----------------------------------------------------------------------------
 
 class docPage extends Page {
+
+	protected $mystring = "documentation";
 
 	protected $styles = array("basic.css", "audit.css", "doc.css",
 	"script.css", "ip_listing.css");
 		// Stylesheets to apply
 
+	protected $h_links = array(
+		"" => "documentation home",
+		"client" => "s-audit.sh client",
+		"interface" => "web interface",
+		"extras" => "extra files and support scripts",
+		"misc" => "miscellany"
+		);
+
+	protected $link_root = DOC_URL;
+		// The base of the $h_links
+
 	public function __construct($title)
 	{
-		require_once(ROOT . "/_lib/filesystem_classes.php");
-		require_once(ROOT . "/_lib/doc_classes.php");
-		$this->title = "s-audit documentation :: $title";
-		$this->styles[] = "dynamic_css.php?" .
-		basename($_SERVER["PHP_SELF"]);
-		echo $this-> open_page();
-	}
+		require_once(LIB . "/doc_classes.php");
 
-	protected function add_header()
+		parent::__construct($title);
+
+		// Get the documentation version. Documentation is kind of a
+		// separate entity from the interface, so it has its own version,
+		// which is stored in a file.
+
+		$verfile = ROOT . "/docs/.version";
+
+		$this->verstr = (file_exists($verfile))
+			? " documentation version " . file_get_contents($verfile)
+			: "";
+    }
+
+	protected function add_content()
 	{
-		return "<div id=\"header\">"
-					. "<div id=\"logo\">s-audit</div>"
-					. "<div id=\"sublogo\">$this->title</div>"
-		."</div>"
-		. "\n<div id=\"docwrapper\">"
-		. "\n<div id=\"doccontent\">";
+		// We need to add the docwrapper and doccontent divs
+
+		$nav = new navigateHoriz($this->h_links, $this->link_root);
+
+        return $nav->display_navbar()
+		. "\n<div id=\"docwrapper\">\n<div id=\"doccontent\">";
 	}
 
 	private function dyn_menu()
@@ -3888,33 +3996,39 @@ class docPage extends Page {
 
 		$vm = new NavigationDynamicVert();
 
-		return "\n</div>\n<div id=\"vmenu\">" . $vm->print_list() .
-		"</div>";
-	}
-
-	protected function add_footer()
-	{
-		// Print the footer for documentation pages. We keep the
-		// documentation version in a file now
-		
-		$verfile = ROOT . "/docs/.version";
-		
-		$verstr = (file_exists($verfile))
-			? " version " .file_get_contents($verfile)
-			: "";
-
-		return "\n\n<div class=\"spacer\">&nbsp;</div>" .
-		"\n\n<div id=\"footer\">s-audit documentation $verstr| (c) 2010 <a
-		href=\"http://snltd.co.uk\">SNLTD</a></div>";
+		return "\n</div>\n<div id=\"vmenu\">" . $vm->print_list() . "</div>";
 	}
 
 	public function close_page()
 	{
-		echo  docPage::dyn_menu() . "</div>" . docPage::add_footer() 
-		. "\n\n</body>\n</html>";
+		echo  $this->dyn_menu() . "</div>" . $this->spacer() .
+		$this->add_footer() . "\n\n</body>\n</html>";
 	}
 
 }
+
+//----------------------------------------------------------------------------
+
+class indexPage extends docPage {
+	
+	// Class for the "available groups" default landing page
+
+	protected $link_to = "http://snltd.co.uk/s-audit/";
+
+	protected $h_links = array(
+		"docs" => "documentation home");
+
+	protected $link_root = ROOT_URL;
+
+	public function close_page()
+	{
+		echo "</div></div>" . $this->spacer() . $this->add_footer() .
+		"\n\n</body>\n</html>";
+	}
+
+}
+
+//----------------------------------------------------------------------------
 
 class NavigationDynamicVert {
 
@@ -3949,7 +4063,7 @@ class NavigationDynamicVert {
 				continue;
 
 			$ret .= ($this->my_d == $d)
-				? "\n  <li>$da[link]</li>"
+				? "\n  <li class=\"thispage\">$da[link]</li>"
 				: "\n  <li><a href=\"$da[url]\">$da[link]</a></li>";
 
 			if ($d == $this->my_d)
@@ -3979,7 +4093,7 @@ class NavigationDynamicVert {
 			eval(Filesystem::getline($da["file"], "menu_entry"));
 
 			$ret .= ($f == $this->my_f)
-				? "\n  <li>$menu_entry</li>"
+				? "\n  <li class=\"thispage\">$menu_entry</li>"
 				: "\n  <li><a href=\"$da[url]\">$menu_entry</a></li>";
 		}
 
@@ -3988,35 +4102,34 @@ class NavigationDynamicVert {
 
 }
 
-class NavigationStaticHoriz {
+//----------------------------------------------------------------------------
 
-	// We used to dynamically create the navigation bar, but now it's
-	// hardcoded. This gives us greater flexibility, and it's hardly a lot
-	// of work to add a link. Just put it in the array below. filename =>
-	// description
+class navigateHoriz {
+
+	// Print the link bar across the top of the page. Sometimes this is
+	// generated dynamically, other times it's static. You just feed the
+	// constructor an array of "filename => description".
 
 	private $o;
-	private $links = array(
-		"index.php" => "platform",
-		"os.php" => "O/S",
-		"net.php" => "networking",
-		"fs.php" => "filesystem",
-		"application.php" => "applications",
-		"tools.php" => "tools",
-		"hosted.php" => "hosted services",
-		"security.php" => "security",
-		"single_server.php" => "single server view",
-		"compare.php" => "compare two servers",
-		"ip_listing.php" => "IP address listing"
-	);
+		// Value of _GET[o]
 
-	public function __construct()
+	private $qs;
+		// query string to tag on to links
+
+	public function __construct($link_arr, $root = "")
 	{
+		// Second argument lets you give a common root to all the links
+
 		$this->o = isset($_GET["o"]) ? $_GET["o"] : 0;
+		$this->links = $link_arr;
+		$this->root = $root;
+
+		// Add in the s-monitor page, if it exists.
 
 		if (file_exists(ROOT . "/monitor/index.php"))
 			$this->pages["row2"]["/monitor/index.php"] = "Monitor";
 
+		$this->qs = new queryString();
 	}
 
 	public function display_navbar()
@@ -4025,18 +4138,95 @@ class NavigationStaticHoriz {
 		// will do the rest
 
 		$ret = "\n<ul class=\"navlist\" id=\"navlist\">";
-		$here = basename($_SERVER["SCRIPT_FILENAME"]);
+		$here = $_SERVER["PHP_SELF"];
 
 		foreach($this->links as $pg => $txt) {
+			
+			$match = "$this->root/$pg";
 
-			$ret .=($pg == $here)
+			// If match doesn't end .php, assume it's a directory, and tag
+			// on the name of this page
+
+			if (!preg_match("/\.php$/", $match))
+				$match .= "/" . basename($_SERVER["PHP_SELF"]);
+
+			// Don't link to the page we're already on.  You can get
+			// multiple "/"s in the match string
+
+			$ret .= (preg_replace("/\/{2,}/", "/", $match) == $here)
 				? "\n<li class=\"here\">$txt</li>"
-				: "<li><a href=\"${pg}?o=$this->o\">$txt</a></li>";
+				: "<li><a href=\"$this->root/${pg}$this->qs\">$txt</a></li>";
 
 		}
 		
 		return $ret . "</ul>";
 	}
+
+}
+
+//----------------------------------------------------------------------------
+	
+class queryString {
+
+	// This class generates HTTP query strings for links to other audit
+	// pages, and also to turn zone display on and off
+
+	private $qs;
+
+	public function __construct($tz = false)
+	{
+		// Generate a query string, carrying through any of these values:
+		// h = hide zones (1 == hide them)
+		// o = offset of first server (i.e. don't show first x)
+		// g = name of server group
+
+		// set $tz is you want to toggle 'h'
+	
+		$qs = false;
+
+		// o is always carried through as-is
+
+		if (isset($_GET["o"])) $qs = "o=$_GET[o]";
+
+		// g is always carried through as-is
+
+		if (isset($_GET["g"])) {
+
+			if ($qs) $qs .= "&";
+
+			$qs .= "g=$_GET[g]";
+		}
+
+		// h may be carried through, or toggled if $tz is set
+
+		if ($tz) {
+
+			if (!isset($_GET["h"])) {
+
+				if ($qs) $qs .= "&amp;";
+				
+				$qs .= "h=1";
+			}
+
+		}
+		elseif (isset($_GET["h"])) {
+
+			if ($qs) $qs .= "&";
+
+			$qs .= "h=1";
+		}
+				
+
+		$this->qs = (empty($qs))
+			? ""
+			: "?" . $qs;
+	}
+
+	public function __toString()
+	{
+		return $this->qs;
+	}
+
 
 }
 

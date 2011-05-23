@@ -2,8 +2,8 @@
 
 //============================================================================
 //
-// hosted.php
-// ----------
+// s-audit/hosted.php
+// ------------------
 //
 // Hosted services audit base page.
 //
@@ -15,7 +15,7 @@
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 
-$map = new ZoneMap(LIVE_DIR);
+$map = new ZoneMap();
 $s = new GetServers($map, false, array("hosted", "fs"));
 $grid = new HostedGrid($map, $s->get_array(), "hosted");
 
@@ -25,13 +25,15 @@ $grid->zone_toggle());
 $um = "<a href=\"" . DOC_URL . "/extras/uri_map_file.php" .
 "\">URI map file</a>";
 
-if (file_exists(URI_MAP_FILE)) {
-	$f_info = stat(URI_MAP_FILE);
+$umf = $map->get_path("uri_map");
+
+if (file_exists($umf)) {
+	$f_info = stat($umf);
 
 	$txt = (($f_info["size"]) == 0)
 		? "You have a $um file, but it contains no entries."
 		: "This table incorporates data from a $um generated at "
-		. date("H:i D d/m/Y", filemtime(URI_MAP_FILE));
+		. date("H:i D d/m/Y", filemtime($umf));
 }
 else
 	$txt = "You do not have a $um";

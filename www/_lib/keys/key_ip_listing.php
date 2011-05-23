@@ -26,18 +26,18 @@ $grid_key = array(
 
 // Only add the following if they're relevant
 
-if (file_exists(IP_LIST_FILE)) {
+if (file_exists($this->paths["ip_list_file"])) {
 	$grid_key["general"][] = array("live addresses in DNS", "resolved",
 	false);
 	$grid_key["general"][] = array("pingable addresses not in DNS or audit
 	files", "onlyping", false);
 	$grid_key["general"][] = array("pingable on last subnet audit",
 	"boxgreen", false);
-	$grid_key["general"][] = array("not pingable on last
-	subnet audit", "boxred", false);
+	$grid_key["general"][] = array("not pingable on last subnet audit",
+	"boxred", false);
 }
 
-if (file_exists(IP_RES_FILE))
+if (file_exists($this->paths["ip_res_file"]))
 	$grid_key["general"][] = array("reserved IP addresses", "reserved",
 	false); 
 

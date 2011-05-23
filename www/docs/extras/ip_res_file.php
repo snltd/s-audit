@@ -5,22 +5,18 @@ include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$menu_entry = "IP_RES_FILE";
-$pg = new docPage("The IP_RES_FILE");
+$menu_entry = "IP Reserved List File";
+$pg = new docPage("The IP Reserved List File");
 $dh = new docHelper();
 
 ?>
 
-<h1>The IP_RES_FILE</h1>
+<h1>The IP Reserved List File</h1>
 <p>This flat text file lets you add addresses to the <a
 href="../interface/ip_listing.php">IP listing page</a>. It can be used for
 things s-audit cannot audit, for instance routers or non-Solaris machines,
-or for addresses reserver for DHCP pools, or transient machines like
+or for addresses reserved for DHCP pools, or transient machines like
 laptops.</p>
-
-<p>The auditor must know the path to the file. It is defined as
-<tt>IP_RES_FILE</tt> in <tt>_conf/s-audit_config.php</tt>. The default path
-is <tt>/var/s-audit/ip_list/ip_list_reserved.txt</tt>.</p>
 
 <p>The file does not have to be present for s-audit to function
 correctly.</p>
@@ -47,8 +43,18 @@ be prefixed with a <tt>#</tt>.</p>
 
 <h2>Location</h2>
 
+<p>The Reserved list file must be named
+<tt>ip_list_reserved.txt</tt>, and stored in the <tt>network/</tt>
+subdirectory of the relevant audit group directory.</p>
+
+<p>For instance, if you have an audit group called &quot;live&quot;, then
+the file would normally be saved as
+
+<pre>
+/var/snltd/s-audit/live/network/ip_list_reserved.txt
+</pre>
+
 <?php
-$dh->file_on_sys("URI map file", "URI_MAP_FILE");
 $pg->close_page();
 ?>
 

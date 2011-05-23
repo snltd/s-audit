@@ -23,6 +23,8 @@ $grid_key = array(
 	),
 
 	"kernel" => array(
+		array("latest installed kernel", "ver_l", false),
+		array("older kernel", "ver_o", false),
 		array("different kernel<br/>in local zone", "boxamber", false)
 	),
 
@@ -49,12 +51,21 @@ $grid_key = array(
 		array("local zone rebooted<br/>after global zone", "boxamber", false)
 	),
 
+	"boot env" => array(
+		array("active now", "boxgreen", false),
+		array("active on reboot", "solidamber", false)
+	),
+
 	"SMF services" => array(
 		array("services in maintenence mode", "solidred", false)
 	),
 
 	"packages" => array(
 		array("partially installed<br/>packages", "solidamber", false)
+	),
+
+	"publisher" => array(
+		array("preferred publisher", "boxgreen", false)
 	),
 
 	"patches" => array(

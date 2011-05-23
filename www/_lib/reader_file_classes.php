@@ -13,10 +13,7 @@
 //
 //============================================================================
 
-// Since we're reading files, we need the Filesystem:: class
-
 require_once(LIB . "/filesystem_classes.php");
-
 //----------------------------------------------------------------------------
 // ZONE MAP
 
@@ -28,22 +25,36 @@ class ZoneMap extends ZoneMapBase {
 	// Class variables are defined in the ZoneMapBase class in
 	// reader_classes.php
 
-	public function __construct($audit_dir)
+	private $fs;
+
+	public function __construct()
 	{
 		// Record the start time
 
 		$this->t_start_map = microtime(true);
 
+		// Create a filesystem object
+
+		$this->fs = new filesystem;
+
 		// Get the offset, if we have one
 
 		$this->offset = (isset($_GET["o"])) ? $_GET["o"] : 0;
+
+		// work out what directory this group's audit data is in. If there
+		// isn't a group, that's an error.
+
+		if (isset($_GET["g"]))
+			$audit_dir = AUDIT_DIR . "/$_GET[g]/hosts";
+		else
+			page::error("No audit group.");
 
 		// Check we've got some data
 
 		if (!is_dir($audit_dir))
 			page::error("missing directory. [${audit_dir}]");
 
-		$server_dirs = filesystem::get_files($audit_dir, "d");
+		$server_dirs = $this->fs->get_files($audit_dir, "d");
 
 		if (sizeof($server_dirs) == 0)
 			page::error("no audit data. [${audit_dir}]");
@@ -69,6 +80,8 @@ class ZoneMap extends ZoneMapBase {
 			}
 
 		}
+
+		$this->paths = $this->set_extra_paths(AUDIT_DIR . "/" . $_GET["g"]);
 
 	}
 	
@@ -103,7 +116,7 @@ class GetServers extends GetServersBase {
 		// zones. This is probably pointless, but a hangover from when we
 		// used to have a file for each zone and each audit type
 
-		if (isset($_GET["no_zones"]))
+		if (isset($_GET["h"]))
 			define("NO_ZONES", true);
 
 		if ($cl && is_string($cl))

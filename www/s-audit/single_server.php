@@ -2,8 +2,8 @@
 
 //============================================================================
 //
-// server.php
-// ----------
+// s-audit/server.php
+// ------------------
 //
 // Show everything we know about our single server friends.
 //
@@ -26,7 +26,7 @@ define("SINGLE_SERVER", 1);
 // present a list of all the servers we know about
 
 $server = (isset($_GET["s"])) ? $_GET["s"] : false;
-$map = new ZoneMap(LIVE_DIR);
+$map = new ZoneMap();
 
 if (($server)) {
 
@@ -57,6 +57,10 @@ else {
 	// Create a getServers object to complete the map. We can destroy it
 	// straight away
 
+	// Disregard "hide local zones" flag
+
+	if (isset($_GET["h"])) unset($_GET["h"]);
+
 	$s = new getServers($map);
 	unset($s);
 
@@ -65,7 +69,7 @@ else {
 	overview.</p>";
 }
 
-echo $view->show_grid();
+echo $view->show_grid(), "<div class=\"spacer\">&nbsp;</div>";
 $pg->close_page();
 
 ?>

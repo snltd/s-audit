@@ -5,23 +5,19 @@ include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$menu_entry = "IP_LIST_FILE";
-$pg = new docPage("The IP_LIST_FILE");
+$menu_entry = "IP List File";
+$pg = new docPage("The IP List File");
 $dh = new docHelper();
 
 ?>
 
-<h1>The IP_LIST_FILE</h1>
+<h1>The IP List File</h1>
 <p>This flat text is created by the <a
 href="s-audit_subnet.php"><tt>s-audit.subnet.sh</tt></a> script, and is used
-to enhance the <a href="../interface/ip_listing.txt">IP listing page</a>. It
+to enhance the <a href="../interface/ip_listing.php">IP listing page</a>. It
 contains information combining a network ping sweep with a DNS query on the
 local domain and is used to help track down DNS discrepencies and pingable,
 hosts which are not audited by s-audit.</p>
-
-<p>The auditor must know the path to this file. It is defined as
-<tt>IP_LIST_FILE</tt> in <tt>_conf/s-audit_config.php</tt>. The default path
-is <tt>/var/s-audit/ip_list/ip_list.txt</tt>.</p>
 
 <p>The file does not have to be present for s-audit to function
 correctly.</p>
@@ -68,8 +64,17 @@ hostname found by performing a lookup on <tt>IP_address_1</tt>, and
 
 <h2>Location</h2>
 
+The IP list file must be named <tt>ip_list.txt</tt>, and stored in the
+relevant audit group's <tt>network/</tt> subdirectory.
+
+For instance, if you have an audit group called "live", then the file would
+normally be saved as 
+
+<pre>
+/var/snltd/s-audit/live/network/ip_listtxt
+</pre>
+
 <?php
-$dh->file_on_sys("URI map file", "URI_MAP_FILE");
 $pg->close_page();
 ?>
 

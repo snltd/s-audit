@@ -41,7 +41,7 @@ foreach($this->cols->get_col_list("ws_cols") as $ws=>$col) {
 }
 
 
-if (file_exists(URI_MAP_FILE) || preg_match("/docs/",
+if (file_exists($this->map->get_path("uri_map")) || preg_match("/docs/",
 $_SERVER["PHP_SELF"])) {
 	$grid_key["website"][] = array("site resolves", "strongg", false);
 	$grid_key["website"][] = array("site does not resolve", "strongr", false);

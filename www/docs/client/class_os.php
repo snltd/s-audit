@@ -43,6 +43,11 @@ $pg = new docPage($menu_entry);
 	<dd>Prints the kernel revision, either the xxxxxx-yy number for 5.10 and
 	older, or the "xxx" build number for 5.11.</dd>
 
+	<dt>boot env</dt>
+	<dd>Lists any boot environments, if the host supports them. The name of
+	the environment is given first, followed by the mountpoint and any
+	active flags.</dd>
+
 	<dt>hostid</dt>
 	<dd>Prints the hostid.</dd>
 
@@ -75,6 +80,11 @@ $pg = new docPage($menu_entry);
 	<dt>patch_count</dt>
 	<dd>Says how many patches have been installed in this zone. Irrelevant
 	in IPS systems.</dd>
+
+	<dt>publisher</dt>
+	<dd>On IPS systems, lists the package publishers being used by the
+	system. Lists the repository name, followed by its URL (in parentheses).
+	The preferred repository is denoted by &quot;(preferred)&quot;.</dd>
 
 </dl>
 

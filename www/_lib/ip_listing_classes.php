@@ -42,21 +42,25 @@ class GetIpList {
 	public $subnets = array();
 		// A unique array of subnets x.x.x.0
 
+	private $paths;
+		// the [paths] element from the map
+
 	public function __construct($map, $servers)  {
 		// Use a separate class to get all the IP addresses from the audit
 		// files
 
-		if (sizeof($map->map) > 0) {
-			$this->addrs["IP_LIVE"] = $this->get_ip_from_audit($servers);
-		}
-		else
-			$this->addrs["IP_LIVE"] = array();
+		$this->paths = $map->paths;
+
+		$this->addrs["IP_LIVE"] = (sizeof($map->map) > 0)
+			? $this->get_ip_from_audit($servers)
+			: $this->addrs["IP_LIVE"] = array();
 
 		// Use the reserved IP file to populate addrs[IP_RES]
 
-		if (file_exists(IP_RES_FILE)) {
-			$this->get_ip_res_file(IP_RES_FILE);
-			$this->timestamp["IP_RES"] = filemtime(IP_RES_FILE);
+		if (file_exists($this->paths["ip_res_file"])) {
+			$this->get_ip_res_file($this->paths["ip_res_file"]);
+			$this->timestamp["IP_RES"] =
+			filemtime($this->paths["ip_res_file"]);
 		}
 		else
 			$this->addrs["IP_RES"] = array();
@@ -64,8 +68,8 @@ class GetIpList {
 		// Use the IP list file to populate addrs[IP_PING] and
 		// addrs[IP_DNS]. get_ip_list_file also sets a timestamp element
 
-		if (file_exists(IP_LIST_FILE))
-			$this->get_ip_list_file(IP_LIST_FILE);
+		if (file_exists($this->paths["ip_list_file"]))
+			$this->get_ip_list_file($this->paths["ip_list_file"]);
 		else
 			$this->addrs["IP_DNS"] = $this->addrs["IP_PING"] = array();
 
@@ -148,6 +152,8 @@ class GetIpList {
 	{
 		// Go through the server data pulling out NIC and ALOM info
 
+		$ret = array();
+
 		foreach($servers as $h=>$s) {
 		
 			if (isset($s["platform"]["ALOM IP"])) {
@@ -190,11 +196,12 @@ class IPGrid extends HostGrid{
 	protected $fields;	// array of networks (from $s)
 	protected $l;		// the list of IP addresses (from $s)
 
-	public function __construct($s)
+	public function __construct($s, $map)
 	{
 		// The fields are the subnets we know about. We have to manually
 		// include the key since we don't call the parent::__construct()
 
+		$this->paths = $map->paths;
 		$this->fields = $s->subnets;
 		$this->l = $s->addrs;
 		include_once(KEY_DIR . "/key_ip_listing.php");
@@ -255,7 +262,7 @@ class IPGrid extends HostGrid{
 				// were up or not on the last sweep
 
 				if (($styl != "empty") && (sizeof($this->l["IP_DNS"] > 0))
-					&& file_exists(IP_LIST_FILE)) {
+					&& file_exists($this->paths["ip_list_file"])) {
 
 					$ic = (in_array($a, array_keys($this->l["IP_DNS"]))) 
 						? $this->cols->icol("box", "green")
@@ -283,8 +290,8 @@ class IPGrid extends HostGrid{
 
 		$nf = sizeof($this->fields);
 
-		return "\n<tr><td class=\"keyhead\" colspan=\"${nf}\">key</td>" .
-		"</tr>\n<tr>" . $this->grid_key_col($this->grid_key["general"],
+		return $this->grid_key_header($nf) 
+		. "\n<tr>" . $this->grid_key_col($this->grid_key["general"],
 		$nf);
 	}
 

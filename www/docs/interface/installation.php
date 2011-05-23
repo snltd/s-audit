@@ -19,6 +19,11 @@ interface is written simply, and requires no non-core PHP functionality.</p>
 suitable installation of PHP, but it is only officially tested with <a
 href="http://httpd.apache.org">Apache</a> 2.2.</p>
 
+<h1><tt>/var</tt> filesystem structure</tt>
+
+<pre>
+/var -- /s-audit /
+</pre>
 
 <?php
 

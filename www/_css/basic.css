@@ -56,48 +56,57 @@ h2, h3, h4 {
 
 div.spacer {
 	clear: both;
-	padding-top: 5em;
+	padding-top: 4em;
+}
+
+div.t_info {
+	text-align: center;
+	clear: both;
+	padding: 4em 0 2em 0;
 }
 
 /*--------------------------------------------------------------------------*/
 /* NAMED ELEMENTS */
 
-#header { /* The bar at the top of the page */
+#header, #footer { /* The bar at the top of the page */
+	background-color: #292C69;
 	font-size: 8pt;
-	color: #8064c5;
+	color: #dee;
 	clear: both;
-}
-
-#headerl { /* LHS of the header. Has the logo and the title */
-	float: left;
-	width: 70%;
+	border-bottom: 1px solid #18193C;
 }
 
 #headerr { /* RHS of the header. */
-	float: right;
-	width: 29%;
 	text-align: right;
 	padding-right: 0.5em;
 }
 
-#logo {
-	font-size: 14pt;
-	font-weight: bold;
-	color: #6044b5;
-	padding-left: 0.1em;
+#header a, #footer a {
+	color: #ddd;
 }
 
-#sublogo {
-	padding-left: 2em;
+#header a:hover, #navlist a:hover, #footer a:hover {
+	color: #EDFFE4;
+}
+
+#logo {
+	font-size: large;
+	font-weight: bold;
+	padding-left: 0.5em;
+}
+
+#logo a {
+	color: #fff;
+}
+
+#sublogo, #navlist a {
+	color: #ddd;
 }
 
 #footer { /* information bar at foot of page */
-	background-color: #eee;
-	padding: 6px 5px 4px 0;
-	text-align: right;
-	border-top: 1px black solid;
-	clear: both;
-	font-size: 8pt;
+	padding: 3px 2px 2px 0;
+	text-align: center;
+	border: 0;
 }
 
 /*--------------------------------------------------------------------------*/

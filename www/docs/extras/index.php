@@ -23,17 +23,17 @@ also exist to help you get more information from s-audit.</p>
 interface.</p>
 
 <dl>
-	<dt><a href="ip_res_file.php">the <tt>IP_RES_FILE</tt></a></dt>
+	<dt><a href="ip_res_file.php">the <tt>IP_Reserved List</tt></a></dt>
 	<dd>A file which lets you add static, un-auditable IP addresses to the
 	<a href="../interface/ip_listing.php">IP listing page</a>.</dd>
 
-	<dt><a href="ip_list_file.php">the <tt>IP_LIST_FILE</tt></a></dt>
+	<dt><a href="ip_list_file.php">the <tt>IP List file</tt></a></dt>
 	<dd>File created by <a
 	href="s-audit_subnetr.php"><tt>s-audit_subnet.sh</tt></a>
 	which adds non-audited machines and DNS information to the <a
 	href="../interface/ip_listing.php">IP listing page</a>.</dd>
 
-	<dt><a href="uri_map_file.php">the <tt>URI_MAP_FILE</tt></a></dt>
+	<dt><a href="uri_map_file.php">the <tt>URI map file</tt></dt>
 	<dd>A file created by <a
 	href="s-audit_dns_resolver.php"><tt>s-audit_dns_resolver.sh</tt></a>
 	which helps the interface point out websites with no DNS entries.</dd>

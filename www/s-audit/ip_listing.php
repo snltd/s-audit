@@ -2,8 +2,8 @@
 
 //============================================================================
 //
-// ip_listing.php
-// --------------
+// s-audit/ip_listing.php
+// ----------------------
 //
 // This produces a list of used IP addresses from three sources. First, it
 // uses the results of a scan run by the s-audit_subnet.sh script, and
@@ -38,29 +38,29 @@ $res_doc = "<a href=\"" . DOC_URL .
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$map = new ZoneMap(LIVE_DIR);
+$map = new ZoneMap();
 $servers = new GetServers($map, false, "net");
 $s = new GetIPList($map, $servers->get_array());
-$grid = new IPGrid($s);
-$pg = new ipPage("IP address list");
+$grid = new IPGrid($s, $map);
+$pg = new ipPage("IP address list", false);
 
 // Put explanatory text in.
 
 echo "\n<p class=\"center\">";
 
-echo (file_exists(IP_LIST_FILE))
+echo (file_exists($map->paths["ip_list_file"]))
 	? "This table incorporates data from a $list_doc generated on " .
 	$s->scan_host . " at " .  date("H:i D d/m/Y", $s->timestamp["IP_LIST"])
 	: "<p class=\"center\">You do not have a $list_doc";
 
 echo ".</p>\n\n<p class=\"center\">";
 
-echo (file_exists(IP_RES_FILE))
+echo (file_exists($map->paths["ip_res_file"]))
 	? "This table incorporates data from a $res_doc last modified at ". 
 	date("H:i D d/m/Y", $s->timestamp["IP_RES"])
 	: "<p class=\"center\">You do not have a $res_doc";
 
-echo ".</p>", $grid->show_grid("70%");
+echo ".</p>", $grid->show_grid("70%"), $pg->spacer();
 
 $pg->close_page();
 

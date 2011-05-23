@@ -14,7 +14,7 @@
 
 class Filesystem {
 
-	static function get_files($base, $type = false, $pattern = false) {
+	public function get_files($base, $type = false, $pattern = false) {
 
 		// Returns an array of files in the directory given by the first
 		// argument used to call it. If the second argument is "d" then it
@@ -72,7 +72,7 @@ class Filesystem {
 		return $ret_arr;
 	}
 
-	static function all_fnames($file) {
+	public function all_fnames($file) {
 		
 		// Returns all the information about a link 
 
@@ -83,7 +83,7 @@ class Filesystem {
 		return $links;
 	}
 
-	static function get_lines($file, $string, $count = -1) {
+	public function get_lines($file, $string, $count = -1) {
 
 		// return an array of the first $count lines in a given file
 		// containing the given string
@@ -112,7 +112,7 @@ class Filesystem {
 		return ($c > 0) ? $ret_arr : false;
 	}
 
-	static function getline($file, $string) {
+	public function getline($file, $string) {
 
 		// return the first line in a given file containing the given string 
 
@@ -133,7 +133,7 @@ class Filesystem {
 		return (isset($line)) ? $line : false;
 	}
 
-	static function get_dirs($d)
+	public function get_dirs($d)
 	{
 		// return an array of all the zones in the site under $dir to which
 		// the user is allowed access
@@ -143,7 +143,7 @@ class Filesystem {
 		// get a list of zones from the filesystem. We could cache this if
 		// we were smart
 
-		$zones = Filesystem::get_files($d, "d");
+		$zones = $this->get_files($d, "d");
 
 		// If this site has zones defined, look at each zone, see if we have
 		// the privs to see it, and if so, add it to the string we're
@@ -159,7 +159,7 @@ class Filesystem {
 		return $ret_arr;
 	}
 
-	static function move_files($files, $dest)
+	public function move_files($files, $dest)
 	{
 		// Move a bunch of files to a directory. Syntax just like mv(1).
 		// First argument can be an array
@@ -191,11 +191,11 @@ class Filesystem {
 		return $ret;
 	}
 
-	static function rm_empty_dir($dir)
+	public function rm_empty_dir($dir)
 	{
 		// Remove a directory if it's empty
 
-		$files = filesystem::get_files($dir);
+		$files = $this->get_files($dir);
 
 		if ($files == 0)
 			rmdir($dir);

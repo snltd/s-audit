@@ -15,7 +15,6 @@
 $grid_key = array(
 
 	"NTP" => array(
-		array("NTP server", false, false),
 		array("preferred NTP server", "solidgreen", false),
 		array("acting as NTP server", "solidorange", false),
 		array("not running", "boxred", false)

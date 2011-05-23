@@ -88,6 +88,17 @@ their kernel version as &quot;Virtual&quot;</dd>
 	echo $dh->colour_key($dh->grid_key["kernel"]);
 ?>
 
+<dt>boot env</dt>
+<dd>Lists any boot environments, if the host uses <tt>beadm</tt>.
+One environment per line, with the name followed by mountpoint, which is in
+parentheses. The currently active boot environment is highlighted on a green
+field. If a different environment will be used on reboot, it is highlighted
+by an amber field.</dd>
+
+<?php
+	echo $dh->colour_key($dh->grid_key["boot env"]);
+?>
+
 <dt>hostid</dt>
 <dd>Displays the hostid of the server or zone.</dd>
 

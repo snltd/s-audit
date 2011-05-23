@@ -117,6 +117,9 @@ class singleGeneric extends HostGrid {
 		// first letter of the class name. This can be overriden by setting
 		// $type in the inheriting class
 
+		require_once(ROOT . "/_conf/omitted_data.php");
+		
+		$this->omit = new omitData();
 		$this->cols = new Colours;
 
 		if (!isset($this->type))
@@ -452,6 +455,7 @@ class singlePatch extends singleGeneric
 				$footnote = "Using definition file at $hover.";
 				include_once($hover);
 				$have_hover = true;
+
 				// Get a list of hover map keys
 
 				$hkeys = array_keys($hover_arr);
@@ -558,7 +562,7 @@ class singlePatch extends singleGeneric
 //============================================================================
 // LIST OF SERVERS VIEW
 
-Class serverListGrid
+Class serverListGrid extends HostGrid
 {
 	// This class displays a grid of server and zone names known to the
 	// system. It doesn't extend the existing grid classes because it's
@@ -566,7 +570,7 @@ Class serverListGrid
 
 	private $map;		// map of all servers
 	private $gkey;		// grid key
-	private $columns; 		// columns in table
+	private $columns; 	// columns in table
 
 	public function __construct($map)
 	{
@@ -608,7 +612,7 @@ Class serverListGrid
 		return $ret . $this->grid_key() . "\n</table>\n";
 	}
 
-	private function show_server($server)
+	public function show_server($server)
 	{
 		// Return HTML <table> rows in which each element contains a
 		// clickable link to a zone which is part of the server given as the
@@ -682,16 +686,15 @@ Class serverListGrid
 			? "${server}@$parent"
 			: $server;
 
-		return "<a href=\"$_SERVER[PHP_SELF]?s=$lserver\">$server</a>";
+		return "<a href=\"$_SERVER[PHP_SELF]?g=" . $_GET["g"]
+		. "&amp;s=$lserver\">$server</a>";
 	}
 	
-	private function grid_key()
+	protected function grid_key()
 	{
-		$ret = "\n\n<tr><td class=\"keyhead\" colspan=\"" . ($this->cols +
-		1) . "\">key</td></tr>\n";
-		
-		return $ret . "\n<tr>" . new listCell($this->gkey["col_1"]) . new
-		listCell($this->gkey["others"], false, $this->cols, 1) . "</tr>";
+		return $this->grid_key_header($this->cols + 1) . new
+		listCell($this->gkey["col_1"]) . new listCell($this->gkey["others"],
+		false, $this->cols, 1) . "</tr>";
 	}
 
 }

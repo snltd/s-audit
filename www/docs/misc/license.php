@@ -31,7 +31,7 @@ All rights reserved.</p>
 	documentation and/or other materials provided with the
 	distribution.</li>
 
-	<li>Neither the name of the &lt;ORGANIZATION&gt; nor the names of its
+	<li>Neither the name of SearchNet Ltd nor the names of its
 	contributors may be used to endorse or promote products derived from
 	this software without specific prior written permission.</li>
 	

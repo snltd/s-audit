@@ -30,7 +30,7 @@ class colours {
 	protected $cols = array(
 		"green" => "#89bf84",
 		"red" => "#ca6a5b",
-		"amber" => "#E9D02F",
+		"amber" => "#DACE4D",
 		"blue" => "#2a1ad6",
 		"pink" => "#E197C5",
 		"grey" => "#bbb", 

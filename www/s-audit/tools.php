@@ -2,8 +2,8 @@
 
 //============================================================================
 //
-// tools.php
-// ---------
+// s-audit/tools.php
+// -----------------
 //
 // Software tool audit base page.
 //
@@ -15,7 +15,7 @@
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 
-$map = new ZoneMap(LIVE_DIR);
+$map = new ZoneMap();
 $s = new GetServers($map, false, "tool");
 $grid = new SoftwareGrid($map, $s->get_array(), "tool");
 

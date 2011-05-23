@@ -39,7 +39,7 @@ an up-to-date overview of all my machines. Originally I ran it through cron
 like so:</p>
 
 <pre>
-0 7,13 * * * /usr/local/bin/s-audit.sh -p -R audit@tap-audit:/var/s-audit/live
+0 7,13 * * * /usr/local/bin/s-audit.sh -p -R audit@tap-audit:/var/snltd/s-audit/live
 </pre>
 
 <p>(tap-audit is the zone running the PHP interface.) But since the advent

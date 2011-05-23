@@ -28,6 +28,9 @@ class ZoneMapBase {
 	// which define the way zones relate to each other. It also has a map of
 	// zones
 
+	private $group;
+		// group of servers
+
 	private $t_start_map;
 		// microtime at which we begin creating the map
 
@@ -57,6 +60,22 @@ class ZoneMapBase {
 
 	public $map = array();
 		// Map of zone name to zone filename
+
+	public function set_extra_paths($dir)
+	{
+		return array(
+			"uri_map" => "${dir}/network/uri_list.txt",
+			"ip_list_file" => "${dir}/network/ip_list.txt",
+			"ip_res_file" => "${dir}/network/ip_list_reserved.txt",
+			"extra_dir" => "${dir}/extras"
+		);
+
+	}
+	
+	public function get_path($key)
+	{
+		return $this->paths[$key];
+	}
 
 	public function list_globals()
 	{

@@ -105,8 +105,12 @@ ul.vmd, ul.vmf {
 	text-align: left;
 	padding-left: 2em;
 	text-indent: -1em;
-	color: #666;
+	color: #5C77BD;
 	line-height: 400%;
+}
+
+li.thispage {
+		text-decoration: underline;
 }
 
 ul.vmf {

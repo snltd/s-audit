@@ -150,10 +150,10 @@ G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
 	snmp ports routes nic"
 L_NET_TESTS=$G_NET_TESTS
 
-G_OS_TESTS="os_dist os_ver os_rel kernel hostid local_zone ldoms
-	scheduler svc_count package_count patch_count uptime "
+G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms
+	scheduler svc_count package_count patch_count pkg_repo uptime "
 L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
-	package_count patch_count uptime"
+	package_count patch_count pkg_repo uptime"
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	svnserve sendmail exim cronolog mailman splunk sshd named ssp symon
@@ -339,10 +339,11 @@ function die
 	# Print a message to stderr, log it, and exit.
 	# $1 is the message to print
 	# $2 is an optional exit code, defaults to 1
+	# $3 - if set, don't clean up
 
 	print -u2 "ERROR: $1"
 	log "$1" err
-	clean_up
+	[[ -z $3 ]] && clean_up
 	exit ${2:-1}
 }
 
@@ -510,8 +511,16 @@ function timeout_job
 		sleep 1
 	done
 
-	kill_children $BGP
-	kill $BPG 2>/dev/null
+	# Kill all the children of the backgrounded job, then the job itself.
+	# Return true if the job isn't in the process table
+
+	if ps -p $BGP >/dev/null 
+	then
+		kill_children $BGP
+		kill $BPG 2>/dev/null
+	else
+		return 0
+	fi
 }
 
 function get_disk_type
@@ -1074,9 +1083,10 @@ function get_printers
 	
 	if can_has lpstat
 	then
-		defp=$(lpstat -d | sed 's/^.*: //')
+		defp=$(lpstat -d 2>/dev/null | sed 's/^.*: //')
 
-		lpstat -s | sed -n '/^system /s/^system for \([^:]*\):.*$/\1/p' | \
+		lpstat -s 2>/dev/null | \
+		sed -n '/^system /s/^system for \([^:]*\):.*$/\1/p' | \
 		while read pr
 		do
 			[[ $defp == $pr ]] && e=" (default)" || e=""
@@ -1130,7 +1140,7 @@ function get_tape_drives
 
 	if can_has cfgadm && cfgadm >/dev/null 2>&1
 	then
-		TPLST=$(cfgadm -al | \
+		TPLST=$(cfgadm 2>/dev/null -al | \
 		sed -n "/tape.*connected/s/^.*\(rmt\/[^ ]\).*$/\/dev\/\1/p")
 	else
 		TPLST=$(ls /dev/rmt/* 2>/dev/null | sed 's/[a-z]*$//' | sort -u)
@@ -1687,6 +1697,20 @@ function get_kernel
 	disp "kernel" ${KERNVER#*_}
 }
 
+function get_be
+{
+	# Get boot environments on machines which have them
+
+	if is_global && can_has beadm 
+	then
+		beadm list -H | cut -d\; -f1,3,4 | tr \; ' ' | while read nm fl r
+		do
+			disp "boot env" "$nm ($r) [$fl]"
+		done
+	fi
+
+}
+
 function get_uptime
 {
 	# I used to use a kstat call here, which worked beautifully on 5.10, but
@@ -1731,23 +1755,37 @@ function get_package_count
 {
 	# A simple count of installed packages
 
-	if can_has dpkg
-	then
-		PKGS="$(dpkg -l | wc -l) [dpkg]"
-	elif can_has pkg
-	then
-		can_has pkg && PKGS="$(pkg list -Hs | wc -l) [ipkg]"
-	elif can_has pkginfo
+	can_has dpkg && disp "packages" $(dpkg -l | wc -l) "[dpkg]"
+
+	can_has pkg && disp "packages" $(pkg list -Hs | wc -l) "[ipkg]"
+
+	if can_has pkginfo
 	then
 		PARTIAL=$(pkginfo -p | wc -l)
 		PKGS=$(pkginfo | wc -l)
 	
 		(($PARTIAL > 0)) && PKGS="$PKGS (${PARTIAL## * } partial)"
 
-		PKGS="$PKGS [SVR4]"
+		disp "packages" $PKGS "[SVR4]"
 	fi
 
-	disp "packages" $PKGS
+}
+
+function get_pkg_repo
+{
+	# Get package repositories for IPS systems
+
+	can_has pkg || return
+
+	pkg publisher -H | while read a b c d e
+	do
+		[[ -n $e ]] \
+			&& str="$a ($e) $b" \
+			|| str="$a ($d)"
+
+		disp "publisher" $str
+	done
+
 }
 
 function get_patch_count
@@ -2733,7 +2771,7 @@ function get_db_mysql
 	do
 		[[ -d $dbdir ]] || continue
 
-		find ${dbdir}/* -name \*MYD | sed 's|/[^/]*$||' | sort -u | \
+		find $dbdir -name \*MYD | sed 's|/[^/]*$||' | sort -u | \
 		while read dir
 		do
 			dbsize=$(du -sh $dir | sed 's/^ *\([0-9\.A-Z]*\).*$/\1/')
@@ -2758,6 +2796,12 @@ function get_db_mysql
 		done
 
 	done
+}
+
+function get_ai
+{
+	# Get install services on an AI server
+	:
 }
 
 #-- FILESYSTEM AUDIT FUNCTIONS -----------------------------------------------
@@ -2879,8 +2923,10 @@ function get_fs
 	then
 		ZPL="compression,quota"
 
-		zfs get help 2>&1 | $EGS dedup && ZPL="${ZPL},dedup"
-		zfs get help 2>&1 | $EGS zoned && ZPL="${ZPL},zoned"
+		for xp in dedup zoned encryption
+		do
+			zfs get help 2>&1 | $EGS $xp && ZPL="${ZPL},$xp"
+		done
 
 		if zfs help 2>&1 | $EGS upgrade
 		then
@@ -2966,9 +3012,20 @@ function get_exports
 		done
 	fi
 
-	# Now Samba. Query the config file, because smbclient may not be
-	# available, or may need a password. Just shows share name and path for
-	# now
+	# Samba via sharemgr
+
+	if can_has sharemgr
+	then
+		sharemgr show -P smb -v | sed '1,/^zfs/d' | sed -n '/=/s/=/ /p' | \
+		while read name dir
+		do
+			disp "export" "$dir smb/zfs [${name}]"
+		done
+	fi
+
+	# Samba via traditional smbd. Query the config file, because smbclient
+	# may not be available, or may need a password. Just shows share name
+	# and path for now
 
 	if can_has smbd
 	then
@@ -2980,7 +3037,7 @@ function get_exports
 			| sed -e :a -e '/\]$/N; s/\]\n//; ta' \
 			| sed 's/^\[//;s/path *= */ /' | while read name dir
 			do
-				disp "export" "$dir smb [${name}]"
+				disp "export" "$dir smb/daemon [${name}]"
 			done
 		fi
 
@@ -3238,7 +3295,7 @@ function get_package_list
 
 	if can_has pkg
 	then
-		PKGLIST=$(pkg list -Ha | pkg list -Hs | sed 's/ .*//' | sort -u)
+		PKGLIST=$(pkg list -Hs | sed 's/ .*//' | sort -u)
 	else
 
 		# Get a list of partially installed packages so we can alert the
@@ -3311,7 +3368,6 @@ do
 			SYSLOG=$OPTARG
 			;;
 
-
 		"M")
 			DO_PLUMB=1
 			;;
@@ -3324,7 +3380,7 @@ do
 				# disp() will pick up. Set the Z_OPTS variable in case we
 				# need to propagate this option down to local zones
 			OUT_P=1
-			Z_OPTS="-p"
+			Z_OPTS="$Z_OPTS -p"
 			SHOW_PATH=1
 			;;
 
@@ -3344,10 +3400,12 @@ do
 
 		"T")	# class timeout
 			C_TIME=$OPTARG
+			Z_OPTS="$Z_OPTS -T $OPTARG"
 			;;
 
 		"u")	# User check file
 			UCHK=$OPTARG
+			Z_OPTS="$Z_OPTS -u $OPTARG"
 			;;
 
 		"V")	# Print version and exit
@@ -3412,8 +3470,8 @@ fi
 
 if [[ -n $ZL ]]
 then
-	is_global || die "-z option invalid in local zones."
-	is_root || die "only root can use -z option."
+	is_global || die "-z and machine audits invalid in local zone."
+	is_root || die "only root can do -z or full machine audits."
 
 	if can_has zoneadm
 	then
@@ -3459,7 +3517,7 @@ if is_root && [[ -f $LOCKFILE ]]
 then
 	OPID=$(cat $LOCKFILE)
 	can_has zonename && OPID="$OPID, zone $(zonename)"
-	die "Lock file exists at ${LOCKFILE}. [PID ${OPID}]"
+	die "Lock file exists at ${LOCKFILE}. [PID ${OPID}]" 3 1
 elif is_root
 then
 	[[ -d ${LOCKFILE%/*} ]] || mkdir -p ${LOCKFILE%/*} 2>/dev/null
@@ -3491,7 +3549,7 @@ then
 
 	fi
 
-	msg "Writing audit files to ${OD}."
+	msg "Writing audit data to ${OD}."
 else
 	exec 3>&1
 fi
@@ -3543,56 +3601,62 @@ fi
 # To audit zones we copy ourselves into the zone root, then run that copy
 # via zlogin, capturing the output
 
-can_has zoneadm && for z in $ZL
-do
-	[[ $ZL == "global" ]] && continue
+if can_has zoneadm
+then
 
-	zoneadm -z $z list -p | cut -d: -f3,4,6 | tr : " " | read zst zr zbr
+	for z in $ZL
+	do
+		[[ $ZL == "global" ]] && continue
 
-	# Running zones get properly audited but those which aren't running get
-	# some dummy output so the interface can show that the zone exists
+		zoneadm -z $z list -p | cut -d: -f3,4,6 | tr : " " | read zst zr zbr
 
-	[[ $zst == "running" && $zbr != "lx" ]] && zlive=1 || zlive=""
+		# Running zones get properly audited but those which aren't running
+		# get some dummy output so the interface can show that the zone
+		# exists
 
-	if [[ -n $zlive ]]
-	then
-		zf=${zr}/root/$$${0##*/}$RANDOM
-		cp -p $0 $zf
-	fi
+		[[ $zst == "running" && $zbr != "lx" ]] && zlive=1 || zlive=""
 
-	# The only way to get separate files is to run the script multiple
-	# times, changing the file descriptor each time. Also run multiple times
-	# for a non-running zone
+		if [[ -n $zlive ]]
+		then
+			zf=${zr}/root/$$${0##*/}$RANDOM
+			cp -p $0 $zf
+		fi
+	
+		# The only way to get separate files is to run the script multiple
+		# times, changing the file descriptor each time. Also run multiple
+		# times for a non-running zone
 
-	if [[ -n $ofh || -z $live ]]
-	then
+		if [[ -n $ofh || -z $live ]]
+		then
 
-		for c1 in $CL
-		do
+			for c1 in $CL
+			do
 
-			[[ -n $of_h ]] && exec 3>"${OD}/${z}.${c1}.saud"
+				[[ -n $of_h ]] && exec 3>"${OD}/${z}.${c1}.saud"
 
-			if [[ -n $zlive ]] 
-			then
-				zlogin -S $z /${zf##*/} $Z_OPTS $c1 \
+				if [[ -n $zlive ]] 
+				then
+					zlogin -S $z /${zf##*/} $Z_OPTS $c1 \
+						|| disp "error" "incomplete audit"
+				else
+					class_head $z $c1
+					disp "hostname" $z
+					disp "zone status" $zst
+					get_time
+					class_foot $z $c1
+				fi >&3
+
+			done
+
+		else
+			zlogin -S $z /${zf##*/} $Z_OPTS $CL >&3 \
 				|| disp "error" "incomplete audit"
-			else
-				class_head $z $c1
-				disp "hostname" $z
-				disp "zone status" $zst
-				get_time
-				class_foot $z $c1
-			fi >&3
+		fi
 
-		done
+		[[ -n $zlive ]] && rm $zf
+	done 
 
-	else
-		zlogin -S $z /${zf##*/} $Z_OPTS $CL >&3 \
-			|| disp "error" "incomplete audit"
-	fi
-
-	[[ -n $zlive ]] && rm $zf
-done 
+fi
 
 # Write a footer if we've just done a parseable file
 

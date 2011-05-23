@@ -20,7 +20,6 @@
 .ssall td { /* all cells */
 	text-align: center;
 	vertical-align: top;
-	padding: 6px 0;
 }
 
 td.ldm, td.svhn, td.vb { /* left-hand column of global zone hostnames */

@@ -32,10 +32,10 @@ from static files is shown on a pink background.</p>
 <h2>Adding Static Data</h2>
 
 <p>It is possible to add a single file of static data for each class of
-audit. These should be created in the <tt>EXTRA_DIR</tt> defined in
-<tt>s-audit_config.conf</tt>, named <tt>class.audex</tt>, where
-<tt>class</tt> is the audit class to which you are adding, and they
-should follow the &quot;ini&quot; file format.</p>
+audit for each audit group. These should be created in the <tt>extras/</tt>
+subdirectory of the audit group's main directory, and named
+<tt>class.audex</tt>, where <tt>class</tt> is the audit class to which you
+are adding, and they should follow the &quot;ini&quot; file format.</p>
 
 <h2>File Format</h2>
 
@@ -81,7 +81,6 @@ s-infra-01=6.7.11
 
 <?php
 
-$dh->file_on_sys("static data directory", "EXTRA_DIR");
 $pg->close_page();
 
 ?>

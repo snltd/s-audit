@@ -36,30 +36,31 @@ div.indent { /* intented divs, e.g. on hosted services */
 	padding: 0 0.5em 0 0.5em;
 }
 
-ul.navlist {
+ul.navlist, th, td.keyhead, td.sskeyhead {
 	clear: both;
 	text-align: right;
-	background: #eee;
+	color: #fff;
+	background-color: #2E3175;
+	border-top: 1px solid #383C8E;
+	border-bottom: 1px solid #eee;
 	font-size: 8pt;
-	padding: 2px;
-	margin-top: 3px;
-	border-top: 1px solid black;
-	border-bottom: 1px solid black;
+	margin: 0 0 20px 0;
 }
 
 li.here {
-	border-bottom: 5px solid black;
+	background-color: #5C77BD;
 }
+
 
 /*--------------------------------------------------------------------------*/
 /* GENERAL AUDIT GRIDS */
 
-th, td.comprow { /* table headings for audit grids */
+th, td.comprow, td.keyhead, td.sskeyhead { /* table headings for audit grids */
 	text-align: center;
-	color: black;
-	padding: 6px 1px 6px 1px;
-	background-color: #ccc;
-	border-bottom: 1px solid black;
+	font-weight: bold;
+	color: #fff;
+	padding: 3px 1px 3px 1px;
+	border: 0
 }
 
 .audit a {
@@ -116,7 +117,7 @@ td.serverhn { /* hostname for global zones/physical servers */
 /*-- versioning ------------------------------------------------------------*/
 
 .ver_l { /* latest version of something */
-	background: #B2C5AC;
+	background: #A5C5B0;
 }
 
 .ver_o { /* old versions of something */
@@ -160,12 +161,7 @@ td.nopad {
 /*--------------------------------------------------------------------------*/
 /* KEY ROW */
 
-td.keyhead { /* table row which separtes the data from the key */
-	text-align: center;
-	border-bottom: 1px solid black;
-	padding: 4px;
-	padding-top: 20px;
-	margin-bottom: 10px;
-	font-size: 13px;
-	font-weight: bold;
+td.keygap {
+	padding-top: 20pt;
 }
+

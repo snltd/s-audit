@@ -2,8 +2,8 @@
 
 //============================================================================
 //
-// compare.php
-// -----------
+// s-audit/compare.php
+// -------------------
 //
 // Compare servers so you can see differences and commonalities.
 //
@@ -40,7 +40,7 @@ if (isset($_POST["z2"]))
 
 // Create a zone file map. We need that whatever we're doing
 
-$map = new ZoneMap(LIVE_DIR);
+$map = new ZoneMap();
 
 // We also want the list of paired servers every time
 
