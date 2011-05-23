@@ -135,12 +135,12 @@ if ($qs == "hosted.php" || defined("ALL")) {
 		$hscol_grp .= "td.${name}, .${name}, ";
 	}
 
-
 	// The strongr and strongg links are for the clickable domain names on
 	// the hosted services page. They're bold-face red and green
 
-	echo "\na.strongr { color: #94112D }\n\na.strongg { color: #355F26; }",
-	"\n\na.strongr, a.strongg { font-weight: bold }\n\n/* end hosted */\n";
+	echo "\na.strongr, .strongr { color: #94112D }\n\na.strongg, .strongg ",
+	"{ color: #355F26; }\n\na.strongr, a.strongg, .strongr, .strongg ",
+	"{ font-weight: bold }\n\n/* end hosted */\n";
 }
 
 ?>

@@ -40,9 +40,10 @@ foreach($this->cols->get_col_list("ws_cols") as $ws=>$col) {
 	$this->cols->icol("box", $ws, "ws_cols"));
 }
 
+// Add this to the key if we're in a doc page (in which case there's no map)
+// or if we're in an audit page and have the uri map
 
-if (file_exists($this->map->get_path("uri_map")) || preg_match("/docs/",
-$_SERVER["PHP_SELF"])) {
+if (!isset($this->map) || file_exists($this->map->get_path("uri_map"))) {
 	$grid_key["website"][] = array("site resolves", "strongg", false);
 	$grid_key["website"][] = array("site does not resolve", "strongr", false);
 }
