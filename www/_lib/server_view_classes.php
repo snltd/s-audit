@@ -253,6 +253,7 @@ class singlePlatform extends singleGeneric {
 		require_once(LIB . "/defs.php");
 		$defs = new defs();
 		$this->card_db = $defs->get_data("card_db");
+		$this->hw_db = $defs->get_data("hw_db");
 		parent::__construct($type, $data, $map, $gzd);
 	}
 }
