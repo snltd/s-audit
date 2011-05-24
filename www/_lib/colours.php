@@ -97,12 +97,16 @@ class colours {
 		// because we might be calling this from dynamic_css.php, which
 		// doesn't include the site config file
 
-		require_once(ROOT . "/_conf/nic_colours.php");
+		if (file_exists(ROOT . "/_conf/nic_colours.php")) {
+			require_once(ROOT . "/_conf/nic_colours.php");
 
-		if (isset($nic_cols)) {
-			$this->nic_cols = $nic_cols;
-			unset($nic_cols);
+			if (isset($nic_cols)) {
+				$this->nic_cols = $nic_cols;
+				unset($nic_cols);
+			}
+
 		}
+
 	}
 
 	public function get_col($col, $class)

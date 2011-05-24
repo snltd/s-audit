@@ -68,7 +68,7 @@ $pg = new docPage("software tool audits");
 	Studio compiler software</a>, (previously known as Sun Studio, SunONE,
 	Forte and Sun Workshop), along with a list of supported languages. (From
 	C, C++ and Fortran.) The version number may not make a lot of sense
-	(it's probably 5.x), but the <a href="../interface">PHP interface</a>
+	(it's probably 5.x), but the <a href="../03_interface">PHP interface</a>
 	will convert it to a marketing number.</dd>
 
 	<dt>gcc</dt>

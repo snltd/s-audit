@@ -32,7 +32,7 @@ $dh->doc_class_start();
 <dt>user</dt>
 <dd>This column pairs users with UIDs. Standard Solaris users, which exist
 by default on all systems, are not shown. The list of standard users is kept
-in <a href="../extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>.</dd>
+in <a href="../04_extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>.</dd>
 
 <dd>On this system the omitted users are:</dd>
 

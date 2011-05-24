@@ -3952,10 +3952,10 @@ class docPage extends Page {
 
 	protected $h_links = array(
 		"" => "documentation home",
-		"client" => "s-audit.sh client",
-		"interface" => "web interface",
-		"extras" => "extra files and support scripts",
-		"misc" => "miscellany"
+		"02_client" => "s-audit.sh client",
+		"03_interface" => "web interface",
+		"04_extras" => "extra files and support scripts",
+		"05_misc" => "miscellany"
 		);
 
 	protected $link_root = DOC_URL;
@@ -4047,6 +4047,7 @@ class NavigationDynamicVert {
 		$this->my_d = dirname($this->my_f);
 		$this->all_d = Filesystem::get_files(ROOT . "/docs", "d");
 		$this->all_f = Filesystem::get_files($this->my_d, "f");
+		$this->fs = new filesystem();
     }
 
 	public function print_list()
@@ -4054,13 +4055,15 @@ class NavigationDynamicVert {
 		$ret = "\n<ul class=\"vmd\">";
 
 		foreach($this->all_d as $d) {
-			$da = Filesystem::all_fnames($d);
+			$da = $this->fs->all_fnames($d);
 
 			// Ignore "hidden" directories. That is, ones whose names start
 			// with an underscore
 
 			if (preg_match("/^_/", $da["link"]))
 				continue;
+			
+			$da["link"] = preg_replace("/^\d+_/", "", $da["link"]);
 
 			$ret .= ($this->my_d == $d)
 				? "\n  <li class=\"thispage\">$da[link]</li>"
@@ -4089,8 +4092,8 @@ class NavigationDynamicVert {
 		}
 	
 		foreach($arr as $f) {
-			$da = Filesystem::all_fnames($f);
-			eval(Filesystem::getline($da["file"], "menu_entry"));
+			$da = $this->fs->all_fnames($f);
+			eval($this->fs->getline($da["file"], "menu_entry"));
 
 			$ret .= ($f == $this->my_f)
 				? "\n  <li class=\"thispage\">$menu_entry</li>"

@@ -33,8 +33,8 @@ than in any of the other classes.</p>
 
 	<dt>users</dt>
 	<dd>Prints a list of all users. The username is paired with the UID.
-	<a href="../interface">The PHP interface</a> removes standard users from
-	this list.</dd>
+	<a href="../03_interface">The PHP interface</a> removes standard users
+	from this list.</dd>
 
 	<dt>uid_0</dt>
 	<dd>Lists all users other than <tt>root</tt> with a UID of 0.</dd>
@@ -58,7 +58,7 @@ than in any of the other classes.</p>
 	<dt>user_attr</dt>
 	<dd>Parses <tt>/etc/user_attr</tt> to find all profiles. Profiles common
 	to all Solaris installations are filtered out by the <a
-	href="../interface">PHP interface</a>.</dd>
+	href="../03_interface">PHP interface</a>.</dd>
 
 	<dt>root_shell</dt>
 	<dd>Displays the root shell if it is anything other than

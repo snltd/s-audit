@@ -43,23 +43,27 @@ if (defined("OMIT_PORT_THRESHOLD"))
 	$grid_key["port"][] = array("NOTE: open ports above " .
 	OMIT_PORT_THRESHOLD . " are not being displayed.", false, false);
 
-// Generate the NIC key automatically
+// Generate the NIC key automatically, if we have a nic_cols array
 
-foreach($this->cols->get_col_list("nic_cols") as $net=>$col) {
-	$class = "net$net";
+if (isset($this->cols->nic_cols)) {
 
-    if ($net == "alom" || $net == "vlan")
-        continue;
-    elseif ($net == "unconfigured")
-        $txt = "unconfigured or VLANned interface";
-    elseif ($net == "vswitch")
-        $txt = "virtual switch";
-    elseif (preg_match("/^\d{1,3}.\d{1,3}.\d{1,3}$/", $net)) {
-        $txt = "${net}.0 network";
-		$class = "net" . preg_replace("/\./", "", $net);
-	}
+	foreach($this->cols->get_col_list("nic_cols") as $net=>$col) {
+		$class = "net$net";
+
+    	if ($net == "alom" || $net == "vlan")
+        	continue;
+    	elseif ($net == "unconfigured")
+        	$txt = "unconfigured or VLANned interface";
+    	elseif ($net == "vswitch")
+        	$txt = "virtual switch";
+    	elseif (preg_match("/^\d{1,3}.\d{1,3}.\d{1,3}$/", $net)) {
+        	$txt = "${net}.0 network";
+			$class = "net" . preg_replace("/\./", "", $net);
+		}
 	
-    $grid_key["NIC"][] = array($txt, $class);
+    	$grid_key["NIC"][] = array($txt, $class);
+	}
+
 }
 
 ?>

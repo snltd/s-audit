@@ -12,25 +12,27 @@ class auditGroupDesc {
 	public function desc_group($dir)
 	{
 		$hd =$dir . "/hosts";
-		$di = new DirectoryIterator($hd);
-		$nd = 0;
+		$fs = new filesystem();
 
 		$info = $dir . "/info.txt";
 		$gn = basename($dir);
+		$hosts = $fs->get_files($hd, "d");
+		$nd = count($hosts);
 
-		$ret = "\n\n<dt><a href=\"s-audit/index.php?g=$gn\">$gn</a></dt>";
+		$ret = ($nd > 0)
+			? "\n\n<dt><a href=\"s-audit/index.php?g=$gn\">$gn</a></dt>"
+			: "\n\n<dt>$gn</dt>";
 
 		if (file_exists($info))
 			$ret .= "\n  <dd>" . file_get_contents($info) . "</dd>";
 
-		foreach($di as $d) $nd++;
-
 		$hdmt = filemtime($hd);
 
-		$ret .= "\n  <dd><strong>$nd</strong> hosts.  Most recent audit
-		added " .
-		date("jS M Y", $hdmt) . ". (" . round((mktime() - $hdmt) / 86400) .
-		" days ago.)</dd>";
+		$ret .= "\n  <dd><strong>$nd</strong> hosts.";
+		
+		if ($nd > 0)
+			$ret .= " Most recent audit added " .  date("jS M Y", $hdmt) .
+			". (" . round((mktime() - $hdmt) / 86400) .  " days ago.)</dd>";
 
 		return $ret;
 

@@ -1,0 +1,165 @@
+<span class="Comment">#!/bin/ksh</span>
+
+<span class="Comment">#=============================================================================</span>
+<span class="Comment">#</span>
+<span class="Comment"># s-audit_group.sh</span>
+<span class="Comment"># -----------------</span>
+<span class="Comment">#</span>
+<span class="Comment"># This simple script creates, removes, and lists audit groups known to the</span>
+<span class="Comment"># server on which it is run.</span>
+<span class="Comment"># </span>
+<span class="Comment"># You probably want to run it as root.</span>
+<span class="Comment">#</span>
+<span class="Comment"># EXAMPLES</span>
+<span class="Comment">#</span>
+<span class="Comment"># To create a group called &quot;production&quot;, which will hold audits for</span>
+<span class="Comment"># production servers, with write permissions for the audit user:</span>
+<span class="Comment">#</span>
+<span class="Comment">#  $ s-audit_group.sh create -d &quot;Production Servers&quot; -u audit production</span>
+<span class="Comment">#</span>
+<span class="Comment"># To remove that group and all its audit files:</span>
+<span class="Comment">#</span>
+<span class="Comment">#  $ s-audit_group.sh remove production</span>
+<span class="Comment">#</span>
+<span class="Comment"># Part of s-audit. (c) 2011 SearchNet Ltd</span>
+<span class="Comment">#   see <a href="http://snltd.co.uk/s-audit">http://snltd.co.uk/s-audit</a> for licensing and documentation</span>
+<span class="Comment">#</span>
+<span class="Comment">#=============================================================================</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># VARIABLES</span>
+
+<span class="Identifier">PATH</span>=/usr/bin:/usr/sbin
+        <span class="Comment"># Always set your PATH</span>
+
+<span class="Identifier">AUDIT_DIR</span>=<span class="Statement">&quot;</span><span class="Constant">/var/snltd/s-audit</span><span class="Statement">&quot;</span>
+    <span class="Comment"># should match the AUDIT_DIR definition in s-audit_config.php. Can be</span>
+    <span class="Comment"># overridden with -R</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># FUNCTIONS</span>
+
+<span class="Identifier">function</span> <span class="Identifier">die</span>
+<span class="Identifier">{</span>
+    <span class="Comment"># Print an error and exit</span>
+
+    <span class="Statement">print</span><span class="shFunctionTwo"> </span><span class="Special">-u2</span><span class="shFunctionTwo"> </span><span class="Statement">&quot;</span><span class="Constant">ERROR: </span><span class="PreProc">$1</span><span class="Statement">&quot;</span>
+    <span class="Statement">exit</span><span class="shFunctionTwo"> </span><span class="PreProc">${</span><span class="PreProc">2</span><span class="Statement">:-</span>1<span class="PreProc">}</span>
+<span class="Identifier">}</span>
+
+
+<span class="Identifier">function</span> <span class="Identifier">usage</span>
+<span class="Identifier">{</span>
+    <span class="Statement">cat</span><span class="Statement">&lt;&lt;-EOUSAGE</span>
+
+<span class="Constant">    usage:</span>
+
+<span class="Constant">      </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> create [-d description] [-u user] [-g group] [-R dir] group_name</span>
+
+<span class="Constant">      </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> remove -r group_name</span>
+
+<span class="Constant">      </span><span class="PreProc">${</span><span class="PreProc">0</span><span class="Statement">##</span>*/<span class="PreProc">}</span><span class="Constant"> lists</span>
+
+<span class="Statement">    EOUSAGE</span>
+
+    <span class="Statement">exit</span><span class="shFunctionTwo"> </span><span class="Constant">2</span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">function</span> <span class="Identifier">mk_group_dirs</span>
+<span class="Identifier">{</span>
+    <span class="Comment"># Make the group directories.</span>
+
+    <span class="Comment"># $1 is the group name</span>
+
+    <span class="Identifier">R</span>=<span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="shFunctionTwo">/</span><span class="PreProc">$1</span>
+
+    <span class="Special">[[</span> <span class="Statement">-d</span><span class="shDblBrace"> </span><span class="PreProc">$R</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class="shFunctionTwo"> </span><span class="Statement">&amp;&amp;</span><span class="shFunctionTwo"> die </span><span class="Statement">&quot;</span><span class="Constant">group '</span><span class="PreProc">$1</span><span class="Constant">' exists at </span><span class="PreProc">${</span><span class="PreProc">R</span><span class="PreProc">}</span><span class="Constant">.</span><span class="Statement">&quot;</span>
+
+    <span class="Statement">mkdir</span><span class="shFunctionTwo"> </span><span class="Special">-p</span><span class="shFunctionTwo"> </span><span class="PreProc">${</span><span class="PreProc">R</span><span class="PreProc">}</span><span class="shFunctionTwo">/hosts </span><span class="PreProc">${</span><span class="PreProc">R</span><span class="PreProc">}</span><span class="shFunctionTwo">/network </span><span class="PreProc">${</span><span class="PreProc">R</span><span class="PreProc">}</span><span class="shFunctionTwo">/extra </span>
+<span class="Identifier">}</span>
+
+<span class="Identifier">function</span> <span class="Identifier">rm_group_dirs</span>
+<span class="Identifier">{</span>
+    <span class="Comment"># Remove a group's directories</span>
+
+    <span class="Comment"># $1 is the group name</span>
+
+    <span class="Identifier">R</span>=<span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="shFunctionTwo">/</span><span class="PreProc">$1</span>
+
+    <span class="Special">[[</span> <span class="Statement">-d</span><span class="shDblBrace"> </span><span class="PreProc">$R</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class="shFunctionTwo"> </span><span class="Statement">||</span><span class="shFunctionTwo"> die </span><span class="Statement">&quot;</span><span class="Constant">group directory does not exist. [</span><span class="PreProc">$R</span><span class="Constant">]</span><span class="Statement">&quot;</span>
+
+    <span class="Statement">rm</span><span class="shFunctionTwo"> </span><span class="Special">-fr</span><span class="shFunctionTwo"> </span><span class="PreProc">$R</span>
+
+    <span class="Special">[[</span> <span class="Statement">-d</span><span class="shDblBrace"> </span><span class="PreProc">$R</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class="shFunctionTwo"> </span><span class="Statement">&amp;&amp;</span><span class="shFunctionTwo"> </span><span class="Statement">return</span><span class="shFunctionTwo"> </span><span class="Constant">1</span><span class="shFunctionTwo"> </span><span class="Statement">||</span><span class="shFunctionTwo"> </span><span class="Statement">return</span><span class="shFunctionTwo"> </span><span class="Constant">0</span>
+<span class="Identifier">}</span>
+
+<span class="Comment">#-----------------------------------------------------------------------------</span>
+<span class="Comment"># SCRIPT STARTS HERE</span>
+
+<span class="Comment"># Need arguments</span>
+
+<span class="Special">[[</span> <span class="PreProc">$#</span><span class="shDblBrace"> </span><span class="Statement">-lt</span><span class="shDblBrace"> </span><span class="Constant">1</span><span class="shDblBrace"> </span><span class="Special">]]</span> &amp;&amp; usage
+
+<span class="Comment"># Get options</span>
+
+<span class="Identifier">CMD</span>=<span class="PreProc">$1</span>
+
+<span class="Statement">shift</span> <span class="PreProc">$((</span><span class="Special"> </span><span class="PreProc">$OPTIND</span><span class="Special"> </span><span class="PreProc">))</span>
+
+<span class="Statement">while </span><span class="Statement">getopts</span><span class="Statement"> </span><span class="Statement">&quot;</span><span class="Constant">d:g:u:R:</span><span class="Statement">&quot;</span><span class="Statement"> option </span><span class="Constant">2</span><span class="Statement">&gt;</span><span class="Statement">/dev/null</span>
+<span class="Statement">do</span>
+
+    <span class="Statement">case</span> <span class="PreProc">$option</span><span class="shCaseEsac"> </span><span class="Statement">in</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">d</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">MSG</span>=<span class="Statement">&quot;</span><span class="PreProc">$OPTARG</span><span class="Statement">&quot;</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">g</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">GROUP</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">R</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">AUDIT_DIR</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        <span class="Statement">&quot;</span><span class="Constant">u</span><span class="Statement">&quot;</span><span class="Statement">)</span>  <span class="Identifier">USER</span>=<span class="PreProc">$OPTARG</span>
+                <span class="Statement">;;</span>
+
+        *<span class="Statement">)</span>        usage
+
+    <span class="Statement">esac</span>
+
+<span class="Statement">done</span>
+
+<span class="Statement">shift</span> <span class="PreProc">$((</span><span class="PreProc">$OPTIND</span><span class="Special"> - </span><span class="Constant">1</span><span class="PreProc">))</span>
+
+<span class="Special">[[</span> <span class="Statement">-w</span><span class="shDblBrace"> </span><span class="PreProc">$AUDIT_DIR</span><span class="shDblBrace"> </span><span class="Special">]]</span> || die <span class="Statement">&quot;</span><span class="Constant">Can't write to AUDIT_DIR. [</span><span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="Constant">]</span><span class="Statement">&quot;</span>
+
+<span class="Statement">if </span><span class="Special">[[</span> <span class="PreProc">$CMD</span><span class="shDblBrace"> </span><span class="Statement">==</span><span class="shDblBrace"> </span><span class="Constant">&quot;create&quot;</span><span class="shDblBrace"> </span><span class="Special">]]</span>
+<span class="Statement">then</span>
+    <span class="Special">[[</span> <span class="PreProc">$#</span><span class="shDblBrace"> </span><span class="Statement">==</span><span class="shDblBrace"> </span><span class="Constant">1</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">||</span><span class=""> usage</span>
+
+    <span class="Special">[[</span> <span class="Statement">-n</span><span class="shDblBrace"> </span><span class="PreProc">${</span><span class="PreProc">USER</span><span class="PreProc">}</span><span class="PreProc">$GROUP</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">&amp;&amp;</span><span class=""> </span><span class="Special">[[</span><span class="shDblBrace"> </span><span class="PreProc">$(</span><span class="Special">id</span><span class="PreProc">)</span><span class="shDblBrace"> </span><span class="Statement">!=</span><span class="shDblBrace"> </span><span class="Statement">&quot;</span><span class="Constant">uid=0(root)</span><span class="Statement">&quot;</span><span class="shDblBrace">* </span><span class="Special">]]</span><span class=""> \</span>
+        <span class="Statement">&amp;&amp;</span><span class=""> die </span><span class="Statement">&quot;</span><span class="Constant">-u and -g options require root privileges.</span><span class="Statement">&quot;</span>
+
+    mk_group_dirs <span class="PreProc">$1</span><span class=""> </span><span class="Statement">||</span><span class=""> die </span><span class="Statement">&quot;</span><span class="Constant">failed to create group directories.</span><span class="Statement">&quot;</span>
+
+    <span class="Special">[[</span> <span class="Statement">-n</span><span class="shDblBrace"> </span><span class="PreProc">$MSG</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">&amp;&amp;</span><span class=""> </span><span class="Statement">print</span><span class=""> </span><span class="Statement">&quot;</span><span class="PreProc">$MSG</span><span class="Statement">&quot;</span><span class=""> </span><span class="Statement">&gt;&gt;</span><span class="Statement">&quot;</span><span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="Constant">/</span><span class="PreProc">${</span><span class="PreProc">1</span><span class="PreProc">}</span><span class="Constant">/info.txt</span><span class="Statement">&quot;</span>
+
+    <span class="Special">[[</span> <span class="Statement">-n</span><span class="shDblBrace"> </span><span class="PreProc">$USER</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">&amp;&amp;</span><span class=""> chown </span><span class="Statement">-R</span><span class=""> </span><span class="PreProc">$USER</span><span class=""> </span><span class="Statement">&quot;</span><span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="Constant">/</span><span class="PreProc">${</span><span class="PreProc">1</span><span class="PreProc">}</span><span class="Statement">&quot;</span>
+    <span class="Special">[[</span> <span class="Statement">-n</span><span class="shDblBrace"> </span><span class="PreProc">$GROUP</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">&amp;&amp;</span><span class=""> chgrp </span><span class="Statement">-R</span><span class=""> </span><span class="PreProc">$GROUP</span><span class=""> </span><span class="PreProc">$R</span><span class=""> </span><span class="Statement">&quot;</span><span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="Constant">/</span><span class="PreProc">${</span><span class="PreProc">1</span><span class="PreProc">}</span><span class="Statement">&quot;</span>
+
+<span class="Statement">elif</span> <span class="Special">[[</span> <span class="PreProc">$CMD</span><span class="shDblBrace"> </span><span class="Statement">==</span><span class="shDblBrace"> </span><span class="Constant">&quot;remove&quot;</span><span class="shDblBrace"> </span><span class="Special">]]</span>
+<span class="Statement">then</span>
+    <span class="Special">[[</span> <span class="PreProc">$#</span><span class="shDblBrace"> </span><span class="Statement">==</span><span class="shDblBrace"> </span><span class="Constant">1</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">||</span><span class=""> usage</span>
+
+    rm_group_dirs <span class="PreProc">$1</span><span class=""> </span><span class="Statement">||</span><span class=""> die </span><span class="Statement">&quot;</span><span class="Constant">failed to remove group directories.</span><span class="Statement">&quot;</span>
+
+<span class="Statement">elif</span> <span class="Special">[[</span> <span class="PreProc">$CMD</span><span class="shDblBrace"> </span><span class="Statement">==</span><span class="shDblBrace"> </span><span class="Constant">&quot;list&quot;</span><span class="shDblBrace"> </span><span class="Statement">||</span><span class="shDblBrace"> </span><span class="PreProc">$CMD</span><span class="shDblBrace"> </span><span class="Statement">==</span><span class="shDblBrace"> </span><span class="Constant">&quot;ls&quot;</span><span class="shDblBrace"> </span><span class="Special">]]</span>
+<span class="Statement">then</span>
+    <span class="Special">[[</span> <span class="Statement">-d</span><span class="shDblBrace"> </span><span class="PreProc">$AUDIT_DIR</span><span class="shDblBrace"> </span><span class="Special">]]</span><span class=""> </span><span class="Statement">||</span><span class=""> die </span><span class="Statement">&quot;</span><span class="Constant">no audit directory. [</span><span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="Constant">]</span><span class="Statement">&quot;</span>
+
+    <span class="Statement">print</span><span class=""> </span><span class="Statement">&quot;</span><span class="Constant">The following audit groups exist:</span><span class="Statement">&quot;</span>
+
+    <span class="Statement">find</span><span class=""> </span><span class="PreProc">${</span><span class="PreProc">AUDIT_DIR</span><span class="PreProc">}</span><span class="">/* -</span><span class="Statement">type</span><span class=""> d -prune </span><span class="Statement">|</span><span class=""> </span><span class="Statement">sed</span><span class=""> </span><span class="Statement">'</span><span class="Constant">s|^.*/|  |</span><span class="Statement">'</span>
+<span class="Statement">else</span>
+    usage
+<span class="Statement">fi</span>

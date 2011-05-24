@@ -73,7 +73,7 @@ $ s-audit.sh -V
 	<dd>Makes the output machine-parseable. By default output is
 	&quot;prettyfied&quot; for human eyes, but the machine-parseable version
 	is generally very easy to understand. This option produces output which
-	can be understood by the <a href="../interface">PHP interface</a>.</dd>
+	can be understood by the <a href="../03_interface">PHP interface</a>.</dd>
 
 	<dt>-P</dt>
 	<dd>With this option, rather than just reporting the versions of
@@ -90,7 +90,7 @@ $ s-audit.sh -V
 	<dt>-R user@host:directory</dt>
 	<dd>This option is used in conjunction with <tt>-f</tt> to copy files to
 	a remote destination, where they will presumably be processed by the <a
-	href="../interface">PHP interface</a>. This requires an <tt>scp</tt>
+	href="../03_interface">PHP interface</a>. This requires an <tt>scp</tt>
 	binary, and you must suppply a remote username, remote hostname, and the
 	directory on that host. You will also most likely have to perform
 	suitable SSH key exchanges to fully automate the process.</dd>

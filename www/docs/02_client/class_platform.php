@@ -28,10 +28,10 @@ $pg = new docPage($menu_entry);
 	<dd>Tries to get the name of the hardware platform, for example,
 	&quot;T2000&quot; or &quot;v210&quot;. It's not always entirely
 	accurate, especially on older machines and older versions of Solaris,
-	but the <a href="../interface">interface</a> is able to more accurately
-	describe some machines based on the output of this check.  x86-based
-	machines are always reported as &quot;x86&quot; Not run in a local
-	zone.</dd>
+	but the <a href="../03_interface">interface</a> is able to more
+	accurately describe some machines based on the output of this check.
+	x86-based machines are always reported as &quot;x86&quot; Not run in a
+	local zone.</dd>
  
 	<dt>virtualization</dt>
 	<dd>Tries to work out whether the current zone is a physical or virtual

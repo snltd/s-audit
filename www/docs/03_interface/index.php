@@ -12,7 +12,7 @@ $pg = new docPage("the s-audit web interface");
 
 <h1>Web Interface Overview</h1>
 
-<p>When <a href="../client"><tt>s-audit.sh</tt></a> is run with the
+<p>When <a href="../02_client"><tt>s-audit.sh</tt></a> is run with the
 <tt>-p</tt> and <tt>-f</tt> options, it produces output of a form which is
 parseable by a specially written web interface.</p>
 

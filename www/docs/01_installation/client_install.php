@@ -5,7 +5,7 @@ include("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$menu_entry = "installation";
+$menu_entry = "s-audit.sh installation";
 $pg = new docPage("s-audit.sh installation");
 
 ?>

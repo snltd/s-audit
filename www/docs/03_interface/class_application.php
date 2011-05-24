@@ -82,7 +82,7 @@ href="class_hosted.php">hosted services page</a>.</dd>
 
 <dt>apache so</dt>
 <dd>Lists Apache modules loaded into a running server. Please refer to the
-<a href="../client/class_application.php">client page</a> for more
+<a href="../02_client/class_application.php">client page</a> for more
 information.</dd>
 
 <dt>mod_php</dt>
