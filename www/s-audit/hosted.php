@@ -22,7 +22,7 @@ $grid = new HostedGrid($map, $s->get_array(), "hosted");
 $pg = new audPage("hosted services", $grid->server_count(),
 $grid->zone_toggle());
 
-$um = "<a href=\"" . DOC_URL . "/extras/uri_map_file.php" .
+$um = "<a href=\"" . DOC_URL . "/04_extras/uri_map_file.php" .
 "\">URI map file</a>";
 
 $umf = $map->get_path("uri_map");

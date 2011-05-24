@@ -30,10 +30,10 @@ require_once(LIB . "/ip_listing_classes.php");
 // VARIABLES
 
 $list_doc = "<a href=\"" . DOC_URL 
-	. "/extras/ip_list_file.php\">network scan file</a>";
+	. "/04_extras/ip_list_file.php\">network scan file</a>";
 
 $res_doc = "<a href=\"" . DOC_URL .
-	"/extras/ip_res_file.php\">reserved IP list file</a>";
+	"/04_extras/ip_res_file.php\">reserved IP list file</a>";
 
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE

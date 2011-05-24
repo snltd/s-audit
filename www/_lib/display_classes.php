@@ -3704,7 +3704,7 @@ class Page {
 		// What kind of pages we're doing. In a variable so it can be
 		// overridden
 
-	protected $link_to = "/";
+	protected $link_to = ROOT_URL;
 		// Where the s-audit in the top left corner links to
 
 	protected $no_class_link = false;
@@ -3714,6 +3714,9 @@ class Page {
 
 	public function __construct($title)
 	{
+		if (empty($this->link_to))
+			$this->link_to = "/";
+
 		$this->type = $title;
 		$this->title = SITE_NAME . " s-audit $this->mystring :: $title";
 		$this->verstr = "interface version " . MY_VER;
@@ -3749,8 +3752,8 @@ class Page {
 		$ret = "";
 
 		foreach($this->styles as $style) {
-  			$ret .= "\n  <link rel=\"StyleSheet\" href=\"/_css/${style}\" "
-			. "type=\"text/css\" media=\"all\" />";
+			$ret .= "\n  <link rel=\"StyleSheet\" href=\"" . CSS_URL .
+			"/${style}\" type=\"text/css\" media=\"all\" />";
   		}
 
 		return $ret;
@@ -3951,7 +3954,7 @@ class docPage extends Page {
 		// Stylesheets to apply
 
 	protected $h_links = array(
-		"" => "documentation home",
+		"." => "documentation home",
 		"02_client" => "s-audit.sh client",
 		"03_interface" => "web interface",
 		"04_extras" => "extra files and support scripts",

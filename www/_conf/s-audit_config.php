@@ -8,6 +8,9 @@
 // Configuration for the s-audit's web interface. Tells the other PHP
 // scripts where things are. You shouldn't need to change this. User changes
 // are in site_config.php.
+// 
+// Some things are defined here, rather than hard-coded, simply to help me
+// put the official s-audit docs onto snltd.co.uk.
 //
 // Part of s-audit. (c) 2011 SearchNet Ltd
 //  see http://snltd.co.uk/s-audit for licensing and documentation
@@ -20,7 +23,7 @@ define("MY_VER", "3.0");
 define("ROOT", $_SERVER["DOCUMENT_ROOT"]);
 	// Site root. Usually document root
 
-define("ROOT_URL", "");
+define("ROOT_URL", false);
 	// top-level URL
 
 define("CONF_DIR", ROOT . "/_conf");
@@ -43,6 +46,9 @@ define("PER_PAGE", 20);
 
 define("DOC_URL", ROOT_URL . "/docs");
 	// URL to top of document tree
+
+define("CSS_URL", ROOT_URL . "/_css");
+	// URL to stylesheets
 
 define("KEY_DIR", LIB . "/keys");
 	// Keys for grids. Also used in documentation

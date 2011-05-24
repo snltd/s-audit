@@ -28,7 +28,12 @@ class auditGroupDesc {
 
 		$hdmt = filemtime($hd);
 
-		$ret .= "\n  <dd><strong>$nd</strong> hosts.";
+		$ret .= "\n  <dd><strong>$nd</strong> host";
+
+		if ($nd != 1)
+			$ret .= "s";
+		
+		$ret .= ".";
 		
 		if ($nd > 0)
 			$ret .= " Most recent audit added " .  date("jS M Y", $hdmt) .
