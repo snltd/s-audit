@@ -3974,7 +3974,7 @@ class docPage extends Page {
 		// separate entity from the interface, so it has its own version,
 		// which is stored in a file.
 
-		$verfile = ROOT . "/docs/.version";
+		$verfile = DOC_ROOT . "/.version";
 
 		$this->verstr = (file_exists($verfile))
 			? " documentation version " . file_get_contents($verfile)
@@ -4048,7 +4048,7 @@ class NavigationDynamicVert {
     {
         $this->my_f = $_SERVER["SCRIPT_FILENAME"];
 		$this->my_d = dirname($this->my_f);
-		$this->all_d = Filesystem::get_files(ROOT . "/docs", "d");
+		$this->all_d = Filesystem::get_files(DOC_ROOT, "d");
 		$this->all_f = Filesystem::get_files($this->my_d, "f");
 		$this->fs = new filesystem();
     }

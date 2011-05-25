@@ -44,6 +44,9 @@ define("OMITTED_DATA_FILE", CONF_DIR . "/omitted_data.php");
 define("PER_PAGE", 20);
 	// How many servers to show on each page. This refers to GLOBAL zones
 
+define("DOC_ROOT", ROOT . "/docs");
+	// path to top of document tree
+
 define("DOC_URL", ROOT_URL . "/docs");
 	// URL to top of document tree
 
@@ -53,12 +56,12 @@ define("CSS_URL", ROOT_URL . "/_css");
 define("KEY_DIR", LIB . "/keys");
 	// Keys for grids. Also used in documentation
 
-define("CB_URL", DOC_URL . "/_files");
-	// URL to code blocks and HTMLized code blocks
-
-define("CB_DIR", ROOT . "/docs/_files");
+define("CB_DIR", DOC_ROOT . "/_files");
 	// Where the codeBlock class finds syntax coloured script files. (Path,
 	// not URL.)
+
+define("CB_URL", DOC_URL . "/_files");
+	// URL to code blocks and HTMLized code blocks
 
 define("PKG_DEF_DIR", LIB . "/pkg_defs");
 	// Where to find package definition files
