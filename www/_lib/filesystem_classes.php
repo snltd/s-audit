@@ -77,7 +77,7 @@ class Filesystem {
 		// Returns all the information about a link 
 
 		$links["file"] = $file;
-		$links["url"] = str_replace(ROOT, "", $file);
+		$links["url"] = str_replace(ROOT, ROOT_URL, $file);
 		$links["link"] = basename($file);
 
 		return $links;

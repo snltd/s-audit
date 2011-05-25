@@ -3896,10 +3896,10 @@ class audPage extends Page {
 
 		$ret = "\n<div id=\"headerr\">\n<strong>documentation</strong>"
 		. ":: <a href=\"${dl}/index.php\">main</a> / <a href=\"$dl"
-		. "/interface/${class_link}\">this page</a>";
+		. "/03_interface/${class_link}\">this page</a>";
 		
 		if (!$this->no_class_link)
-			$ret .= "/ <a href=\"${dl}/client/${class_link}\">this class</a>";
+			$ret .= "/ <a href=\"${dl}/02_client/${class_link}\">this class</a>";
 		
 		if (method_exists($this, "add_zt_link"))
 			$ret .= $this->add_zt_link();

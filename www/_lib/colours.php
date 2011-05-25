@@ -21,9 +21,10 @@ class colours {
 	// A little class which defines colours used for various purposes, and
 	// provides a method to access their hex values.
 
-	protected $nic_cols;
+	public $nic_cols;
 		// This array stores colours for various networks. It's set by the
-		// in the nic_colours.php file
+		// in the nic_colours.php file. It's accessed statically by the
+		// network audit page key, so it has to be public
 
 	// These are just named colours we use all over.
 
