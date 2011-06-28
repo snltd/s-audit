@@ -42,10 +42,16 @@ class ZoneMap extends ZoneMapBase {
 		$this->offset = (isset($_GET["o"])) ? $_GET["o"] : 0;
 
 		// work out what directory this group's audit data is in. If there
-		// isn't a group, that's an error.
+		// isn't a group, that's an error. We need the _POST when we do
+		// comparisons
 
 		if (isset($_GET["g"]))
-			$audit_dir = AUDIT_DIR . "/$_GET[g]/hosts";
+			$group = $_GET["g"];
+		elseif (isset($_POST["g"]))
+			$group = $_POST["g"];
+
+		if (isset($group))
+			$audit_dir = AUDIT_DIR . "/${group}/hosts";
 		else
 			page::error("No audit group.");
 
@@ -81,7 +87,7 @@ class ZoneMap extends ZoneMapBase {
 
 		}
 
-		$this->paths = $this->set_extra_paths(AUDIT_DIR . "/" . $_GET["g"]);
+		$this->paths = $this->set_extra_paths(AUDIT_DIR . "/" . $group);
 
 	}
 	

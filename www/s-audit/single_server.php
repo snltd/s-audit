@@ -43,7 +43,7 @@ if (($server)) {
 		define("NO_ZONES", 1);
 
 	$data = new GetServers($map, $server, array("os", "net", "fs", "app",
-	"tool", "hosted", "security", "patch" ));
+	"tool", "hosted", "security", "patch"));
 
 	$view = new serverView($data->get_array(), $map);
 }

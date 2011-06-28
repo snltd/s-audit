@@ -22,27 +22,29 @@ obsolete websites. If you wish to use it, you must use
 
 <p>The script is invoked in the following way:</p>
 
-<pre>s-audit_dns_resolver.sh [-s dns_server] [-d dir] [-D path] [-o file]</pre>
+<pre>s-audit_dns_resolver.sh [-s dns_server] [-d dir] [-D path] [-g group] [-o file]</pre>
 
 <dl>
 
+	<dt>-g</dt>
+	<dd>the audit group to work on. If options is not supplied, is
+	<tt>default</tt>.
+
 	<dt>-o</dt>
 	<dd>path to output file. Defaults to
-	<tt>/var/s-audit/dns/uri_list.txt</tt>.</dd>
+	<tt>/var/snltd/s-audit/default/dns/uri_list.txt</tt>, though the
+	<tt>default</tt> part may be changed with the <tt>-g</tt> option.</dd>
 
 	<dt>-D</dt>
 	<dd>path to dig binary. The default is <tt>/usr/local/bin/dig</tt>.</dd>
 
 	<dt>-d</dt>
-	<dd>directory containing the audit files the script will parse. By
-	default this is <tt>/var/s-audit/audit</tt>. The files may be in a
-	subdirectory below the given directory.</dd>
+	<dd>The base directory of your s-audit data. By default this is
+	<tt>/var/snltd/s-audit</tt>.</dd>
 
 	<dt>-s</dt>
 	<dd>DNS server on which to do lookups.</dd>
 </dl>
-
-
 
 <p>Either modify the script to suit your environment or use the options
 above. Everything which can be changed by an option is defined at the
@@ -58,7 +60,8 @@ default values match.</p>
 run <tt>s-audit.sh</tt>, but to wait until all <tt>s-audit.sh</tt>'s results
 are in. Here is an example cron entry which processes audit files at 07:30
 and 13:30. No special privileges are required to run the script, but the
-user which runs it must have write access to <tt>/var/s-audit/dns</tt>.</p>
+user which runs it must have write access to the relevant audit groups'
+<tt>network</tt> directories.</p>
 
 <pre>
 30 7,13 * * * /usr/local/bin/s-audit_dns_resolver.sh
@@ -69,8 +72,7 @@ user which runs it must have write access to <tt>/var/s-audit/dns</tt>.</p>
 <h2>Requirements</h2>
 
 <p>You need a working copy of dig, and the DNS server it accesses must
-support batch queries. This limits you to BIND 9.4 or later. The user the
-script runs as must have write access to <tt>/var/s-audit/dns</tt>.</p>
+support batch queries. This limits you to BIND 9.4 or later.</p>
 
 <h2>Source</h2>
 
@@ -81,4 +83,4 @@ echo $scr->show_script();
 
 $pg->close_page();
 
-?>
+

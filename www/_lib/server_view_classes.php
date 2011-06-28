@@ -139,11 +139,8 @@ class singleGeneric extends HostGrid {
 		// audit class
 
 		$this->html = "\n\n<table align=\"center\" width=\"$this->width\">"
-		. "\n<tr><td><h1>$this->type audit</h1></td></tr>\n</table>\n";
-
-		// Now call show_class() to get the table 
-
-		$this->html .= $this->show_class();
+		. "\n<tr><td><h1>$this->type audit</h1></td></tr>\n</table>\n"
+		. $this->show_class();
 	}
 
 	protected function show_class()

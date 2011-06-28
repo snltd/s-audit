@@ -656,16 +656,18 @@ class HostGrid {
 
 		$class = false;
 
+		$qs = "g=" . $_GET["g"] . "&amp;s=";
+
 		if ($this->map->is_global($zn))
-			$ref = $zn;
+			$qs .= $zn;
 		else {
-			$ref = "${zn}@" . $this->get_parent_prop($zn, "platform",
+			$qs .= "${zn}@" . $this->get_parent_prop($zn, "platform",
 			"hostname");
 
 			if (!$as_global) $class = "class=\"zlink\"";
 		}
 
-		return "<a ${class}href=\"single_server.php?s=$ref\">$zn</a>";
+		return "<a ${class}href=\"single_server.php?$qs\">$zn</a>";
 	}
 
 	protected function show_audit_completed($data)
@@ -689,11 +691,11 @@ class HostGrid {
 
 			if($date < LOWEST_T) {
 				$class = "solidorange";
-				$date_str = "$t_arr[1]<strong>IMPOSSIBLY OLD</strong>";
+				$date_str = "$t_arr[1]<div class=\"strl\">IMPOSSIBLY OLD</div>";
 			}
 			elseif($date > $now) {
 				$class = "solidorange";
-				$date_str = "$t_arr[1]<strong>FUTURE TIME</strong>";
+				$date_str = "$t_arr[1]<div class=\"strl\">FUTURE TIME</div>";
 			}
 			elseif (($now - $date) < 86400) {
 				$date_str = false;
@@ -2114,8 +2116,9 @@ class HostGrid {
 
 			// if the pool is in a degrated state, override the background
 			// colour
+			/// XXX do I mean a[1] or a[3]?
 
-			if ($a[3] == "DEGRADED")
+			if ($a[1] == "DEGRADED")
 				$class = "solidamber";
 
 			$c_arr[] = array($txt, $class);
@@ -2187,11 +2190,6 @@ class HostGrid {
 			preg_match("/^(\S+) (\w+) \[([^\]]+)\] \(([^\)]+)\)(.*)$/",
 			$row, $a);
 
-			//echo "<br>", count($a);
-			//pr($a);
-			//continue;
-
-			//pr($a);
 			// Gives us an array where
 			// [0] = whole string from s-audit.sh
 			// [1] = mountpoint
@@ -4240,7 +4238,7 @@ class queryString {
 
 class html {
 
-	static function dialog_submit($name, $value)
+	public function dialog_submit($name, $value)
 	{
 
 		// code to produce a generic submit button
@@ -4248,7 +4246,7 @@ class html {
 		return "\n<input type=\"submit\" name=\"$name\" value=\"$value\" />";
 	}
 
-	static function dialog_form($page, $method = "post")
+	public function dialog_form($page, $method = "post")
 	{
 
     	// open a form
@@ -4256,7 +4254,14 @@ class html {
 		return "\n<form action=\"$page\" method=\"$method\">\n";
 	}
 
-	static function dialog_cycle($name, $data, $default = false)
+	public function dialog_hidden($name, $value) {
+
+		// return correct HTML for a HIDDEN FORM field
+	
+		return "\n<input type=\"hidden\" name=\"$name\" value=\"$value\" />";
+	}
+
+	public function dialog_cycle($name, $data, $default = false)
 	{
 
 		// return the HTML for a generic cycle gadget whose OPTIONs are

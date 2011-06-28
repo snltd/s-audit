@@ -58,7 +58,8 @@ gathered by <tt>s-audit.sh</tt>. The information is added to the platform
 audit view, and the &quot;asset tag&quot; field is to the right of the
 existing &quot;serial number&quot; field.</p>
 
-<p>The file is stored as <tt>/var/s-audit/extra/platform.audex</tt>.</p>
+<p>The file is stored as <tt>platform.audex</tt> in the audit group's
+<tt>extra</tt> subdirectory.</p>
 
 <pre>
 [asset no]

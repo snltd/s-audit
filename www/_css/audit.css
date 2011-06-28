@@ -71,6 +71,10 @@ a.zlink {
 	color: #333;
 }
 
+div.strl { /* strong text on its own line */
+	font-weight: bold;
+}
+
 /*-- backgrounds for rows --------------------------------------------------*/
 
 .server, td.svhn { /* global zones/servers. Used in <tr> and <td> */

@@ -106,9 +106,11 @@ class defs {
 			),
 
 			"pci" => array(
+				"FCX2-6562" => "JNI dual-port HBA",
 				"QLA2342" => "QLogic FCAL HBA",
 				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet",
-				"LSI,1030" => "LSI diffrential SCSI"
+				"LSI,1030" => "LSI diffrential SCSI",
+				"SUNW,pci-ce" => "Sun Gigaswift Ethernet (fc)"
 			)
 		);
 

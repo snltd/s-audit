@@ -35,11 +35,11 @@ it with</p>
 	put audit data. To have the data copied with SCP, supply a full
 	<tt>-R</tt> option, for instance
 
-	<pre>"-R audit_user@audit_server:/var/s-audit/live"</pre>
+	<pre>"-R audit_user@audit_server:/var/snltd/s-audit/live"</pre>
 
 	To copy the data to a directory, use the form
 
-	<pre>"-f /var/s-audit/live"</pre></dd>
+	<pre>"-f /var/snltd/s-audit/live"</pre></dd>
 
 	<dt>options/pth</dt>
 	<dd>Type <tt>astring</tt>. The path to the <tt>s-audit.sh</tt>
@@ -49,7 +49,7 @@ it with</p>
 <p>To change those properties, issue a command of the form:</p>
 
 <pre class="cmd">
-# svccfg -s s-audit setprop options/dest="\"-f /var/s-audit/live\""
+# svccfg -s s-audit setprop options/dest="\"-f /var/snltd/s-audit/live\""
 </pre>
 
 <h2>Performing an audit at boot time</h2>

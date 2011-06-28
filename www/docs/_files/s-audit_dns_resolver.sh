@@ -26,14 +26,11 @@
 PATH=/usr/bin
 	# Always set your PATH
 
-AUDIT_DIR="/var/s-audit"
+BASE_DIR="/var/snltd/s-audit/default"
 	# s-audit's /var directory
 
-SRC_DIR="${AUDIT_DIR}/audit"
-	# Where we expect to find audit files
-
-OUTFILE="${AUDIT_DIR}/dns/uri_list.txt"
-	# Where to write the "uri=a.b.c.d" format list. Override with -f
+GROUP="default"
+	# the default audit group
 
 DNS_SRV="dns-server"
 	# Which DNS server to use for lookups. Override with -s
@@ -54,15 +51,17 @@ usage()
 {
 	cat<<-EOUSAGE
 	usage:
-	  ${0##*/} [-s dns_server] [-d dir] [-D path] [-o file]
+	  ${0##*/} [-s dns_server] [-d dir] [-D path] [-g group] [-o file]
 
 	where:
+	  -g :     audit group
+	             [Default is '${DEF_GROUP}'.]
 	  -o :     path to output file.
 	             [Default is '${OUTFILE}'.]
 	  -D :     path to dig binary
 	             [Default is '${DIG}'.]
-	  -d :     directory containing audit files
-	             [Default is '${SRC_DIR}'.]
+	  -d :     base directory for s-audit data
+	             [Default is '${BASE_DIR}'.]
 	  -s :     DNS server on which to do lookups
 	             [Default is '${DNS_SRV}'.]
 
@@ -72,15 +71,18 @@ usage()
 #-----------------------------------------------------------------------------
 # SCIRPT STARTS HERE
 
-while getopts "D:s:o:" option 2>/dev/null
+while getopts "D:g:s:o:" option 2>/dev/null
 do
 
 	case $option in
 
-		"d")	SRC_DIR=$OPTARG
+		"d")	BASE_DIR=$OPTARG
 				;;
 
 		"D")	DIG=$OPTARG
+				;;
+		
+		"g")	GROUP=$OPTARG
 				;;
 	
 		"o")	OUTFILE=$OPTARG
@@ -96,11 +98,21 @@ do
 
 done
 
+# Work out some paths and do some checks
+
+SRC_DIR="${BASE_DIR}/${GROUP}/hosts"
+
+[[ -z $OUTFILE ]] \
+	&& OUTFILE="${BASE_DIR}/${GROUP}/network/uri_list.txt"
+
 [[ -x $DIG ]] \
 	|| die "can't run dig [${DIG}]" 1
 
 [[ -w ${OUTFILE%/*} ]] \
 	|| die "can't write to output directory [${OUTFILE%/*}]" 2
+
+[[ -d $SRC_DIR ]] \
+	|| die "no audit data at ${SRC_DIR}."
 
 # Pull URIs out of all the audit files. They're on lines beginning "site=".
 # We are only interested in URIs with dots in them - ones without will take
