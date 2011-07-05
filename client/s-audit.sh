@@ -175,7 +175,7 @@ G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
 L_FS_TESTS="root_fs fs exports"
-G_FS_TESTS="zpools capacity $L_FS_TESTS"
+G_FS_TESTS="zpools vx_dgs capacity $L_FS_TESTS"
 
 #-----------------------------------------------------------------------------
 # FUNCTIONS
@@ -2323,9 +2323,7 @@ function get_vxfs
 	# manager, the best way I can find to do this is by querying the loaded
 	# module list. Surely there's a better way that that?
 
-	VXFS_VER=$(modinfo | egrep vxfs)
-	VXFS_VER=${VXFS_VER##* }
-	disp "VxFS" ${VXFS_VER%,*}
+	disp "VxFS" $(modinfo | sed -n '/vxfs/s/^.*xFS \([^ ]*\).*/\1/p')
 }
 
 function get_vcs
@@ -2889,6 +2887,21 @@ function get_zpools
 	fi
 }
 
+function get_vx_dgs
+{
+	# List VxVM volume groups, along with their status
+
+	if is_root && can_has vxdg
+	then
+
+		vxdg list | sed '1d' | while read dg st id
+		do
+			disp "disk group" "$dg ($st)"
+		done
+
+	fi
+}
+
 function get_root_fs
 {
 	# Get the filesystem type for / and say if it's mirrored or not
@@ -2896,10 +2909,19 @@ function get_root_fs
 	RFS=$(df -n / | sed 's/^.* : \([^ ]*\).*$/\1/')
 	RDEV=$(df -e / | sed '1d;s/ .*//')
 
-	if [[ $RFS == "ufs" ]] && [[ $RDEV == */md/* ]]
+	if [[ $RFS == "ufs" ]] 
 	then
-		metastat ${RDEV##*/} | $EGS "^${RDEV##*/}: Mirror" \
-			&& FSM="(mirrored)"
+
+		if [[ $RDEV == "/dev//md/"* ]]
+		then
+			metastat ${RDEV##*/} | $EGS "^${RDEV##*/}: Mirror" \
+				&& FSM="(mirrored)"
+
+		elif [[ $RDEV == "/dev/vx/"* ]] 
+		then
+			FSM="(encapsulated)"
+		fi
+
 	elif [[ $RFS == "zfs" ]] && is_global
 	then
 		zpool status ${RDEV%%/*} | $EGS "^\[$IFS\]*mirror[ -]" \
