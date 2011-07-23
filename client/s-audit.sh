@@ -150,7 +150,7 @@ G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
 	snmp ports routes nic"
 L_NET_TESTS=$G_NET_TESTS
 
-G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms
+G_OS_TESTS="os_dist os_ver os_rel os_clust kernel be hostid local_zone ldoms
 	scheduler svc_count package_count patch_count pkg_repo uptime "
 L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
 	package_count patch_count pkg_repo uptime"
@@ -935,6 +935,17 @@ function get_os_rel
 
 	disp "release" $OS_R
 }
+
+function get_os_clust
+{
+	# The Solaris cluster that was installed initially
+
+	if [[ -f /var/sadm/system/admin/CLUSTER ]]
+	then
+		disp "cluster" $(sed 's/^.*=//' /var/sadm/system/admin/CLUSTER)
+	fi
+}
+
 
 function get_hostid
 {
@@ -2309,9 +2320,9 @@ function get_sccli
 
 function get_vxvm
 {
-	# Get the version of Veritas Volume Manager. AFAIK Veritas don't supply
-	# a command-line tool to do this, so I'm going to get the version of the
-	# kernel module.
+	# Get the version of Veritas Volume Manager. Might change this to use
+	# vxlicrep, but for now get the version of the kernel module. This is
+	# more accurate
 
 	is_run_ver "VxVm" vxconfigd \
 		$(modinfo | sed -n '/ vxio /s/^.*VxVM \([^ ]*\).*$/\1/p')
@@ -2319,9 +2330,8 @@ function get_vxvm
 
 function get_vxfs
 {
-	# Get the version of Veritas Filesystem on the box. As with volume
-	# manager, the best way I can find to do this is by querying the loaded
-	# module list. Surely there's a better way that that?
+	# Get the version of Veritas Filesystem. As with volume manager, by
+	# querying the loaded module list
 
 	disp "VxFS" $(modinfo | sed -n '/vxfs/s/^.*xFS \([^ ]*\).*/\1/p')
 }
@@ -2889,14 +2899,16 @@ function get_zpools
 
 function get_vx_dgs
 {
-	# List VxVM volume groups, along with their status
+	# List VxVM disk groups, along with their status, and the number of
+	# disks and volumes they contain
 
 	if is_root && can_has vxdg
 	then
 
 		vxdg list | sed '1d' | while read dg st id
 		do
-			disp "disk group" "$dg ($st)"
+			disp "disk group" "$dg ($st) [$(vxprint -g $dg | grep -c \
+			^dm) disk/$(vxprint -g $dg | grep -c ^v) volume]"
 		done
 
 	fi
@@ -2919,7 +2931,17 @@ function get_root_fs
 
 		elif [[ $RDEV == "/dev/vx/"* ]] 
 		then
-			FSM="(encapsulated)"
+			FSM="(encapsulated"
+			
+			# Work out if it's mirrored by counting the plexes in the
+			# rootvol
+
+			rv=$(df -k / | sed -n '2s/ .*//p')
+
+			[[ $(vxprint ${rd##*/} | grep -c ^pl) -gt 1 ]] \
+				&& FSM="$FSM and mirrored"
+
+			FSM="${FSM})"
 		fi
 
 	elif [[ $RFS == "zfs" ]] && is_global
@@ -3415,7 +3437,7 @@ do
 			;;
 
 		"R")	# Remote copy information
-			REMOTE_STR=$OPTARG
+			REM_STR=$OPTARG
 			OD_R="${VARBASE}/audit_out"
 			TO_FILE=1
 			;;
@@ -3686,13 +3708,13 @@ fi
 
 # Do we have to copy the output directory?
 
-if [[ -n $REMOTE_STR ]]
+if [[ -n $REM_STR ]]
 then
 	can_has scp	|| die "no scp binary."
 
-	scp -rqCp $DP $REMOTE_STR >/dev/null 2>&1 \
-		&& msg "copied data to $REMOTE_STR" \
-		|| die "failed to copy data to $REMOTE_STR"
+	scp -rqCp $DP $REM_STR >/dev/null 2>&1 \
+		&& msg "copied data to $REM_STR" \
+		|| die "failed to copy data to $REM_STR"
 fi
 
 clean_up
