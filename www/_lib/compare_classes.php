@@ -12,19 +12,29 @@
 //
 //============================================================================
 
+//============================================================================
+// SERVER LIST PAGE
+
 class compareListPage extends audPage {
 
-	// This is the default landing page for the compare servers page
+	// This is the default landing page for the compare servers page. (As
+	// opposed to comparePage, which is used for the comparisons proper.)
 
     protected $no_class_link = true;
 		// There's no "this class" documentation link
 
 	protected $group;
+		// The audit group we're looking at
 
 	protected $ff;
 		// Path to friends file
 
 	protected $map;
+		// as usual
+
+	// We need the "compare" stylesheet
+
+	protected $styles = array("basic.css", "audit.css", "compare.css");
 	
 	public function __construct($title, $map)
 	{
@@ -117,7 +127,9 @@ class compareCyc {
 		
 		$h = new html;
 
-        $this->html = "\n<div class=\"center\">"
+        $this->html = "<p class=\"center\">Select a pair of servers or zones
+		to compare with the following gadgets.</p>"
+		. "\n<div id=\"cycle_row\">"
         . $h->dialog_form($_SERVER["PHP_SELF"])
         . $h->dialog_submit("c", "compare")
         . $h->dialog_cycle("z1", $z_list, $z1, false) . " with "
@@ -133,12 +145,17 @@ class compareCyc {
 
 }
 
-//----------------------------------------------------------------------------
+//============================================================================
+// COMPARISON PAGE
 
 class comparePage extends audPage {
 
+	// The basic HTML template for the page used for the actual comparison.
+
     protected $no_class_link = true;
 		// There's no "this class" documentation link
+
+	protected $styles = array("basic.css", "audit.css", "compare.css");
 
 }
 
@@ -146,9 +163,9 @@ class comparePage extends audPage {
 
 class compareView extends HostGrid {
 	
-	// This class groups together all the functions needed to compare two
-	// servers, and display the results of that comparison. It works like
-	// the serverView class does for single server pages.
+	// This class groups together functions needed to compare two servers,
+	// and display the results of that comparison. It works like the
+	// serverView class does for single server pages.
 	
 	// We have to extend the HostGrid because we use its methods to display
 	// data
@@ -160,23 +177,11 @@ class compareView extends HostGrid {
 	private $classes;
 		// Audit classes we're going to compare
 
-	/*
-    protected $fields;
-    protected $rows;
-
-    protected $pairs = array(
-        "packages" => "package",
-        "patches" => "patch"
-    );
-	*/
-
     public function __construct($data, $map)
     {
-		// set up some variables 
+		// Call this constructor to create the whole compare grid.
 
 		$this->map = $map;
-
-		//pr($data);
 
 		// Populate the $fields array with the hostnames of the servers to
 		// compare and get a list of classes. Servers should always have the
@@ -230,6 +235,8 @@ class compareView extends HostGrid {
 
 }
 
+//----------------------------------------------------------------------------
+
 class compareGeneric extends HostGrid {
 
 	private $hosts;
@@ -242,8 +249,12 @@ class compareGeneric extends HostGrid {
 	protected $no_colour = array("hostname", "audit completed");
 
 	protected $no_compare = array();
+		// Don't compare fields in this array. You won't see them on the
+		// grid at all
 
-	private $width = "40%";
+	private $width = "650em";
+		// The width of the compare grid (all columns combined)
+
 	private $colwidth;
 		// the % width of each column in the comparison table
 
@@ -265,8 +276,7 @@ class compareGeneric extends HostGrid {
 			
 			foreach($data[$host] as $key=>$value) {
 
-				if (!in_array($key, $rows))
-					$rows[] = $key;
+				if (!in_array($key, $rows)) $rows[] = $key;
 			}
 
 		}
@@ -276,19 +286,24 @@ class compareGeneric extends HostGrid {
 		$this->colwidth = round(100 / $this->cols) . "%";
 
 		$this->html = "\n\n<table align=\"center\" width=\"$this->width\">"
-		. "\n<tr><td><h1>$type audit comparison</h1></td></tr>\n</table>\n"
-		. $this->compare_class();
+		. "\n<tr><td class=\"nocol\"><h1>$type audit comparison</h1></td>"
+		. "</tr>\n</table>\n" . $this->compare_class();
 	}
 
 	protected function compare_class()
 	{
 		// Print the comparison tables for the class
 
-		$ret = "\n\n<table border=3 class=\"audit\" align=\"center\""
+		$ret = "\n\n<table cellspacing=\"1\" class=\"audit\" align=\"center\""
 		. " width=\"$this->width\">\n";
+
+		// Step through each row
 
 		foreach($this->rows as $row) {
 			$method = "compare_$row";
+
+			// the $no_compare[] array may tell us we don't wish to compare
+			// this row.
 
 			if (in_array($row, $this->no_compare)) {
 				$rowdat = "don't compare";
@@ -327,7 +342,7 @@ class compareGeneric extends HostGrid {
 				$d .= "</tr>";
 			}
 
-			$ret .= "\n<tr><td class=\"solid$keycol\" ";
+			$ret .= "\n<tr><th class=\"solid$keycol\" ";
 			
 			if (count($rowdat) > 1)
 				$ret .= "rowspan=\"" . count($rowdat) . "\"";
@@ -389,8 +404,14 @@ class compareGeneric extends HostGrid {
 		for($i = 0; $i < $diffs; $i++) {
 			$tmp_arr = array("a" => $ma[$i], "b" => $mb[$i]);
         
+			// Things that aren't being coloured may be in the fancy array
+
 			if (in_array($row, $this->no_colour)) {
-				$tmp_arr["ca"] = $tmp_arr["cb"] = false;
+
+				//if (in_array($row, $this->fancy_display))
+					//$tmp_ar
+				////else
+					$tmp_arr["ca"] = $tmp_arr["cb"] = false;
 			}
 			else {
 
@@ -432,6 +453,14 @@ class compareGeneric extends HostGrid {
 		return (current($arr) == $a) ? false : true;
 	}
 
+	protected function fancy_display($data)
+	{
+		// If it exists, use the show_ method to display data
+
+		pr($data);
+
+	}
+
 	public function __toString()
 	{
 		return $this->html;
@@ -445,6 +474,7 @@ class comparePlatform extends compareGeneric {
 	"virtualization", "serial number", "ALOM IP", "CPU", "card", "memory",
 	"storage");
 
+	protected $fancy = array("ALOM IP", "storage");
 }
 
 class compareOS extends compareGeneric {

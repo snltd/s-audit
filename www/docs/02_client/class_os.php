@@ -75,7 +75,8 @@ $pg = new docPage($menu_entry);
 	<dt>package_count</dt>
 	<dd>Says how many packages are installed in this zone. The number of
 	partially installed packages is reported in brackets. Also reports the
-	type of packages, for instance SYSV or IPS.</dd>
+	type of packages, for instance SYSV or IPS. SYSV machines also report
+	the Solaris software cluster used to build the machine.</dd>
 
 	<dt>patch_count</dt>
 	<dd>Says how many patches have been installed in this zone. Irrelevant

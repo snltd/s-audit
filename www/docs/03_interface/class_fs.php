@@ -43,6 +43,18 @@ $dh->doc_class_start();
 		echo $dh->colour_key($dh->grid_key["zpool"]);
 	?>
 
+	<dt>disk group</dt>
+	<dd>Shows Veritas Volume Manager disk groups. The group name is given
+	first, in <strong>bold face</strong> with the group's status following
+	in parentheses. On the next line is the number of disks which the group
+	contains, and the third line shows the number of volumes created in the
+	group. Disk groups in states other than &quot;enabled&quot; are
+	highlighted by a coloured field.</dd>
+
+	<?php
+		echo $dh->colour_key($dh->grid_key["disk group"]);
+	?>
+
 	<dt>capacity</dt>
 	<dd>Shows, in <strong>bold face</strong>, the total uncompressed storage
 	capacity of all local filesystems mounted at the time of the audit. On a

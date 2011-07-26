@@ -47,7 +47,7 @@ if (isset($in["z1"]) && isset($in["z2"])) {
 	$z1 = $in["z1"];
 	$z2 = $in["z2"];
 
-// Do a few sanity checks
+	// Do a few sanity checks
 
 	if (!$map->has_data($z1))
 		$pg->error("no audit data for $z1");
@@ -64,8 +64,10 @@ if (isset($in["z1"]) && isset($in["z2"])) {
 	if ($map->is_global($z1) && $map->is_global($z2))
 		define("NO_ZONES", 1);
 
-	$data = new GetServers($map, array($z1, $z2), array("os", "net", "fs",
-	"app", "tool", "hosted", "security", "patch" ));
+	$data = new GetServers($map, array($z1, $z2), array("os"));
+
+	//$data = new GetServers($map, array($z1, $z2), array("os", "net", "fs",
+	//"app", "tool", "hosted", "security", "patch" ));
 
 	$view = new compareView($data->get_array(), $map);
 

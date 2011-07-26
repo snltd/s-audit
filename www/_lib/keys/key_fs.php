@@ -20,9 +20,14 @@ $grid_key = array(
 		array("online zpool can be<br/>upgraded", "solidorange", false)
 	),
 
+	"disk group" => array(
+		array("disabled group", "solidred", false),
+		array("warning state", "solidamber", false)
+	),
+
 	"capacity" => array(
-		array("&gt;85% of capacity used", "solidamber", false),
-		array("&gt;90% of capacity used", "solidred", false)
+		array("&gt;90% of capacity used", "solidred", false),
+		array("&gt;85% of capacity used", "solidamber", false)
 	),
 
 	"root fs" => array(
@@ -31,9 +36,9 @@ $grid_key = array(
 	),
 
 	"fs" => array(
-		array("mount not in vfstab", "solidpink"),
-		array("&gt;85% of capacity used", "solidamber", false),
 		array("&gt;90% of capacity used", "solidred", false),
+		array("&gt;85% of capacity used", "solidamber", false),
+		array("mount not in vfstab", "solidpink"),
 		array("read-only filesystem", "solidgrey", false),
 		array("ZFS dataset can be upgraded", "zfs",
 		$this->cols->icol("solid", "orange"))
@@ -57,7 +62,7 @@ foreach ($this->cols->get_col_list("fs_cols") as $f=>$col) {
 	$txt = strtoupper($f);
 
 	if ($f == "ufs" || $f == "zfs" || $f == "hsfs" || $f == "zfs" || $f ==
-	"lofs" || $f == "vboxfs" || $f == "smbfs" || $f == "nfs")
+	"lofs" || $f == "vxfs" || $f == "vboxfs" || $f == "smbfs" || $f == "nfs")
 		$grid_key["fs"][] = array("$txt filesystem", $f, false);
 	else
 		$grid_key["export"][] = array("$txt export", $f,false);

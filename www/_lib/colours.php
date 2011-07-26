@@ -45,6 +45,7 @@ class colours {
 	protected $fs_cols = array(
 		"ufs" => "#230997",
 		"zfs" => "#B60A4F",
+		"vxfs" => "#D68251",
 		"lofs" => "#737373",
 		"hsfs" => "#275733",
 		"nfs" => "#000",

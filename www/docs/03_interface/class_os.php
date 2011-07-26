@@ -134,7 +134,7 @@ machines, this field will not be displayed.</dd>
 <dd>In a primary logical domain, this field displays a list of the guest
 domains configured on the box. The domain name is in <strong>bold
 face</strong> on the first line, followed by, in parentheses, the number of
-VCPUS and the amount of physical RAM assigned to the damoin. For domians
+VCPUS and the amount of physical RAM assigned to the domain. For domians
 other than the primary, the console port number is shown underneath in
 square brackets. The domain's state is highlighted by the following
 colour-coding.</dd>
@@ -165,7 +165,8 @@ zone last booted.</dd>
 <dd>Displays the number of packages in the zone, along with their type
 in square brackets. SYSV systems which have partially installed packages
 are highlighted, and the number of partial installs is displayed in
-parentheses.</dd>
+parentheses. For SYSV packaged machines, the software cluster with which the
+server was built is displayed on its own line.</dd>
 
 <?php
 	echo $dh->colour_key($dh->grid_key["packages"]);

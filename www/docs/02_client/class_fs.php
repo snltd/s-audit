@@ -30,6 +30,12 @@ $pg = new docPage($menu_entry);
 	the highest zpool version supported on the machine. Not run in local
 	zones.</dd>
 
+	<dt>disk group</dt>
+	<dd>Lists Veritas Volume Manager disk groups. The name of the group is
+	given first, followed by its status in parentheses, followed by the
+	number of disks and the number of volumes which belong to the
+	group.</dd>
+
 	<dt>capacity</dt>
 	<dd>Adds up the available and used space on all local filesystems and
 	reports it as numbers and a percentage used. Omitted in local

@@ -1332,11 +1332,15 @@ class HostGrid {
 	protected function show_packages($data)
 	{
 		// Print the number of packages installed in the zone, and highlight
-		// in amber if any of them are only partially installed
+		// in amber if any of them are only partially installed. Break the
+		// cluster out on to a separate line, if it's there
 
 		$class = preg_match("/partial/", $data[0])
 			? "solidamber"
 			: false;
+
+		if (preg_match("/\/SUNW/", $data[0]))
+			$data[0] = preg_replace("/\/(\w*)\]/", "]<div>$1</div>", $data[0]);
 
 		return new Cell($data[0], $class);
 	}
@@ -2050,7 +2054,7 @@ class HostGrid {
 		foreach($data as $row) {
 			$a = preg_split("/[ :]/", $row, 5);
 
-			// for a normal zpool we'll have 5 fields
+			// for an ONLINE or DEGRADED zpool we'll have 5 fields
 			//
 			// 0 - pool name
 			// 1 - raw capacity
@@ -2116,12 +2120,49 @@ class HostGrid {
 
 			// if the pool is in a degrated state, override the background
 			// colour
-			/// XXX do I mean a[1] or a[3]?
 
-			if ($a[1] == "DEGRADED")
+			if ($a[3] == "DEGRADED")
 				$class = "solidamber";
 
 			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr);
+	}
+
+	protected function show_disk_group($data)
+	{
+		// VxVM disk groups. There can be many of these, so we need a
+		// listCell. Empty filed for "enabled"
+		// Red for "disabled", amber for everything else.
+
+		foreach($data as $dg) {
+	
+			preg_match("/(\w+) \((\w+)\) \[(\d+) disk\/(\d+).*$/", $dg, $a);
+
+			// Gives us and array of the form:
+			// [1] => disk group name
+			// [2] => disk group state
+			// [3] => number of disks
+			// [4] => number of volumes
+
+			$txt = "<div><strong>$a[1]</strong> ($a[2])</div>"
+			. "\n<div>$a[3] disk";
+
+			if ($a[3] != 1) $txt .= "s";
+
+			$txt .= "</div>\n<div>$a[4] volume";
+
+			if ($a[4] != 1) $txt .= "s";
+
+			if ($a[2] == "enabled")
+				$class = false;
+			elseif ($a[2] == "disabled")
+				$class = "red";
+			else
+				$class = "amber";
+
+			$c_arr[] = array($txt . "</div>", "solid$class");
 		}
 
 		return new listCell($c_arr);
@@ -2294,6 +2335,11 @@ class HostGrid {
 
 					$key = $f[0];
 					$val = $f[1];
+
+					if (!isset($f[1]) ){
+						pr($d);
+						echo $key;
+					}
 
 					// Don't print anything that's "off"
 
@@ -3161,6 +3207,10 @@ class NetGrid extends HostGrid {
 // FS AUDIT
 
 class FSGrid extends HostGrid {
+
+	protected $adj_fields = array(
+		"zpool" => "disk group");
+
 	protected $mntd_nfs = array();
 
 		// This array counts the number of times each NFS mount is used. It

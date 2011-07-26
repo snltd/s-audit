@@ -1,0 +1,58 @@
+/*==========================================================================
+ *
+ * comparison.css
+ * --------------
+ *
+ * Styles required for comparison page.
+ *
+ * s-audit (c) 2011 SNLTD
+ *
+ *==========================================================================*/
+
+/*--------------------------------------------------------------------------*/
+/* LANDING PAGE */
+
+ul {
+		text-align: center;
+		list-style: none;
+}
+
+
+/*--------------------------------------------------------------------------*/
+/* Comparison Grid */
+
+#cycle_row {
+		text-align: center;
+		border-top: 1px #ccc solid;
+		padding: 6px 0 20px 0;
+		margin: 0 50px;
+}
+
+th {	
+		/* left-hand column with the field names. Background colour is set in
+		 * the compare_class() method */
+
+	color: black;
+	font-weight: normal;
+	text-align: right;
+	padding: 3px 3px 3px 7px;
+	vertical-align: top;
+}
+
+td {
+		
+		/* normal, uncoloured, comparison cells. Same colour as zone cells in
+		 * normal audits */
+
+	background-color: #dcdcdc;
+	padding: 3px;
+}
+
+td.nocol { /* used for the "audit comparison" rows */
+	padding-top: 3em;
+	background: none;
+}
+
+input, select { /* cycle gadgets used to select servers on compare page */
+	font: 11px normal helvetica, sans-serif;
+}

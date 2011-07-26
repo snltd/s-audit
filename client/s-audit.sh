@@ -150,7 +150,7 @@ G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
 	snmp ports routes nic"
 L_NET_TESTS=$G_NET_TESTS
 
-G_OS_TESTS="os_dist os_ver os_rel os_clust kernel be hostid local_zone ldoms
+G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms
 	scheduler svc_count package_count patch_count pkg_repo uptime "
 L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
 	package_count patch_count pkg_repo uptime"
@@ -174,8 +174,8 @@ G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
 	user_attr root_shell dtlogin cron"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
-L_FS_TESTS="root_fs fs exports"
-G_FS_TESTS="zpools vx_dgs capacity $L_FS_TESTS"
+G_FS_TESTS="zpools vx_dgs capacity root_fs fs exports"
+L_FS_TESTS="zpools root_fs fs exports"
 
 #-----------------------------------------------------------------------------
 # FUNCTIONS
@@ -935,17 +935,6 @@ function get_os_rel
 
 	disp "release" $OS_R
 }
-
-function get_os_clust
-{
-	# The Solaris cluster that was installed initially
-
-	if [[ -f /var/sadm/system/admin/CLUSTER ]]
-	then
-		disp "cluster" $(sed 's/^.*=//' /var/sadm/system/admin/CLUSTER)
-	fi
-}
-
 
 function get_hostid
 {
@@ -1777,7 +1766,12 @@ function get_package_count
 	
 		(($PARTIAL > 0)) && PKGS="$PKGS (${PARTIAL## * } partial)"
 
-		disp "packages" $PKGS "[SVR4]"
+		# If we can, get the Solaris cluster that was installed 
+
+		[[ -f /var/sadm/system/admin/CLUSTER ]] \
+			&& CST=/$(sed 's/^.*=//' /var/sadm/system/admin/CLUSTER)
+
+		disp "packages" $PKGS "[SVR4${CST}]"
 	fi
 
 }
@@ -3002,10 +2996,12 @@ function get_fs
 
 		[[ -n $a ]] && dfs="${u}/$k ($c) used" || dfs="unknown capacity"
 
-		# we get extra info for ZFS filesystems
+		# we get extra info for ZFS filesystems. ZFS roots in zones can't be
+		# examined - you can see the dataset name, but can't "get" it
 
-		if [[ $typ == "zfs" && $mdv != "/" ]]
+		if [[ $typ == "zfs" && $mdv != "/" ]] && zfs list $mdv >/dev/null 2>&1
 		then
+
 			zfs get -Hp -o property,value $ZPL $mdv | while read p v
 			do
 				zx="${zx}${p}=${v},"
