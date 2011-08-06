@@ -16,13 +16,17 @@ $grid_key = array(
 
 	"zpool" => array(
 		array("faulted zpool", "solidred", false),
-		array("degraded zpool", "solidamber", false),
-		array("online zpool can be<br/>upgraded", "solidorange", false)
+		array("degraded zpool", "boxamber", false),
+		array("online zpool", "boxgreen", false),
+		array("pool can be upgraded", "solidorange", false)
 	),
 
 	"disk group" => array(
-		array("disabled group", "solidred", false),
-		array("warning state", "solidamber", false)
+		array("disabled group", "boxred", false),
+		array("warning state", "boxamber", false),
+		array("enabled group", "boxgreen", false),
+		array("errored disk or plex", "solidred", false),
+		array("unused subdisk or plex", "solidamber", false)
 	),
 
 	"capacity" => array(

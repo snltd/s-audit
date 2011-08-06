@@ -611,6 +611,24 @@ class HostGrid {
 		. $this->show_audit_completed($data["audit completed"]);
 	}
 
+	protected function indent_print($keyval, $keycol = false)
+	{
+		// Print indented data for NICs, filesystems, exports
+
+		$ret = "\n<div class=\"indent\">";
+
+		foreach($keyval as $key=>$val) {
+			$ret .= "\n  <div";
+
+			if (isset($keycol[$key]))
+				$ret .= " class=\"$keycol[$key]\"";
+
+			$ret .= "><strong>${key}:</strong> $val</div>";
+
+		}
+
+		return $ret . "\n</div>";
+	}
 
 	//------------------------------------------------------------------------
 	// show_property() functions
@@ -1033,7 +1051,7 @@ class HostGrid {
 			"<strong>\\1</strong>:", $datum), $class, $ic);
 		}
 
-		return new listCell($c_arr, "smallaudit");
+		return new listCell($c_arr, "smallaudit", false, 1);
 	}
 
 	protected function show_printer($data)
@@ -1736,24 +1754,23 @@ class HostGrid {
 
 			if ($na[3]) $txt .= " ($na[3])";
 
-			// Next row is the MAC
+			// From here on in, data is in key-value pairs. A heading and
+			// the data.
 
-			$txt .= "<div class=\"indent\">MAC: ";
+			$id = array();
 
-			$txt .= ($na[2] == "unknown")
-				? "unknown"
+			$id["MAC"] = ($na[2] == "unknown")
+				? $na[2]
 				: "<tt>" . $this->format_mac_addr($na[2]) . "</tt>";
 
-			$txt .= "</div>";
-
-			// Speed on the next row
+			// Speed now
 
 			if ($na[4]) {
 
 				// in LDOMs speed is reported as "unknown"
 
 				if ($na[4] == "unknown")
-					$speed = "unknown speed";
+					$speed = $na[4];
 				else {
 			
 					// Split the speed/duplex into two parts
@@ -1788,31 +1805,30 @@ class HostGrid {
 						$speed = "${sa[0]}bit/$sa[1] duplex";
 					}
 
-					if (isset($sf[1]))
-						$speed .= " $sf[1]";
+					if (isset($sf[1])) $speed .= " $sf[1]";
 				}
 				
-				if (isset($speed))
-					$txt .= "<div class=\"indent\">$speed</div>";
+				if (isset($speed)) $id["speed"] = $speed;
 			}
 
-			// na[5] can be DHCP or IPMP info. IPMP info goes on both sides
+			// na[5] can be DHCP or IPMP info. Possibly other things in the
+			// future
 
-			if ($na[5]) {
-				$txt .= "<div class=\"indent\">";
-
-				$txt .= ($na[5] == "DHCP")
-					? "assigned by DHCP"
-					: "IPMP=$na[5]";
-
-				$txt .= "</div>";
-			}
+			if ($na[5] == "DHCP")
+				$id["DHCP"] = "yes";
+			elseif ($na[5] && preg_match("/^IPMP/", $na[5]))
+				$id["IPMP"] = preg_replace("/^.*=/", $na[5]);
 
 			// Then +vswitch or VLAN info
 
-			if ($na[6])
-				$txt .= "<div class=\"indent\">" .strtoupper($na[6]) .
-				"</div>";
+			if ($na[6]) {
+
+				if ($na[6] == "vlan")
+					$id["VLAN"] = "yes";
+				elseif(preg_match("/^VSW/", $na[6]))
+					$id["vSwitch"] = $na[6];
+
+			}
 
 			// That's all the info that goes in the cells. Now we need to
 			// work out how to colour them. We do that with inline colour
@@ -1893,11 +1909,13 @@ class HostGrid {
 
 			if (preg_match("/:/", $na[0])) $class = "box$class";
 
-			$c_arr[] = array($txt, $class);
+			$c_arr[] = array($txt . $this->indent_print($id), $class);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
 	}
+
+
 	//-- tools and applications ----------------------------------------------
 
 	protected function show_sun_cc($data)
@@ -2049,71 +2067,65 @@ class HostGrid {
 		// List Zpools and their sizes. Ones which can be upgraded are on an
 		// orange field. Red for faulted, amber for degraded
 
+
 		$c_arr = false;
 
 		foreach($data as $row) {
-			$a = preg_split("/[ :]/", $row, 5);
+			$id = $idc = array();
+			$txt = $class = "";
 
-			// for an ONLINE or DEGRADED zpool we'll have 5 fields
-			//
-			// 0 - pool name
-			// 1 - raw capacity
-			// 2 - zpool version/highest available version
-			// 3 - zpool state
-			// 4 - (last scrub: ddd mmm DD HH:MM:SS YYYY)
+			preg_match("/(\w+) (\w+) \(last scrub: ([^\)]+)\)(.*)$/",
+			$row, $a);
+			
+			// So $a[] is of the form:
+			// [1] => pool name
+			// [2] => pool status
+			// [3] => last scrub - ddd mmm DD HH:MM:SS YYYY | none
+			// [4] => [version/supported_version] | empty
+			
+			// UNLESS the pool is faulted
+			// [1] => pool name
+			// [2] => "FAULTED"
 
-			// A faulted pool just has two
-			//
-			// 0 - pool name
-			// 1 - "FAULTED"
-
-			$txt = "<strong>$a[0]</strong> $a[1]";
-
+			$txt = "<strong>$a[1]</strong> ($a[2])";
+			
 			if ($a[1] == "FAULTED")
 				$class = "solidred";
 			else {
-
-				// We deal with the version part separately
-
-				$varr = explode("/", preg_replace("/[\[\]]/", "",
-				$a[2]));
-
-				if ($varr[0] != $varr[1]) {
-					$vex = "v$varr[0] (v$varr[1] supported)";
-					$class = "solidorange";
-				}
-				else {
-					$vex =" v$varr[0]";
-					$class = false;
-				}
-
-				$txt .= "<div>$vex $a[3]</div>";
+				$class = "boxgreen";
 			
-				// Time of last scrub. This comes in a form we can't really
-				// use
+				// Split the version and colour if there's a higher
+				// supported version than the pool is using. (Assuming we
+				// have the version. Originally ZFS couldn't tell you what
+				// version it was.)
 
-				$ls = preg_split("/[\W]/ ", $a[4]);
+				if (!empty($a[4])) {
+					preg_match("/\[(\d+)\/(\d+)\]/", $a[4], $b);
 
-				if ($ls[4] == "none")
-					$txt .= "<div>not scrubbed</div>";
-				else {
+					if ($b[1] == $b[2])
+						$id["version"] = $b[1];
+					else {
+						$id["version"] = "$b[1] ($b[2] supported)";
+						$idc["version"] = "solidorange";
+					}
+				}
 
-					// So ls is of the form:
-					// [0] => 
-					// [1] => last
-					// [2] => scrub
-					// [3] => 
-					// [4] => Sun
-					// [5] => Mar
-					// [6] => 20
-					// [7] => 01
-					// [8] => 44
-					// [9] => 28
-					// [10] => 2011
-					// [11] => 
+				// Now the scrub. Don't bother reporting it if there isn't
+				// one
 
-					$txt .= "<div>scrubbed: $ls[7]:$ls[8] "
-					. "$ls[6] $ls[5] $ls[10]</div>";
+				if ($a[3] != "none") {
+					$c = preg_split("/\W+/ ", $a[3]);
+
+					// So c[] is of the form:
+					// [0] => day of week
+					// [1] => month
+					// [2] => day of month
+					// [3] => hour
+					// [4] => minutes
+					// [5] => seconds
+					// [6] => year
+
+					$id["scrubbed"] = "$c[2] $c[1] $c[6]";
 				}
 
 			}
@@ -2121,51 +2133,101 @@ class HostGrid {
 			// if the pool is in a degrated state, override the background
 			// colour
 
-			if ($a[3] == "DEGRADED")
-				$class = "solidamber";
+			if ($a[2] == "DEGRADED")
+				$class = "boxamber";
 
-			$c_arr[] = array($txt, $class);
+			$c_arr[] = array($txt . $this->indent_print($id, $idc),
+			$class);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "auditl", false, 1);
 	}
 
 	protected function show_disk_group($data)
 	{
 		// VxVM disk groups. There can be many of these, so we need a
-		// listCell. Empty filed for "enabled"
-		// Red for "disabled", amber for everything else.
+		// listCell. It's quite a complicated string we get, and needs a
+		// fair bit of processing
 
 		foreach($data as $dg) {
+			$id = $idc = array();
 	
-			preg_match("/(\w+) \((\w+)\) \[(\d+) disk\/(\d+).*$/", $dg, $a);
+			preg_match("/(\w+) \((\w+)\) \[([^\]]*)\](.*)$/", $dg, $a);
 
 			// Gives us and array of the form:
 			// [1] => disk group name
 			// [2] => disk group state
-			// [3] => number of disks
+			// [3] => n disks/n+m subdisk/n vol/n+m plex
+			// [4] => [ERRS: n disk/m plex] or nothing
+
+			// The name and state are easy
+
+			$txt = "<strong>$a[1]</strong> ($a[2])";
+
+			// Now the disk/subdisk/volume/plex string
+
+			preg_match("/(\d+) disk\/(\d+)\+(\d+) subdisk\/(\d+) "
+			. "vol\/(\d+)\+(\d+) plex/", $a[3], $b);
+
+			// so b[] is an array with:
+			// [1] => number of disks
+			// [2] => number of subdisks
+			// [3] => number of unused subdisks
 			// [4] => number of volumes
+			// [5] => number of plexes
+			// [6] => number of unused plexes
 
-			$txt = "<div><strong>$a[1]</strong> ($a[2])</div>"
-			. "\n<div>$a[3] disk";
+			// disks
 
-			if ($a[3] != 1) $txt .= "s";
+			$id["disks"] = $b[1];
+			$id["subdisks"] = $b[2];
 
-			$txt .= "</div>\n<div>$a[4] volume";
+			if ($b[3] > 0) {
+				$id["subdisks"] .= " ($b[3] unused)";
+				$idc["subdisks"] = "solidamber";
+			}
 
-			if ($a[4] != 1) $txt .= "s";
+			$id["volumes"] = $b[4];
+			$id["plexes"] = $b[5];
+
+			if ($b[4] > 0) {
+				$id["plexes"] .= " ($b[4] unused)";
+				$idc["plexes"] = "solidamber";
+			}
+
+			// Do we have errors?
+
+			if (!empty($a[4])) {
+				preg_match("/\[ERRS:(\d+) disk\/(\d+).*$/", $a[4], $c);
+
+				// so $c is of the form:
+				// [1] => number of errored disks
+				// [2] => number of errored plexes
+
+				if ($c[1] > 0) {
+					$id["disk errors"] = $c[1];
+					$idc["disk errors"] = "solidred";
+				}
+
+				if ($c[2] > 0) {
+					$id["plex errors"] = $c[2];
+					$idc["plex errors"] = "solidred";
+				}
+
+			}
 
 			if ($a[2] == "enabled")
-				$class = false;
+				$class = "green";
 			elseif ($a[2] == "disabled")
 				$class = "red";
 			else
 				$class = "amber";
 
-			$c_arr[] = array($txt . "</div>", "solid$class");
+			$c_arr[] = array($txt . $this->indent_print($id, $idc),
+			"box$class");
 		}
 
-		return new listCell($c_arr);
+		 return new listCell($c_arr, "auditl", false, 1);
 	}
 
 	protected function show_capacity($data)
@@ -2216,16 +2278,10 @@ class HostGrid {
 
 		// directory fs_type [b_used/b_avail (pc%) used] // (dev:opts:x_opts)
 
-		$head = array(
-			2 => "storage",
-			3 => "mount opts",
-			4 => "ZFS opts");
-
 		$c_arr = array();
 
 		foreach($data as $row) {
-			$out = $ic = array();
-
+			$id = $idc = $ic = array();
 			$class = false;
 
 			preg_match("/^(\S+) (\w+) \[([^\]]+)\] \(([^\)]+)\)(.*)$/",
@@ -2270,33 +2326,32 @@ class HostGrid {
 			// ROW 1 is the mountpoint followed by the fs type and device
 			// path
 
-			$out[1] = "<strong>$a[1]</strong> (" . strtoupper($a[2]);
+			$txt = "<strong>$a[1]</strong> (" . strtoupper($a[2]);
 
 			// In local zones, loopback mounted filesystems have the same
 			// device name as the mountpoint. Don't bother showing that.
 			// Otherwise, add on the device path/zfs dataset name
 			
-			if ($a[1] != $b[0])
-				$out[1] .= ":$b[0]";
+			if ($a[1] != $b[0]) $txt .= ":$b[0]";
 
-			$out[1] .= ")";
+			$txt .= ")";
 
 			// Again, if not in vfstab, this time just say so
 
-			if (!empty($a[5]))
-				$out[1] .= " (not in vfstab)";
+			if (!empty($a[5])) $txt .= " (not in vfstab)";
 			
 			// If this isn't in the vfstab, put the first line on a pink
 			// field
 
-			if (!empty($a[5]))
-				$ic[1] = $this->cols->icol("solid", "pink", false, 1);
+			$txt = (empty($a[5]))
+				? "\n<div>$txt</div>"
+				: "\n<div class=\"solidpink\"$txt</div>";
 
 			// ROW 2 is disk usage. Use amber and red fields for fses more
 			// than 80 and 90% full respectively
 
 			if ($a[3] == "unknown capacity")
-				$out[2] = $a[3];
+				$id["capacity"] = "unknown";
 			else {
 				preg_match("/(\d+)\/(\d+) \((\d+)%\).*$/", $a[3], $c);
 
@@ -2306,45 +2361,38 @@ class HostGrid {
 				// [2] bytes available
 				// [3] percentage used
 
-				$out[2] = units::from_b($c[1]) . "/" .
+				$id["capacity"] = units::from_b($c[1]) . "/" .
 				units::from_b($c[2]) . " ($c[3]%) used";
 
 				if ($c[3] > 90)
-					$ic[2] = $this->cols->icol("solid", "red", false, 1);
+					$idc["capacity"] = "solidred";
 				elseif ($c[3] > 80)
-					$ic[2] = $this->cols->icol("solid", "amber", false, 1);
+					$idc["capacity"] = "solidamber";
+
 			}
+
 
 			// ROW 3 is mount options. Colour this if it's read-only. Other
 			// odd options we leave it to the viewer to spot (for now)
 
-			$out[3] = preg_replace("/,/", " ", $b[1]);
+			if ($b[1]) $id["opts"] = preg_replace("/,/", " ", $b[1]);
 
-			if (preg_match("/\bro\b/", $b[1]))
-				$ic[3] = $this->cols->icol("solid", "grey", false, 1);
+			if (preg_match("/\bro\b/", $b[1])) $idc["opts"] = "solidgrey";
 
 			// Extended options. You get these for ZFS filesystems
 
 			if ($a[2] == "zfs" && isset($b[2])) {
-
 				$d = explode(",", $b[2]);
-				$out[4] = "";
+				$row = "";
 
 				foreach($d as $e) {
 					$f = explode("=", $e);
-
 					$key = $f[0];
 					$val = $f[1];
 
-					if (!isset($f[1]) ){
-						pr($d);
-						echo $key;
-					}
-
 					// Don't print anything that's "off"
 
-					if ($val == "off")
-						continue;
+					if ($val == "off") continue;
 
 					// If the quota is non-zero, make it human-readable and
 					// display it
@@ -2352,7 +2400,7 @@ class HostGrid {
 					if ($key == "quota") {
 						
 						if ($val != 0)
-							$out[4] .= " quota=" . units::from_b($val);
+							$row .= " quota=" . units::from_b($val);
 					}
 	
 					// If the version isn't the maximum supported version,
@@ -2360,12 +2408,11 @@ class HostGrid {
 
 					elseif ($key == "version") {
 						$v = explode("/", $val);
-						$out[4] .= " version=$v[0]";
+						$row .= " version=$v[0]";
 
 						if ($v[0] != $v[1]) {
-							$out[4] .= " (v$v[1] supported)";
-							$ic[4] = $this->cols->icol("solid", "orange",
-							false, 1);
+							$row .= " (v$v[1] supported)";
+							$idc["ZFS opts"] = "solidorange";
 						}
 
 					}
@@ -2375,30 +2422,17 @@ class HostGrid {
 					// even if it isn't processed
 
 					else
-						$out[4] .= " $e";
+						$row = $e;
 
 				}
 
+				$id["ZFS opts"] = $row;
+
 			}
 			elseif (isset($b[2]))
-				$out[4] = $b[2];
+				$id["ZFS opts"] = $b[2];
 
-			$txt = $out[1];
-			
-			for($i = 2; $i < 5; $i++) {
-
-				if (empty($out[$i]))
-					continue;
-
-				$txt .= "<div class=\"indent\"";
-
-				if (isset($ic[$i]))
-					$txt .= $ic[$i];
-					
-				$txt .= "><strong>$head[$i]:</strong> $out[$i]</div>";
-			}
-
-			$c_arr[] = array($txt, $class);
+			$c_arr[] = array($txt . $this->indent_print($id, $idc), $class);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -2417,13 +2451,15 @@ class HostGrid {
 		$c_arr = false;
 
 		foreach($data as $row) {
-			preg_match("/^(\S+) ([\/\w]+) (.*)$/", $row, $a);
-			$txt = $col = $sty = false;
+			$txt = $col = $sty = $opts = false;
+			$id = array();
 
-			// This gives us an array with
+			// Break the row up into an array of the form
 			// [1] = share name
-			// [2] = export type
+			// [2] = export/filesystem type
 			// [3] = options
+
+			preg_match("/^(\S+) ([\/\w]+) (.*)$/", $row, $a);
 
 			if ($a[2] == "iscsi")
 				$fstyp = "iSCSI";
@@ -2438,12 +2474,22 @@ class HostGrid {
 
 			if ($fstyp == "NFS") {
 
+				// Does this filesysem have a name? If it does, $a will have
+				// two elements
+				
+				$b = preg_split("/\) \[\"/", $opts);
+
+				if (isset($b[1])) {
+					$opts = $b[0];
+					$id["description"] = preg_replace("/\"\]$/", "", $b[1]);
+				}
+
 				// For NFS, we strip off the domain name, if it's defined in
 				// STRIP_DOMAIN, and fold. 
 
 				if (STRIP_DOMAIN)
-					$l2 = $this->fold_line(str_replace("." .  STRIP_DOMAIN,
-					"", $opts), $fold);
+					$id["opts"] = $this->fold_line(str_replace("." .
+					STRIP_DOMAIN, "", $opts), $fold);
 
 				// Now we look to see if anything else has mounted this
 				// filesystem. $mntd_nfs is an array which counts the number
@@ -2470,31 +2516,36 @@ class HostGrid {
 			}
 			elseif (preg_match("/^SMB/", $fstyp)) {
 
-				// For SMB exports, just put the export name in quotes
+				// For SMB exports, we have a name
 
-				$l2 = preg_replace("/[\[\]]/", "&quot;", $a[3]);
+				$id["name"] = preg_replace("/[\[\]]/", "", $a[3]);
 				$a[2] = "smb";
 			}
 			elseif ($fstyp == "iSCSI") {
 				
 				// for iSCSI, just show the value of the shareiscsi property
 
-				$l2 = "shareiscsi=$opts";
+				$id["shareiscsi"] = $opts;
 			}
 			elseif ($fstyp == "VDISK") {
 
 				// Unassigned VDISKS go on an amber field
 
+				$bt = preg_replace("/bound to /", "", $opts);
+
 				if (preg_match("/bound to unassigned$/", $opts)) {
-					$l2 =preg_replace("/bound to unassigned$/", " -
-					UNASSINGED", $opts);
-					$col = $this->cols->icol("solid", "amber");
+
+					if ($bt == "unassigned") {
+						$bt = "UNASSIGNED";
+						$col = $this->cols->icol("solid", "amber");
+					}
+
 				}
-				else
-					$l2 = $opts;
+
+				$id["bound to"] = $bt;
 			}
 
-			$txt .= "<div $sty class=\"indent\">$l2</div>";
+			if (isset($id)) $txt .= $this->indent_print($id);
 
 			$c_arr[] = array($txt, $a[2], $col);
 		}
@@ -2659,16 +2710,16 @@ class HostGrid {
 
 		foreach($data as $datum) {
 			$arr = explode(":", $datum);
-			$str = "<strong>$arr[1]</strong> ($arr[0]) $arr[2]b";
+			$txt = "<strong>$arr[1]</strong> ($arr[0]) $arr[2]b";
 			$col = false;
+			$id = array();
 
 			if ($arr[3]) {
-				$str .= "<div class=\"indent\">last updated: 
-				$arr[3]</div>";
+				$id["last update"] = $arr[3];
 				$col = $this->cols->icol("solid", "amber"); 
 			}
 				
-			$c_arr[] = array($str, $arr[0], $col);
+			$c_arr[] = array($txt . $this->indent_print($id), $arr[0], $col);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -3209,6 +3260,7 @@ class NetGrid extends HostGrid {
 class FSGrid extends HostGrid {
 
 	protected $adj_fields = array(
+		"capacity" => "zpool",
 		"zpool" => "disk group");
 
 	protected $mntd_nfs = array();

@@ -71,9 +71,9 @@ class defs {
 				),
 
 			"5.10" => array(
-				"03/05" => "GA",
-				"01/06" => "update 1",
-				"06/06" => "update 2",
+				"3/05" => "GA",
+				"1/06" => "update 1",
+				"6/06" => "update 2",
 				"11/06" => "update 3",
 				"8/07" => "update 4",
 				"5/08" => "update 5",
@@ -82,12 +82,14 @@ class defs {
 				"10/09" => "update 8",
 				"9/10" => "update 9"
 				)
+
             );
 
 	// Sun Studio's -V output mapped to marketing release number
 
 	private $sun_cc_vers = array(
 			"5.0" => "5.0",
+			"5.4" => "7",
 			"5.8" => "11",
 			"5.9" => "12",
 			"5.10" => "12u1",

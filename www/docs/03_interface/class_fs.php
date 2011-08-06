@@ -35,9 +35,9 @@ $dh->doc_class_start();
 	face</strong>, with its capacity in parentheses. On the next line, the
 	version of the zpool is reported. If the system supports a higher
 	version than the pool is using, the available version is also given, and
-	the cell is coloured. The state of the zpool is displayed, in upper
-	case, and zpools which are not &quot;ONLINE&quot; are highlighted by a
-	coloured field.</dd>
+	the cell is coloured. If the pool has recently been scrubbed, the date
+	of the last scrub is reported.  Zpools which are not &quot;ONLINE&quot;
+	are highlighted by a coloured field.</dd>
 
 	<?php
 		echo $dh->colour_key($dh->grid_key["zpool"]);
@@ -46,10 +46,12 @@ $dh->doc_class_start();
 	<dt>disk group</dt>
 	<dd>Shows Veritas Volume Manager disk groups. The group name is given
 	first, in <strong>bold face</strong> with the group's status following
-	in parentheses. On the next line is the number of disks which the group
-	contains, and the third line shows the number of volumes created in the
-	group. Disk groups in states other than &quot;enabled&quot; are
-	highlighted by a coloured field.</dd>
+	in parentheses. The indented lines display the number of disks and
+	subdisks in the group. If there are unused subdisks, they are reported
+	and highlighted on an amber field. The number of volumes in the group is
+	displayed, and so is the number of plexes. Again, unused plexes are
+	reported and highlighed. If the disk group contains errored disks or
+	plexes they are shown on a red field.</dd>
 
 	<?php
 		echo $dh->colour_key($dh->grid_key["disk group"]);
@@ -68,7 +70,8 @@ $dh->doc_class_start();
 
 	<dt>root fs</dt>
 	<dd>Shows the type of filesystem used for the system root. This will be
-	either UFS or ZFS. If <tt>s-audit.sh</tt> was able to identify a
+	either UFS or ZFS, and VxVM encapsulated UFS filesystems are also
+	recognized. If <tt>s-audit.sh</tt> was able to identify a
 	mirrored root, then this is reported. It can only do this in the case of
 	software mirroring done by the zone being audited, so if a system does
 	not report a mirrored root, that does not necessarily mean it does not

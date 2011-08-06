@@ -834,7 +834,7 @@ function get_hardware
 
 	if [[ $HW_PLAT == "SUNW,UltraAX-i2" ]]
 	then
-		HW_OUT=$($PRTDIAG \
+		HW_OUT=$($PRTDIAG 2>/dev/null \
 		| sed -n "/Configuration/s/^.*$HW_HW \([^\(]*\).*$/\1/p")
 	else
 		HW_OUT=$(print $HW_HW | sed 's/SUNW,//;s/-/ /g')
@@ -1204,18 +1204,19 @@ function get_virtualization
 		if [[ $HW_HW == "i86pc" ]]
 		then
 
-			# Prtdiag is not supported on x86 Solaris < 10. At the moment I
-			# can't work out a bulletproof way to tell whether those old
+			# Prtdiag is not supported on x86 Solaris < 10u2. At the moment
+			# I can't work out a bulletproof way to tell whether those old
 			# OSes are running on a physical machine or in a virtualbox
 			
-			if (($OSVERCMP > 59))
+			if (($OSVERCMP > 59)) && [[ $(prtdiag 2>&1) != \
+			*"not implemented"* ]]
 			then
-				sysconf=$($PRTDIAG | sed 1q)
+				sc=$($PRTDIAG 2>/dev/null | sed 1q)
 
-				if [[ $sysconf == *VirtualBox* ]]
+				if [[ $sc == *VirtualBox* ]]
 				then
 					VIRT="VirtualBox"
-				elif [[ $sysconf == *VMware* ]]
+				elif [[ $sc == *VMware* ]]
 				then
 					VIRT="VMware"
 				fi
@@ -2487,29 +2488,36 @@ function get_php_cmd
 function get_cc
 {
 	# Gets the version and patch number of whatever Sun are calling their C
-	# compiler this week. Definitely works for 5, 11 and 12.
+	# compiler this week. Definitely works for 5, 7, 11 and 12.
 
 	for BIN in $(find_bins cc)
 	do
 		# Is this really Sun CC?
 
-		cc 2>&1 | $EGS details$ || continue
+		cc 2>&1 | $EGS "^usage" || continue
 
 		CCDIR=${BIN%/*}
 		CC_LIST="(C"
 		CC_INFO=$($BIN -V 2>&1 | sed 1q)
-		CC_MAJ_VER=$(print $CC_INFO | cut -d\  -f4)
+
+		[[ "$CC_INFO" == *Forte* ]] && FN=6 || FN=4
+		
+		CC_MAJ_VER=$(print $CC_INFO | cut -d\  -f$FN)
 
 		if [[ $CC_INFO == *Patch* ]]
 		then
 			CC_MIN_VER=${CC_INFO% *}
 			CC_MIN_VER=" ${CC_MIN_VER##* }"
+		elif print $CC_INFO | $EGS "/[0-9][0-9]$"
+		then
+			CC_MIN_VER=" ${CC_INFO##* }"
 		fi
 
-		# Look to see what options we have. C/C++/Fortran
+		# Look to see what options we have. C/C++/Fortran/IDE
 
 		[[ -x ${CCDIR}/CC ]] && CC_LIST="${CC_LIST}, C++"
 		[[ -x ${CCDIR}/f77 ]] && CC_LIST="${CC_LIST}, Fortran"
+		[[ -x ${CCDIR}/sunstudio ]] && CC_LIST="${CC_LIST}, IDE"
 		CC_LIST="${CC_LIST})"
 
 		disp "Sun CC@$BIN" ${CC_MAJ_VER}$CC_MIN_VER $CC_LIST
@@ -2846,7 +2854,8 @@ function get_capacity
 function get_zpools
 {
 	# Get a list of zpools, their versions, and capacities. There's no
-	# "zpool get" in early ZFS releases
+	# "zpool get" in early ZFS releases. Output:
+	# name status (last scrub:) [ver/max_ver]
 
 	if can_has zpool
 	then
@@ -2868,22 +2877,25 @@ function get_zpools
 				disp "zpool" $zp $st
 			else
 
+				# get the last scrub
+
+				lscr=$(zpool status $zp | egrep "scrub:|scan:" | \
+				sed 's/^.*s on //')
+
+				[[ -z $lscr || $lscr == *"none requested"* ]] && lscr="none"
+
+				zpext="(last scrub: $lscr)"
+
+				# Get the version, if we can
+
 				if [[ -n $zpsup ]]
 				then
 					zpool get version,size $zp | sed '1d;$!N;s/\n/ /' \
 					| read a b zv c d e zs f
-					zpext="$zp (${zs}) [${zv}/${zpsup}]"
+					zpext="$zpext [${zv}/${zpsup}]"
 				fi
 
-				# Add on the date of the last scrub
-
-				lscr=$(zpool status $zp | sed -n '/scrub:/s/^.*s on //p')
-
-				[[ -z $lscr ]] && lscr="none"
-
-				zpext="$zpext $st (last scrub: $lscr)"
-
-				disp "zpool" $zpext
+				disp "zpool" "$zp $st $zpext"
 			fi
 
 		done
@@ -2901,8 +2913,17 @@ function get_vx_dgs
 
 		vxdg list | sed '1d' | while read dg st id
 		do
-			disp "disk group" "$dg ($st) [$(vxprint -g $dg | grep -c \
-			^dm) disk/$(vxprint -g $dg | grep -c ^v) volume]"
+			# Get errored disks and plexes
+
+			errs=" [ERRS:$(vxprint -dg $dg | egrep -c \
+			"NODEVICE|FAIL") disk/$(vxprint -pg $dg | egrep -c \
+			"NODEVICE|IOFAIL") plex]"
+
+			[[ $errs == *":0 disk/0 p"* ]] && unset errs
+
+			vxprint -S -g$dg | sed '1d' | read v p s pf sf d rv rl stp vs c
+			disp "disk group" \
+			"$dg ($st) [${d} disk/${s}+$sf subdisk/$v vol/${p}+$pf plex]$errs"
 		done
 
 	fi
@@ -2918,7 +2939,7 @@ function get_root_fs
 	if [[ $RFS == "ufs" ]] 
 	then
 
-		if [[ $RDEV == "/dev//md/"* ]]
+		if [[ $RDEV == "/dev/md/"* ]]
 		then
 			metastat ${RDEV##*/} | $EGS "^${RDEV##*/}: Mirror" \
 				&& FSM="(mirrored)"
@@ -2932,7 +2953,7 @@ function get_root_fs
 
 			rv=$(df -k / | sed -n '2s/ .*//p')
 
-			[[ $(vxprint ${rd##*/} | grep -c ^pl) -gt 1 ]] \
+			[[ $(vxprint ${rv##*/} | grep -c ^pl) -gt 1 ]] \
 				&& FSM="$FSM and mirrored"
 
 			FSM="${FSM})"
