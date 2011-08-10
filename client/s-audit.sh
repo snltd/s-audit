@@ -78,8 +78,8 @@ OSVERCMP=$(print $OSVER | tr -d .)
 SCADM=/usr/platform/${HW_HW}/sbin/scadm
 
 [[ -x /usr/sbin/prtdiag ]] \
-	&& PRTDIAG=/usr/sbin/prtdiag \
-	|| PRTDIAG=/usr/platform/${HW_HW}/sbin/prtdiag
+	&& PRTDIAG='/usr/sbin/prtdiag 2>/dev/null' \
+	|| PRTDIAG='/usr/platform/${HW_HW}/sbin/prtdiag 2>/dev/null'
 
 IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc "
 	# Ignore these fs types in the fs audit
@@ -150,7 +150,7 @@ G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
 	snmp ports routes nic"
 L_NET_TESTS=$G_NET_TESTS
 
-G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms
+G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
 	scheduler svc_count package_count patch_count pkg_repo uptime "
 L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
 	package_count patch_count pkg_repo uptime"
@@ -532,7 +532,7 @@ function get_disk_type
 
 	if [[ $s == *ide@* ]]
 	then
-		print "IDE" # Also SATA, can't see a way to differentiate
+		print "ATA" 
 	elif [[ $s == *scsi_vhci* ]]
 	then
 		print "SCSI VHCI"
@@ -557,6 +557,9 @@ function get_disk_type
 	elif (($OSVERCMP >= 510)) && iostat -En $dev | $EGS "VBOX"
 	then
 		print "VBOX"
+	elif [[ $s == */xpvd/* ]]
+	then
+		print "xVM"
 	else
 		print "unknown"
 	fi
@@ -1201,14 +1204,17 @@ function get_virtualization
 	if is_global
 	then
 
-		if [[ $HW_HW == "i86pc" ]]
+		if [[ $HW_HW == "i86xpv" ]] && prtconf | $EGS xpvd,
+		then
+			is_running xenconsoled && VIRT="xVM dom0" || VIRT="xVM domU"
+		elif [[ $HW_HW == "i86pc" ]]
 		then
 
 			# Prtdiag is not supported on x86 Solaris < 10u2. At the moment
 			# I can't work out a bulletproof way to tell whether those old
 			# OSes are running on a physical machine or in a virtualbox
 			
-			if (($OSVERCMP > 59)) && [[ $(prtdiag 2>&1) != \
+			if (($OSVERCMP > 59)) && [[ $(PRTDIAG 2>&1) != \
 			*"not implemented"* ]]
 			then
 				sc=$($PRTDIAG 2>/dev/null | sed 1q)
@@ -1844,6 +1850,25 @@ function get_ldoms
 		done
 
 	fi
+}
+
+function get_xvmdoms
+{
+
+	# A list of xVM domians, with their state, CPU and memory
+
+	if is_root && can_has virsh
+	then
+		
+		virsh list | sed '1,2d;/^$/d' | while read id nm st
+		do
+			print $(virsh dominfo $nm | egrep "^CPU\(|Max" | \
+			sed 's/^.*: *//') | read cpu mem
+
+			disp "xVM domain" "$nm ($st) [$cpu CPU/$mem]"
+		done
+	fi
+
 }
 
 #-- APPLICATION AUDITING FUNCTIONS -------------------------------------------
