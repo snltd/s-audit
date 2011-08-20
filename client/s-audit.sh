@@ -60,7 +60,7 @@ RUN_HERE=1
 SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin \
 	$(find /usr/*/*bin /usr/local/*/*bin /opt/*/*bin /usr/*/libexec \
 	/usr/local/*/libexec /opt/*/libexec -prune 2>/dev/null) \
-	/usr/netscape/suitespot"
+	/usr/netscape/suitespot /opt/VirtualBox"
 
 PATH=$(print "$SPATH" | tr " " : | tr "\n" ":")
 
@@ -78,8 +78,8 @@ OSVERCMP=$(print $OSVER | tr -d .)
 SCADM=/usr/platform/${HW_HW}/sbin/scadm
 
 [[ -x /usr/sbin/prtdiag ]] \
-	&& PRTDIAG='/usr/sbin/prtdiag 2>/dev/null' \
-	|| PRTDIAG='/usr/platform/${HW_HW}/sbin/prtdiag 2>/dev/null'
+	&& PRTDIAG=/usr/sbin/prtdiag \
+	|| PRTDIAG=/usr/platform/${HW_HW}/sbin/prtdiag 
 
 IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc "
 	# Ignore these fs types in the fs audit
@@ -151,7 +151,7 @@ G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
 L_NET_TESTS=$G_NET_TESTS
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
-	scheduler svc_count package_count patch_count pkg_repo uptime "
+	vboxes scheduler svc_count package_count patch_count pkg_repo uptime "
 L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
 	package_count patch_count pkg_repo uptime"
 
@@ -1078,6 +1078,19 @@ function get_disks
 		done
 	fi
 
+	# If there's raidctl hardware mirroring, things get complicated. I'll
+	# just count the volumes. First line is 5.10, second 5.9
+
+	if can_has raidctl
+	then
+
+		raidctl 2>&1 | $EGS ^Controller \
+			&& v=$(raidctl -l | grep -c Volume:) \
+			|| v=$(raidctl | grep -c ^c)
+
+		(($v > 0)) && disp storage "RAID vol: $v"
+	fi
+
 }
 
 function get_printers
@@ -1162,9 +1175,9 @@ function get_tape_drives
 
 function get_cards
 {
-	# Have a go at finding cards. 
+	# Have a go at finding cards, on SPARCs.
 	
-	if [[ -x $PRTDIAG && $HW_HW != "i86pc" ]]
+	if [[ -x $PRTDIAG && $HW_HW != "i86"* ]]
 	then
 		# SBUS first. Works on the Ultra 2, YMMV.  I'm not very confident
 		# about only checking below slot 14
@@ -1176,7 +1189,7 @@ function get_cards
 		done
 
 		# Now PCI. This is not very reliable. It seems to work well enough
-		# on SPARC Solaris 10/11, but it's a dead loss on 8, and doesn't
+		# on SPARC Solaris 9 and 10, but it's a dead loss on 8, and doesn't
 		# work at all on x86.
 
 		$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
@@ -1244,12 +1257,19 @@ function get_virtualization
 
 			fi
 
+			# Get the versions of VMWare tools or VirtualBox additions
+
 			if [[ $VIRT == "VirtualBox" ]]
 			then
 				VBGVER=$(pkginfo -l SUNWvboxguest 2>/dev/null | sed -n \
 				'/VERSION/s/VERSION:.* \([^,]*\).*$/\1/p')
 				
 				[[ -n $VBGVER ]] && VIRT="${VIRT} (guest add. $VBGVER)" 
+			elif [[ $VIRT == "VMware" ]]
+			then
+				can_has vmware-toolbox-cmd && \
+					VIRT="$VIRT (tools $(vmware-toolbox-cmd -v \
+					| sed 's/ .*//'))"
 			fi
 				
 		elif [[ $HW_PLAT == "sun4v" ]] 
@@ -1706,16 +1726,35 @@ function get_kernel
 
 function get_be
 {
-	# Get boot environments on machines which have them
+	# Get beadm or LiveUpgrade boot environments
 
-	if is_global && can_has beadm 
+	if is_global 
 	then
-		beadm list -H | cut -d\; -f1,3,4 | tr \; ' ' | while read nm fl r
-		do
-			disp "boot env" "$nm ($r) [$fl]"
-		done
-	fi
 
+		if can_has beadm # show the name, root, active flags and mountpoint
+		then
+
+			beadm list -H | cut -d\; -f1,3,4 | tr \; ' ' | while read nm fl r
+			do
+				disp "boot env" "beadm: $nm ($r) [$fl]"
+			done
+
+		elif is_root && can_has lustatus
+		then
+
+			lustatus | sed '1,3d' | while read nm c an ar a
+			do
+				# Make the active flags match the beadm output
+
+				[[ $an == "yes" ]] && fl=N
+				[[ $ar == "yes" ]] && fl=${fl}R
+				[[ $c != "yes" ]] && x="in"
+
+				disp "boot env" "LU: $nm ($fl) [${x}complete]"
+			done
+		fi
+
+	fi
 }
 
 function get_uptime
@@ -1826,12 +1865,10 @@ function get_local_zone
 			zmem=$(zonecfg -z $zn info capped-memory | sed -n "$sed")
 			zcpu=$(zonecfg -z $zn info capped-cpu | sed -n "$sed")
 			zdcpu=$(zonecfg -z $zn info dedicated-cpu | sed -n "$sed")
-			rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" , | tr -s ,)
-			rc=${rc#,}
+			rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" / | tr -s ,)
+			rc=${rc#/}
 
-			[[ $rc != , ]] && xrc=" [${rc%,}]"
-
-			disp "local zone" "$zn (${zbrand}:${zstat}) [${zpth}]$xrc"
+			disp VM "local zone: $zn (${zbrand}:${zstat}) [${rc}] $zpth"
 		done
 
 	fi
@@ -1846,7 +1883,7 @@ function get_ldoms
 
 		ldm ls | sed 1d | while read n st fl co cp m x
 		do
-			disp LDOM "$n (${cp}vCPU/${m}:${st}) [port $co]"
+			disp VM "LDOM: $n (port $co:$st) [${cp}vCPU/${m}]"
 		done
 
 	fi
@@ -1862,13 +1899,33 @@ function get_xvmdoms
 		
 		virsh list | sed '1,2d;/^$/d' | while read id nm st
 		do
-			print $(virsh dominfo $nm | egrep "^CPU\(|Max" | \
-			sed 's/^.*: *//') | read cpu mem
+			print $(virsh dominfo $nm | egrep "^CPU\(|^Max|^OS" | \
+			sed 's/^.*: *//') | read o c m
 
-			disp "xVM domain" "$nm ($st) [$cpu CPU/$mem]"
+			disp VM "xVM: $nm (${o}:$st) [$c CPU/$m]"
 		done
 	fi
 
+}
+
+function get_vboxes
+{
+	if is_root && can_has vboxshell.py
+	then
+		
+		VBoxManage list vms | cut -d\" -f2 | while read vb
+		do
+			st=$(VBoxManage list -l vms | egrep  "^State|^Name" \
+			| sed 's/^[^:]*: *//;s/ (since.*$//' | sed -n "/$vb/{n;p;}")
+
+			print $(print "info '$vb'" | vboxshell.py \
+			| egrep " CPUs | RAM | OS Type" | sed '1!G;h;$!d' \
+			| sed 's/^.*: //') | read m c os
+
+			disp VM "VBox: $vb (${os}:$st) [$c CPU/$m]"
+		done
+		
+	fi
 }
 
 #-- APPLICATION AUDITING FUNCTIONS -------------------------------------------
@@ -2982,6 +3039,14 @@ function get_root_fs
 				&& FSM="$FSM and mirrored"
 
 			FSM="${FSM})"
+		elif can_has raidctl 
+		then
+			# Look to see if this disk is in raidctl output.
+
+			RDSK=${RDEV%s*}
+			RDSK=${RDSK##*/}
+			raidctl -l | $EGS "^${RDSK}[$WSP]|Volume:$RDSK$" \
+				&& FSM="(HW RAID)"
 		fi
 
 	elif [[ $RFS == "zfs" ]] && is_global
@@ -3077,14 +3142,24 @@ function get_fs
 
 		disp "fs" "$mpt $typ [$dfs] (${mdv};${mo}$extra)$vf"
 	done
+
+	# List unmounted ZFS filesystems
+
+	if can_has zfs 
+	then
+		zfs list -Ho mounted,name,referenced | grep -v ^yes | \
+		while read m n r
+		do
+			disp fs "unmounted zfs [$r] ($n)"
+		done
+	fi
 }
 
 function get_exports
 {
-	# Get exported filesystems. This is an amalgamation of the old Samba and
-	# NFS share functions, plus some extra
+	# Get exported filesystems and disks
 	# Format is of the form
-	#   what_is_shared fs_type (options) [name]
+	#   path/dataset (share type) [options] name
 
 	# NFS first. Only global zones can export filesystems
 
@@ -3092,8 +3167,8 @@ function get_exports
 	then
 		share | while read a dir opts desc
 		do
-			txt="$dir nfs (${opts})"
-			[[ $desc != '""' ]] && txt="$txt [${desc}]"
+			txt="$dir (nfs) [$opts]"
+			[[ $desc != '""' ]] && txt="$txt $desc"
 			disp "export" $txt
 		done
 	fi
@@ -3105,7 +3180,7 @@ function get_exports
 		sharemgr show -P smb -v | sed '1,/^zfs/d' | sed -n '/=/s/=/ /p' | \
 		while read name dir
 		do
-			disp "export" "$dir smb/zfs [${name}]"
+			disp "export" "$dir (smb/zfs) [$name]"
 		done
 	fi
 
@@ -3123,13 +3198,13 @@ function get_exports
 			| sed -e :a -e '/\]$/N; s/\]\n//; ta' \
 			| sed 's/^\[//;s/path *= */ /' | while read name dir
 			do
-				disp "export" "$dir smb/daemon [${name}]"
+				disp export "$dir (smb/daemon) [$name]"
 			done
 		fi
 
 	fi
 
-	# Now iSCSI. Just shows the ZFS dataset and the value of the shareiscsi
+	# iSCSI. Just shows the ZFS dataset and the value of the shareiscsi
 	# property
 
 	if can_has zfs && zfs get 2>&1 | $EGS iscsi
@@ -3138,12 +3213,12 @@ function get_exports
 		zfs get -H -po name,value shareiscsi \
 		| sed '/@/d;/off$/d' | while read fs st
 		do
-			disp "export" "$fs iscsi ($st)"
+			disp export "$fs (iscsi) [$st]"
 		done
 
 	fi
 	
-	# Now virtual disks in an LDOM primary
+	# Virtual disks in an LDOM primary
 
 	if can_has ldm && is_root
 	then
@@ -3161,7 +3236,34 @@ function get_exports
 					&& own=$ldm
 			done
 
-			disp "export" "$vol vdisk (${dev} bound to ${own})"
+			disp export "$vol (vdisk) [${dev} bound to ${own}]"
+		done
+
+	fi
+
+	# VBox disks
+
+	if can_has VBoxManage && is_root
+	then
+
+		VBoxManage list hdds | egrep  "^Location|^Usage" | sed \
+		'/^Usage/s/Usage: *\(.*\) (.*/=\1/;/Location/s/Location: *//' | \
+		sed '$!N;s/\n//' | while read l
+		do
+			disp export "${l%=*} (vbox disk) [on ${l#*=}]"
+		done
+
+	fi
+
+	# Virtual disks in an xVM dom0
+
+	if can_has virsh && is_root
+	then
+
+		virsh list | sed '1,3d;/^$/d' | while read n dom s
+		do
+			disp export $(virsh dumpxml $dom | sed -n \
+			"/source dev/s/^.*dev='\([^']*\)'.*$/\1/p") "(xVM disk) [on $dom]"
 		done
 
 	fi
