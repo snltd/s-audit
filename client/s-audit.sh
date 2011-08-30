@@ -147,13 +147,13 @@ G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
 L_PLATFORM_TESTS="virtualization printers"
 
 G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
-	snmp ports routes nic"
+	snmp ports routes rt_fwd nic"
 L_NET_TESTS=$G_NET_TESTS
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
 	vboxes scheduler svc_count package_count patch_count pkg_repo uptime "
-L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count
-	package_count patch_count pkg_repo uptime"
+L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count package_count 
+	patch_count pkg_repo uptime"
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	svnserve sendmail exim cronolog mailman splunk sshd named ssp symon
@@ -1085,8 +1085,8 @@ function get_disks
 	then
 
 		raidctl 2>&1 | $EGS ^Controller \
-			&& v=$(raidctl -l | grep -c Volume:) \
-			|| v=$(raidctl | grep -c ^c)
+			&& v=$(raidctl -l 2>/dev/null | grep -c Volume:) \
+			|| v=$(raidctl 2>/dev/null | grep -c ^c)
 
 		(($v > 0)) && disp storage "RAID vol: $v"
 	fi
@@ -1227,8 +1227,7 @@ function get_virtualization
 			# I can't work out a bulletproof way to tell whether those old
 			# OSes are running on a physical machine or in a virtualbox
 			
-			if (($OSVERCMP > 59)) && [[ $(PRTDIAG 2>&1) != \
-			*"not implemented"* ]]
+			if (($OSVERCMP > 59)) && $PRTDIAG >/dev/null 2>&1
 			then
 				sc=$($PRTDIAG 2>/dev/null | sed 1q)
 
@@ -1512,7 +1511,7 @@ function get_nic
 		# So long as the interface isn't "uncabled", and is a physical port,
 		# we can probably get its speed. Some interfaces, we can't
 
-		if [[ $S0 == *"pcn"* ]]
+		if [[ $S0 == *"pcn"* && $S1 != "uncabled" ]]
 		then
 			S4="unknown"
 		elif [[ $nic_type == "vnic" || $nic_type == "etherstub" ]]
@@ -1560,9 +1559,9 @@ function get_nic
 
 			# If the interface is down, we can quickly plumb it to get its
 			# MAC.  This is a "destructive" action, and is only done if the
-			# DO_PLUMB variable is defined
+			# DO_PLUMB variable is defined. We skip aliases NICs
 
-			if [[ -n $DO_PLUMB && -z $mac ]]
+			if [[ $S0 != *:* ]] && [[ -n $DO_PLUMB && -z $mac ]]
 			then
 		
 				# ifconfig exits 0 even if it can't plumb an interface. But
@@ -1654,6 +1653,33 @@ function get_routes
 	done
 }
 
+function get_rt_fwd
+{
+	# Get IP routing and forwarding info. Use routeadm if we have it, fall
+	# back to ndd
+
+	if can_has routeadm
+	then
+
+		routeadm | grep "IPv.*abled" | while read a b c d
+		do
+			[[ $c == enabled || $d == enabled ]] \
+				&& disp routing "$a $b ${c}/$d"
+		done
+
+	elif is_root
+	then
+
+		[[ $(ndd -get /dev/ip ip_forwarding) == 1 ]] \
+			&& disp routing "IPv4 forwarding enabled"
+
+		[[ $(ndd -get /dev/ip6 ip_forwarding) == 1 ]] \
+			&& disp routing "IPv6 forwarding enabled"
+
+		is_running "in.routed" && disp routing "IPv4 routing enabled"
+	fi
+}
+
 function get_name_server
 {
 	# Find out what name services (DNS, NIS, LDAP etc) we're serving up.
@@ -1726,33 +1752,59 @@ function get_kernel
 
 function get_be
 {
-	# Get beadm or LiveUpgrade boot environments
+	# Get beadm, LiveUpgrade and failsafe boot environments
 
-	if is_global 
+	is_global || return
+
+	if (($OSVERCMP > 510 )) && can_has beadm
+	then
+		# show the name, root, active flags and mountpoint
+
+		beadm list -H | cut -d\; -f1,3,4 | tr \; ' ' | while read nm fl r
+		do
+			disp "boot env" "beadm: $nm ($r) [$fl]"
+		done
+
+	elif is_root && can_has lustatus
 	then
 
-		if can_has beadm # show the name, root, active flags and mountpoint
-		then
+		lustatus 2>/dev/null | sed '1,3d' | while read nm c an ar a
+		do
+			# Make the active flags match the beadm output
 
-			beadm list -H | cut -d\; -f1,3,4 | tr \; ' ' | while read nm fl r
+			[[ $an == "yes" ]] && fl=N
+			[[ $ar == "yes" ]] && fl=${fl}R
+			[[ $c != "yes" ]] && x="in"
+
+			disp "boot env" "LU: $nm (${x}complete) [$fl]"
+		done
+	fi
+
+
+	if (($OSVERCMP > 59))
+	then
+		
+		[[ -f /boot/grub/menu.lst ]] && GM=/boot/
+		[[ -f /rpool/boot/grub/menu.lst ]] && GM=/
+
+		find /boot -name \*miniroot\* | while read f
+		do
+			unset i
+
+			grep -v "^#" ${GM}/grub/menu.lst | sed '1!G;h;$!d' | while read l
 			do
-				disp "boot env" "beadm: $nm ($r) [$fl]"
+				if [[ $l == "module $f" ]] 
+				then
+					i=1
+				elif [[ -n $i && $l == "title"* ]]
+				then
+					disp "boot env" "failsafe: \"${l#* }\" ($f)"
+					break;
+				fi
+
 			done
 
-		elif is_root && can_has lustatus
-		then
-
-			lustatus | sed '1,3d' | while read nm c an ar a
-			do
-				# Make the active flags match the beadm output
-
-				[[ $an == "yes" ]] && fl=N
-				[[ $ar == "yes" ]] && fl=${fl}R
-				[[ $c != "yes" ]] && x="in"
-
-				disp "boot env" "LU: $nm ($fl) [${x}complete]"
-			done
-		fi
+		done
 
 	fi
 }
@@ -1865,10 +1917,10 @@ function get_local_zone
 			zmem=$(zonecfg -z $zn info capped-memory | sed -n "$sed")
 			zcpu=$(zonecfg -z $zn info capped-cpu | sed -n "$sed")
 			zdcpu=$(zonecfg -z $zn info dedicated-cpu | sed -n "$sed")
-			rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" / | tr -s ,)
-			rc=${rc#/}
+			rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" , | tr -s ,)
+			rc=${rc#,}
 
-			disp VM "local zone: $zn (${zbrand}:${zstat}) [${rc}] $zpth"
+			disp VM "local zone: $zn (${zbrand}:${zstat}) [${rc%,}] $zpth"
 		done
 
 	fi
@@ -3562,6 +3614,7 @@ do
 
 		"o")	# Omit the following tests
 			OMIT_TESTS=" $(print $OPTARG | tr "," " ") "
+			Z_OPTS="$Z_OPTS -o $OPTARG"
 			;;
 
 		"p")	# We want machine-parsable output, so set a flag which
@@ -3755,7 +3808,7 @@ then
 
 	for myc in $CL
 	do
-		[[ -n $ofh ]] && exec 3>"${OD}/${HOSTNAME}.${myc}.saud"
+		[[ -n $of_h ]] && exec 3>"${OD}/${HOSTNAME}.${myc}.saud"
 
 		WARN=$(nr_warn $myc)
 
@@ -3807,7 +3860,8 @@ then
 		if [[ -n $zlive ]]
 		then
 			zf=${zr}/root/$$${0##*/}$RANDOM
-			cp -p $0 $zf
+			cp $0 $zf
+			chmod 0700 $zf
 		fi
 	
 		# The only way to get separate files is to run the script multiple
@@ -3815,7 +3869,7 @@ then
 		# times for a non-running zone
 
 		if [[ -n $ofh || -z $live ]]
-		then
+	 	then  
 
 			for c1 in $CL
 			do
@@ -3829,6 +3883,7 @@ then
 				else
 					class_head $z $c1
 					disp "hostname" $z
+					[[ $zbr == "lx" ]] && disp "zone brand" lx
 					disp "zone status" $zst
 					get_time
 					class_foot $z $c1
