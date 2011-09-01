@@ -1520,7 +1520,7 @@ function get_nic
 		elif [[ $S1 != "uncabled" ]] && is_root && is_global
 		then
 
-			# Use dladm if we can. If not, try kstat
+			# Use dladm if we can. If not, try kstat, then ndd
 
 			if [[ -n $HAS_DL ]] && eval $DL_DEVLIST_CMD | $EGS "^$S0"
 			then
@@ -1533,7 +1533,7 @@ function get_nic
 				then
 					KI=${S0#$KDEV}
 					DUP=$(kstat -m $KDEV -i $KI \
-						| sed -n '/link_duplex/s/^.* //p')
+						| sed -n '/link_duplex/s/^.* //p' | sed 1q)
 
 					[[ $DUP == 2 ]] && SD="full" || SD="half"
 
@@ -1541,8 +1541,19 @@ function get_nic
 					| sed -n '/ifspeed/s/^.* //p')-$SD"
 				fi
 
+			else
+				nds=$(ndd -get /dev/${S0%[0-9]*} link_speed 2>/dev/null)
+				nds=$(ndd -get /dev/${S0%[0-9]*} link_mode 2>/dev/null)
+
+				[[ $nds == 0 ]] && S4=10000000
+				[[ $nds == 1 ]] && S4=100000000
+				[[ $nds == 1000 ]] && S4=1000000000
+
+				[[ $nds == 0 ]] && S4="${S4}-half"
+				[[ $nds == 1 ]] && S4="${S4}-full"
 			fi
 
+			[[ $S4 == "0-half" ]] && unset S4
 		fi
 
 		# Turns out you can't (currently?) get the link speed from an LDOM,
@@ -1673,7 +1684,9 @@ function get_rt_fwd
 		[[ $(ndd -get /dev/ip ip_forwarding) == 1 ]] \
 			&& disp routing "IPv4 forwarding enabled"
 
-		[[ $(ndd -get /dev/ip6 ip_forwarding) == 1 ]] \
+		# IPv6 if it's there
+
+		[[ $(ndd -get /dev/ip6 ip_forwarding 2>/dev/null) == 1 ]] \
 			&& disp routing "IPv6 forwarding enabled"
 
 		is_running "in.routed" && disp routing "IPv4 routing enabled"
