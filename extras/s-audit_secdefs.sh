@@ -39,11 +39,11 @@ function die
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
-DISTRO=${1:-Solaris}
+DIST=${1:-Solaris}
 
 # Now we know what to call the file, and we can open it 
 
-OUTFILE="sec_defs-$DISTRO-$(uname -r).php"
+OUTFILE="sec_defs-$DIST-$(uname -r).data"
 
 cat <<-EOPHP >$OUTFILE
 ;=============================================================================
