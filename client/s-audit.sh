@@ -59,8 +59,8 @@ RUN_HERE=1
 
 SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin \
 	$(find /usr/*/*bin /usr/local/*/*bin /opt/*/*bin /usr/*/libexec \
-	/usr/local/*/libexec /opt/*/libexec -prune 2>/dev/null) \
-	/usr/netscape/suitespot /opt/VirtualBox"
+	/usr/local/*/libexec /opt/*/libexec /usr/postgres/*/bin -prune \
+	2>/dev/null) /usr/netscape/suitespot /opt/VirtualBox" 
 
 PATH=$(print "$SPATH" | tr " " : | tr "\n" ":")
 
@@ -160,8 +160,8 @@ L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	samba x vbox"
 G_APP_TESTS="vxvm vxfs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
-L_TOOL_TESTS="openssl rsync mysql_c sqlplus svn_c java perl php_cmd python
-	ruby cc gcc pca nettracker saudit scat explorer"
+L_TOOL_TESTS="openssl rsync mysql_c pgsql_c sqlplus svn_c java perl php_cmd
+	python ruby cc gcc pca nettracker saudit scat explorer"
 G_TOOL_TESTS="sccli sneep vts $L_TOOL_TESTS"
 
 G_HOSTED_TESTS="site_apache site_iplanet db_mysql"
@@ -1063,8 +1063,8 @@ function get_disks
 	done
 
 	# If we can't get anything from iostat, which happens on old intel
-	# Solarises, fall back to format(1). I don't think you can get the disk
-	# size. On a vbox, only the CD-ROM shows up
+	# Solarises and domUs, fall back to format(1). I don't think you can get
+	# the disk size. On a vbox, only the CD-ROM shows up
 
 	if (($i == 0))
 	then
@@ -2556,6 +2556,17 @@ function get_mysql_c
 	done
 }
 
+function get_pgsql_c
+{
+	# Get the version of the PostgreSQL client
+
+	for BIN in $(find_bins postgres)
+	do
+		pgc=$($BIN --version)
+		disp "Postgres client@$BIN" ${pgc##* }
+	done
+}
+
 function get_sqlplus
 {
 	# Get verion of SQL*Plus
@@ -3479,7 +3490,7 @@ function get_ports
 
 		[[ -n $Z_FLAG ]] && PSFLAGS=$Z_FLAG || PSFLAGS="-e"
 
-		ps $PSFLAGS -o pid,fname | while read pid fname
+		ps $PSFLAGS -o pid,fname | sed 1d | while read pid fname
 		do
 
 			pfiles $pid 2>/dev/null | egrep "sockname.*port:" | while read p
@@ -3491,8 +3502,8 @@ function get_ports
 
 		done
 
-		# Now ask netstat for the open sockets. and see if we can match each
-		# one to a program name, using the list we just made
+		# Now ask netstat for the open sockets and see if we can match each
+		# one to a program name in the list we just made
 
 		netstat -an | sed -n '/LISTEN/s/^ *\*\.\([0-9]*\).*$/\1/p' \
 		| sort -un | while read num
