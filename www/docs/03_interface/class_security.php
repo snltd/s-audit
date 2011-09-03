@@ -30,17 +30,15 @@ $dh->doc_class_start();
 ?>
 
 <dt>user</dt>
-<dd>This column pairs users with UIDs. Standard Solaris users, which exist
-by default on all systems, are not shown. The list of standard users is kept
-in <a href="../04_extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>.</dd>
 
-<dd>On this system the omitted users are:</dd>
+<dd>This column pairs users with UIDs. If <tt>OMIT_STANDARD_USERS</tt> is
+defined in <tt>site_config.php</tt>, then users which exist in a default
+Solaris installation will not be shown. If the constant is undefined, a
+simple list of usernames will be shown.</dd>
 
-<dd>
-<?php
-    echo $dh->list_omitted("omit_users");
-?>
-</dd>
+<dd>If a username is found on multiple systems using multiple UIDs, it is
+highlighted. Similarly, UIDs which are found assigned to more than one
+username are shown.</dd>
 
 <dt>empty password</dt>
 <dd>If any empty passwords were found on the host, they are displayed here.
@@ -91,16 +89,6 @@ These describe RBAC profiles. Note that the entries can span multiple lines.
 The first line is not indented, and the name of the user who has the
 privilges is in <strong>bold face</strong>.</dd>
 
-<dd>On this system the omitted roles are:</dd>
-
-<dd>
-
-<?php
-    echo $dh->list_omitted("omit_attrs", "omitlisttt");
-?>
-
-</dd>
-
 <dd>If only standard roles are found, the auditor will display
 &quot;standard roles&quot;.</dd>
 
@@ -114,24 +102,30 @@ highlighted by an amber field, if not, by a red box.</dd>
 ?>
 
 <dt>cron job</dt>
-<dd>Through not strictly security related, non-standard cron jobs are listed
-on this page. On the first line the user who runs the job is displayed in
-<strong>bold face</strong>, followed by the standard five fields from a cron
-entry which describe the time(s) at which the job is run. On the following
-line(s), indented, is the command.</dd>
+<dd>Through not strictly security related, cron jobs are shown
+on this page. If <tt>OMIT_STANDARD_CRON</tt> is
+defined in <tt>site_config.php</tt>, then cron jobs which exist in a default
+Solaris installation will not be shown.</dd>
 
-<dd>The following jobs are considered standard, and are not displayed.</dd>
+<dd>Each job is shown by first displaying the user which the job runs as in
+<strong>bold face</strong>. On the next line, headed &quot;time&quot; the standard five fields from a cron
+entry which describe the time(s) at which the job is run are shown. Spacing
+between each field has been increased to improve legibility. On the following
+line(s) marked &quot;job&quot;, is the command. Note that the command is
+likely to have been folded, with newlines escaped with backslashes.</dd>
 
-<dd>
+<dd>If <tt>OMIT_STANDARD_CRON</tt> is
+defined and only standard cron jobs are found, the auditor will display
+&quot;standard jobs&quot;. Non-standard jobs will be highlighted by a green
+box, and jobs which are on a standard system, but not on the audited one,
+will be displayed and highlighted.</dd>
 
 <?php
-    echo $dh->list_omitted("omit_crons", "omitlisttt");
+	if (!defined("OMIT_STANDARD_CRON"))
+		define("OMIT_STANDARD_CRON", true);
+
+	echo $dh->colour_key($dh->grid_key["cron job"]);
 ?>
-
-</dd>
-
-<dd>If only standard cron jobs are found, the auditor will display
-&quot;standard jobs&quot;.</dd>
 
 <?php
 

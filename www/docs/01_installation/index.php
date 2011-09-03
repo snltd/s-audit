@@ -125,6 +125,21 @@ $ vim site_config.php
 	higher than the given number will not be displayed. It is useful for
 	screening out transient ports used for NFS and so-on.</dd>
 
+	<dt><tt>OMIT_STANDARD_USERS</tt></dt>
+	<dd>If this is defined, then users which are installed by default will
+	not be shown in the &quot;users&quot; column of the <a
+	href="../03_interface/security.php">security audit page</a></dd>
+
+	<dt><tt>OMIT_STANDARD_CRON</tt></dt>
+	<dd>If this is defined, then cron jobs which are installed by default
+	will not be shown in the &quot;users&quot; column of the <a
+	href="../03_interface/security.php">security audit page</a></dd>
+
+	<dt><tt>OMIT_STANDARD_ATTRS</tt></dt>
+	<dd>If this is defined, then user roles and profiles which are installed
+	by default will not be shown in the &quot;users&quot; column of the <a
+	href="../03_interface/security.php">security audit page</a></dd>
+
 	<dt><tt>SS_HOST_COLS</tt></dt>
 	<dd>The <a href="../03_interface/single_server.php">single server audit
 	page</a> shows a list of servers known to the auditor. This constant

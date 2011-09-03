@@ -40,4 +40,22 @@ $grid_key = array(
 	)
 );
 
+if (defined("OMIT_STANDARD_CRON"))
+
+	$grid_key["cron job"] = array(
+		array("NOTE: standard cron jobs are not being displayed"),
+		array("non-standard job", "boxgreen", false),
+		array("standard job not on system", "boxamber", false)
+	);
+
+
+if (defined("OMIT_STANDARD_ATTRS"))
+
+	$grid_key["user_attr"] = array(
+		array("NOTE: standard user_attrs are not being displayed"),
+		array("non-standard attr", "boxgreen", false),
+		array("standard attr not on system", "boxamber", false)
+	);
+
+?>
 ?>

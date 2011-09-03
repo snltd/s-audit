@@ -2952,49 +2952,133 @@ class HostGrid {
 	
 	protected function show_user_attr($data)
 	{
-		// List user_attr info. Bit of bolding and folding, that's all.
-
-		// We're not interested in the ones in omit_attrs
-
-		$ns = (isset($this->omit->omit_attrs))
-			? array_diff($data, $this->omit->omit_attrs)
-			: $data;
-
-		if (sizeof($data > 0) && sizeof($ns) == 0)
-			return new Cell("standard attrs");
+		// List user_attr info. Put the user in bold and fold the lines.
 
 		$c_arr = array();
 
-		foreach($ns as $attr)
-			$c_arr[] = array(preg_replace("/^([^:]*)/",
-			"<tt><strong>$1</strong>", $this->fold_line(htmlentities($attr),
-			50, '[,;]')) . "</tt>", false);
+		// Are we going to hide standard attrs?
 
-		return new listCell($c_arr, "smallindent", false, 1);
+		if (defined("OMIT_STANDARD_ATTRS")) {
+
+			if (isset($this->curr_omit["user_attrs"])) {
+				$x_arr = array_diff($data, $this->curr_omit["user_attrs"]);
+				$m_arr = array_diff($this->curr_omit["user_attrs"], $data);
+				$omit = true;
+			}
+			else {
+				$x_arr = $data;
+				$m_arr = array();
+				$omit = false;
+			}
+
+			// x_arr[] => non-standard attrs
+			// m_arr[] => standard attrs which haven't been found
+
+			// If we only have standard attrs - that is, none missing and no
+			// extras, we're done
+
+			if (count($x_arr) == 0 && count($m_arr) == 0)
+				return new Cell("standard attrs");
+
+			$attr_arr = array_merge($x_arr, $m_arr);
+
+		}
+		else
+			$attr_arr = $data;
+
+		sort($attr_arr);
+
+		foreach($attr_arr as $attr) {
+			$txt = preg_replace("/^(\w+):/", "<strong>$1</strong>:",
+			$this->fold_line(htmlentities($attr), 60, '[,;]'));
+
+			if ($omit) {
+
+				if (in_array($attr, $x_arr))
+					$class = "boxgreen";
+				elseif(in_array($attr, $m_arr))
+					$class = "boxamber";
+				else
+					$class = false;
+			}
+			else
+				$class = false;
+
+			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	protected function show_cron_job($data)
 	{
 		// List cron jobs. Put the user in bold and the time on the first
-		// line, the command folded underneath
-
-		$ns = (isset($this->omit))
-			? array_diff($data, $this->omit->omit_crons)
-			: $data;
-
-		if (sizeof($data > 0) && sizeof($ns) == 0)
-			return new Cell("standard jobs");
+		// line, the command folded underneath. 
 
 		$c_arr = array();
 
-		foreach($ns as $datum) {
-			$a = preg_split("/\s+/", $datum, 6);
-			$c_arr[] = array("<strong>" . preg_replace("/:/",
-			"</strong><tt> ", $a[0]) . " $a[1] $a[2] $a[3] $a[4]<br/>" .
-			$this->fold_line(htmlentities($a[5]), 50) . "</tt>");
+		// Are we going to hide standard cron jobs?
+
+		if (defined("OMIT_STANDARD_CRON")) {
+
+			if (isset($this->curr_omit["crontabs"])) {
+				$x_arr = array_diff($data, $this->curr_omit["crontabs"]);
+				$m_arr = array_diff($this->curr_omit["crontabs"], $data);
+				$omit = true;
+			}
+			else {
+				$x_arr = $data;
+				$m_arr = array();
+				$omit = false;
+			}
+
+			// x_arr[] => non-standard cron jobs
+			// m_arr[] => standard cron jobs which haven't been found
+
+			// If we only have standard jobs - that is, none missing and no
+			// extras, we're done
+
+			if (count($x_arr) == 0 && count($m_arr) == 0)
+				return new Cell("standard jobs");
+
+			$job_arr = array_merge($x_arr, $m_arr);
+
+		}
+		else
+			$job_arr = $data;
+
+		sort($job_arr);
+
+		foreach($job_arr as $job) {
+			preg_match("/(\w+):(.*$)/", $job, $a);
+			$b = preg_split("/\s+/", $a[2], 6);
+			$txt = "<strong>$a[1]</strong>";
+
+			// Space the time fields out a bit, for legibility
+
+			$id["time"] = "<tt>$b[0]&nbsp;&nbsp;$b[1]&nbsp;&nbsp;$b[2]"
+			. "&nbsp;&nbsp;$b[3]&nbsp;&nbsp;$b[4]</tt>";
+
+			$id["job"] = "<tt>" . $this->fold_line(htmlentities($b[5]), 60)
+			. "</tt>";
+
+			if ($omit) {
+
+				if (in_array($job, $x_arr))
+					$class = "boxgreen";
+				elseif(in_array($job, $m_arr))
+					$class = "boxamber";
+				else
+					$class = false;
+
+			}
+			else
+				$class = false;
+
+			$c_arr[] = array($txt . $this->indent_print($id), $class);
 		}
 
-		return new listCell($c_arr, "smallindent", false, 1);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	protected function show_empty_password($data)
