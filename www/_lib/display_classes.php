@@ -42,7 +42,7 @@ class HostGrid {
 		// A numbered list, starting at 0, of the fields we will print,
 		// pulled out of a global zone audit file
 
-	protected $hidden_fields = array("zone status", "_err_");
+	protected $hidden_fields = array("zone status", "_err_", "zone brand");
 		// These fields are never shown in its own column, but handled
 		// elsewhere
 
@@ -68,6 +68,9 @@ class HostGrid {
 
 	protected $cols;
 		// Colours
+	
+	private $lc;
+		// last row class
 
 	//------------------------------------------------------------------------
 	// METHODS
@@ -464,26 +467,28 @@ class HostGrid {
 			
 			// use the map to get the virtualization
 
-			if (in_array($z, $this->map->list_vbox()))
-				$row_class = "vb";
-			elseif (in_array($z, $this->map->list_pldoms()))
-				$row_class = "ldmp";
-			elseif (in_array($z, $this->map->list_ldoms()))
-				$row_class = "ldm";
+			if ($this->map->is_global($z) && $this->lc != "sa")
+				$row_class = "sa";
 			elseif ($this->map->is_global($z))
-				$row_class = "server";
+				$row_class = "sb";
+			elseif ($this->lc != "za")
+				$row_class = "za";
 			else
-				$row_class = "zone";
+				$row_class = "zb";
 
 			$ret_str = "\n<tr class=\"$row_class\">";
+
+			$this->lc = $row_class;
 
 			// Zones which aren't in the running state should only have
 			// three elements in their array. Handle those as a special case
 		
 			if ($this->erred_zone($data))
 				return $this->erred_zone_print($data) . "</tr>";
-			if ($this->non_running_zone($data))
+			elseif ($this->non_running_zone($data))
 				$ret_str .= $this->non_running_zone_print($data);
+			elseif ($this->lx_zone($data))
+				$ret_str .= $this->lx_zone_print($data);
 			else {
 
 				// We already know what fields we want to display, so loop
@@ -601,13 +606,32 @@ class HostGrid {
 
 	protected function non_running_zone_print($data)
 	{
-		// This function informs the user that we got a zone in a state
-		// other than running. 
+		// This function informs the user that we got a zone with no audit
+		// data. This probably means it's not in the "running" state, but it
+		// could also be an lx branded zone.
 
 		return $this->show_hostname($data["hostname"])
 		. new Cell("No information. Zone is in &quot;"
-		. $data["zone status"][0] .  "&quot; state.", "solidamber", false,
+		. $data["zone status"][0] .  "&quot; state.", "znoinf", false,
 		false, (sizeof($this->fields) - 2))
+		. $this->show_audit_completed($data["audit completed"]);
+	}
+
+	protected function lx_zone($data)
+	{
+		// Check whether we have an LX branded zone, which requires special
+		// handling
+
+		return (isset($data["zone brand"]))
+			? true
+			: false;
+	}
+
+	protected function lx_zone_print($data)
+	{
+		return $this->show_hostname($data["hostname"])
+		. new Cell("LX branded zone in &quot;" . $data["zone status"][0] .
+		"&quot; state.", "zlx", false, false, (sizeof($this->fields) - 2))
 		. $this->show_audit_completed($data["audit completed"]);
 	}
 
@@ -656,6 +680,19 @@ class HostGrid {
 	{
 		// Ask the map if this is a global zone or not
 
+			/*
+			if (in_array($z, $this->map->list_vbox()))
+				$row_class = "vb";
+			elseif (in_array($z, $this->map->list_pldoms()))
+				$row_class = "ldmp";
+			elseif (in_array($z, $this->map->list_ldoms()))
+				$row_class = "ldm";
+			elseif ($this->map->is_global($z))
+				$row_class = "server";
+			else
+				$row_class = "zone";
+			*/
+
 		if ($c)
 			$class = "error";
 		elseif ($this->map->is_global($data[0]))
@@ -663,7 +700,9 @@ class HostGrid {
 		else
 			$class = "zonehn";
 
-		return new Cell($this->ss_link($data[0]), $class, false);
+		return new Cell("<div class=\"$class\">" . $this->ss_link($data[0])
+		. "</div>");
+
 
 	}
 
@@ -804,9 +843,14 @@ class HostGrid {
 			? "solidamber"
 			: false;
 
-		$frame = ($a[1] == "i86pc")
-			? false
-			: $this->cols->icol("box", "sparc", "plat_cols");
+		if ($a[1] == "i86xpv")
+			$frame = $this->cols->icol("box", "xen", "plat_cols");
+		elseif(preg_match("/SPARC/", $a[2]))
+			$frame = $this->cols->icol("box", "sparc", "plat_cols");
+		else
+			$frame = false;
+			
+			//: $this->cols->icol("box", "sparc", "plat_cols");
 
 		// Put a line break in if we're not in single server mode
 
@@ -1042,6 +1086,10 @@ class HostGrid {
 					$class = "fc";
 					break;
 
+				case "RAID vol":
+					$class = "rvol";
+					break;
+
 				default:
 					$class = false;
 
@@ -1257,31 +1305,57 @@ class HostGrid {
 	protected function show_boot_env($data)
 	{
 		// Display boot environments. "Active now" in a green box, active
-		// on reboot on amber
+		// on reboot in red
 
 		foreach($data as $row) {
-			
-			$a = explode(" ", $row);
+			$class = false;
 
-			// [0] = BE name
-			// [1] = (mount point)
-			// [2] = flags
+			if (preg_match("/^failsafe:/", $row))
+				preg_match("/^(\w+): \"([^\"]*)\" \((.*)\)$/", $row, $a);
 
-			if (preg_match("/N/", $a[2]))
-				$class = "boxgreen";
-			elseif (preg_match("/R/", $a[2]))
-				$class = "solidamber";
-			else
-				$class = false;
+				// [1] => "failsafe"
+				// [2] => BE name
+				// [3] => miniroot path
 
-			$mp = ($a[1] == "()")
-				? "(not mounted)"
-				: $a[1];
+			else 
+				preg_match("/^(\w+): (.*) \((.*)\) \[(\w*)\]$/", $row, $a);
 
-			$c_arr[] = array("$a[0] $mp", $class);
+				// [1] => BE type
+				// [2] => BE name
+				// [3] => LU="(in)complete"/beadm=mount point
+				// [4] => flags
+
+			$txt = "<strong>$a[2]</strong> ($a[1])";
+
+			if ($a[1] == "failsafe")
+				$id["path"] = $a[3];
+			else {
+
+				if (!empty($a[4]))
+					$id["flags"] = $a[4];
+
+				if (preg_match("/N/", $a[4])) {
+					$class = "boxgreen";
+				}
+				elseif (preg_match("/R/", $a[4]))
+					$class = "boxred";
+
+				if ($a[1] == "LU") {
+					$id["state"] = $a[3];
+
+					if ($a[3] == "incomplete")
+						$class = "solidamber";
+				}
+				else
+					$id["mpt"] = $a[3];
+
+			}
+
+			$c_arr[] = array($txt . $this->indent_print($id), $class);
+
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	protected function show_kernel($data)
@@ -1406,131 +1480,151 @@ class HostGrid {
 		return new Cell($data[0], $class);
 	}
 	
-	protected function show_local_zone($data) 
+	protected function show_vm($data) 
 	{
-		// Show local zone information in a table
-		// green highlighting on the zone name means "running"
-		// yellow highlighting on the zone name means "installed"
-		// red highlighting on the zone name means "other" and the status is
-		// displayed
-		//local zone=cs-infra-02z-mailman (native:running:1.00CPU
-		//1000M/1000M]) [/zones/cs-infra-02z-mailman]
+		// Show virtual machine information in a table. This could be local
+		// zones, LDOMs, VirtualBoxes or Xen domains
+
+		// Input is of the form:
+		// vm_type: vm_name (os_type:state) [extra_1] /zone/path
+
+		// The colour of the border (the cell class) shows you what the VM
+		// is, the field (inline style) gives you the state.
 
 		foreach($data as $row) {
-			$col = false;
-			$a = preg_split("/[\s\[\]\(\):]+/", $row);
-			
-			// This gives us an array of the following form
-			//
-			// [0] => zone name
-			// [1] => zone brand
-			// [2] => zone state
-			// [3] => zone root
-			// [4] => resource caps, if any, key=value,key=value
+			$id = $idc = array();
+			unset($res);
+			preg_match("/^([^:]+): (.*) \(([^:]+):(.*)\) \[(.*)\](.*)$/U",
+			$row, $a);
 
-			// do we have resource capping? If we do, $a will have 6
-			// elements
+			// Gives us an array of the form:
+			// [1] => VM type
+			// [2] => VM name
+			// [3] => VM O/S type (brand, O/S), or console port for LDOMs
+			// [4] => VM state (running, shut off etc.)
+			// [5] => resources as CPU/memory
+			// [6] => zone path for local zones, blank for others
 
-			$txt = "<strong>" . $this->ss_link($a[0], 1) . "</strong>
-			($a[3])";
+			// Catch errors
 
-			// do we print resource caps?
+			if (count($a) != 7) {
+				$call[] = array("ERROR: $row", "error");
+				continue;
+			}
 
-			if ($a[4]) {
-				$txt .= "<div " . $this->cols->icol("box", "black", false, 1)
-				. ">";
-				$b = explode(",", $a[4]);
+			$txt = "<strong>$a[2]</strong> ($a[1])";
 
-				foreach($b as $cap) {
-					$c = explode("=", $cap);
-					$key = $c[0];
+			$id["state"] = $a[4];
 
-					if ($c[0] == "swap" || $c[0] == "physical" || $c[0] ==
-					"locked") {
-						$val = units::from_b(units::to_b($c[1]));
+			if (!empty($a[5]))
+				$b = explode("/", $a[5]);
+
+			switch($a[1]) {
+
+				case "local zone":
+
+					// Add on the zone path.
+
+					$id["brand"] = $a[3];
+					$id["path"] = $a[6];
+
+					$class = ($a[3] != "native" && $a[3] != "ipkg")
+						? "bzone"
+						: "lzone";
+
+					// If we have resource caps, deal with them.
+
+					if (!empty($a[5])) {
+						$c = explode(",", $a[5]);
+
+						foreach($c as $key) {
+							$d = explode("=", $key);
+							$id[$d[0]] = $d[1];
+						}
 					}
-					else
-						$val = $c[1];
 
-					$txt .= "$val ${key}, ";
-				}
+					break;
 
-				$txt = preg_replace("/, $/", "", $txt) . "</div>";
+				case "xVM":
+
+					// XEN domain. Virtualization type? Change "linux" to
+					// "paravirtualized".
+
+					$id["type"] = ($a[3] == "linux")
+						? "paravirtualized"
+						: $a[3];
+
+					$class = ($a[2] == "Domain-0")
+						? "dom0"
+						: "domu";
+
+					$id["CPU"] = "x " . str_replace(" CPU", "", $b[0]);
+
+					// Memory is in "xx kB". Convert it.
+
+					if ($b[1] != "no limit")
+						$id["memory"] = 
+						units::from_b(units::to_b(str_replace(" kB", "kb",
+						$b[1])));
+
+					break;
+
+				case "VBox":
+					$class = "vbox";
+					$id["CPU"] = "x " . str_replace(" CPU", "", $b[0]);
+					$id["memory"] = units::from_b(units::to_b($b[1]));
+					break;
+
+				case "LDOM":
+					$class = "ldm";
+					$id["console port"] = $a[3];
+					break;
+
+				default:
+					$call[] = array("ERROR: $row", "error");
+					continue;
 			}
 
-			// do we print the zone type?
+			if (isset($res))
+				$id["resource"] = $res;
 
-			if ($a[1] != "native") {
-				$txt .= "<div>[$a[1] brand]</div>";
-				$col = $this->cols->icol("box", "amber");
+			// colour according to the state of the VM. We may also add some
+			// explanatory text
+
+			switch($a[4]) {
+
+				case "down":		// lx brand zones
+				case "incomplete":	// local zones
+				case "aborted":		// VBox
+					$sc = "solidred";
+					break;
+
+				case "running":
+					$sc = "solidgreen";
+					break;
+
+				case "idle":			// xVM
+					$sc = "solidamber";
+					break;
+
+				case "shut off":		// xVM
+				case "installed":		// local zone
+				case "powered off":		// VBox
+				case "bound":			// LDOM
+					$sc = "solidorange";
+					break;
+
+				default:
+					$sc = false;
+					echo $a[4];
 			}
-			
-			// Get the colour to background the zone name
 
-			if ($a[2] == "running")
-				$class = "solidgreen";
-			elseif ($a[2] == "installed")
-				$class = "solidamber";
-			else {
-				$txt .= "<div>zone &quot;$a[2]&quot;</div>";
-				$class = "solidred";
-				$a[0] = "$a[0] ($a[2])";
-			}
+			$idc["state"] = $sc;
+			$c_arr[] = array($txt . $this->indent_print($id, $idc), $class);
 
-			$call[] = array($txt, $class, $col);
 		}
 
-		return new listCell($call, "smallaudit", false, true);
-	}
-
-	protected function show_ldom($data) 
-	{
-		// Show Logical Domain 
-		// green highlighting on the domain name means "active"
-		// yellow highlighting on the domain name means "bound"
-		// red highlighting on the domain name means "other" and the status is
-		// displayed
-		// $data looks like this:
-		//    cs-dev-02l-nv1 (4vCPU/2G:active) [port 5000]
-
-		foreach($data as $row) {
-			$a = preg_split("/[\s\(\)\[\]]+/", $row);
-
-			// Now have
-			// [0] => cs-dev-02l-nv1
-			// [1] => 4vCPU/2G:active
-			// [2] => port
-			// [3] => 5000// [0] => cs-dev-02l-nv1
-
-			$b = explode(":", $a[1]);
-
-			$hn = ($a[0] == "primary")
-				? $a[0]
-				: $this->ss_link($a[0], 1);
-
-			$txt = "<strong>$hn</strong> ($b[0]b)";
-
-			// Add on the port if it's not the SP (which it is for the
-			// primary)
-
-			if ($a[3] != "SP")
-				$txt .= " [port $a[3]]";
-
-			// background colour
-
-			if ($b[1] == "active")
-				$class = "solidgreen";
-			elseif($b[1] == "bound")
-				$class = "solidamber";
-			else {
-				$class = "solidred";
-				$txt ="<div>in state &quot;$b[1]&quot;</div>";
-			}
-
-			$c_arr[] = array($txt, $class);
-		}
-
-		return new listCell($c_arr, "smallaudit");
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	//-- Networking //-------------------------------------------------------
@@ -1565,7 +1659,7 @@ class HostGrid {
 	protected function show_name_service($data)
 	{
 		return new listCell(preg_replace("/^(.*:)/", "<strong>$1</strong>",
-		$data));
+		$data), "auditl");
 	}
 
 	protected function show_name_server($data) 
@@ -1626,8 +1720,7 @@ class HostGrid {
 			// If this port is in the "usual ports" array, don't highlight
 			// it
 
-			$class = (isset($this->omit) && in_array($a[0],
-			$this->omit->usual_ports))
+			$class = in_array($a[0], $this->usual_ports)
 				? false
 				: "solidamber";
 
@@ -1663,7 +1756,7 @@ class HostGrid {
 				// it. If not in /etc/defaultrouter then a[2] will say so,
 				// and we put it on an amber field
 
-				$txt = "$a[1] (default)";
+				$txt = "<strong>default:</strong> $a[1]";
 
 				if (isset($a[2]))
 					$class = "solidamber";
@@ -1671,11 +1764,11 @@ class HostGrid {
 			}
 			else {
 				
-				// normal routes. Print network - gateway and put the
+				// normal routes. Print network: gateway and put the
 				// interface after, if we have it. If it's a persistent
 				// route a[2] will say so, and we put it in a green box
 
-				$txt = "$a[0]&nbsp;-&nbsp;$a[1]";
+				$txt = "<strong>$a[0]</strong>&nbsp;->&nbsp;$a[1]";
 
 				// a[2] can be "persistent" or an interface name
 				
@@ -1684,7 +1777,7 @@ class HostGrid {
 					if ($a[2] == "(persistent)")
 						$class = "boxgreen";
 					else
-						$txt .= " $a[2]";
+						$txt .= "&nbsp;$a[2]";
 
 				}
 
@@ -1695,7 +1788,7 @@ class HostGrid {
 		}
 
 
-		return new listCell($c_arr, "smallaudit");
+		return new listCell($c_arr, "smallauditl");
 	}
 
 	private function format_mac_addr($mac)
@@ -1725,7 +1818,7 @@ class HostGrid {
 		//
 		//   [0] - device name 
 		//   [1] - IP address / uncabled / unconfigured in global /
-		//         vswitch on.. / exclusive IP on... / vlan
+		//         vswitch on.. / exclusive IP on... / vlan / etherstub
 		//   [2] - MAC address (possibly "unknown")
 		//   [3] - hostname / zonename
 		//   [4] - speed-duplex / speed:duplex
@@ -1743,12 +1836,20 @@ class HostGrid {
 			$na = explode("|", $nic);
 			unset($speed);
 
+			// aliased interfaces, uncabled ones and etherstubs lack
+			// information. Flag them up now
+
+			$anic = ($na[1] == "uncabled" || preg_match("/:/", $na[0]) 
+				|| $na[1] == "exclusive IP" || $na[1] == "etherstub")
+				? true
+				: false;
+
 			// First row has the NIC name in bold if it's cabled, light if
 			// not, then the IP address or state of the interface
 			
-			$txt = ($na[1] == "uncabled" || preg_match("/:/", $na[0]))
-				? "$na[0]: $na[1]"
-				: "<strong>" . $na[0] . ": $na[1]</strong>";
+			$txt = (!$anic || $na[1] == "etherstub")
+				? "<strong>" . $na[0] . ": <u>$na[1]</u></strong>"
+				: "$na[0]: $na[1]";
 
 			// followed by the host/zone name if we have one
 
@@ -1759,9 +1860,12 @@ class HostGrid {
 
 			$id = array();
 
-			$id["MAC"] = ($na[2] == "unknown")
-				? $na[2]
-				: "<tt>" . $this->format_mac_addr($na[2]) . "</tt>";
+			if (!$anic) {
+
+				$id["MAC"] = ($na[2] == "unknown")
+					? $na[2]
+					: "<tt>" . $this->format_mac_addr($na[2]) . "</tt>";
+			}
 
 			// Speed now
 
@@ -1872,6 +1976,8 @@ class HostGrid {
 				}
 
 			}
+			elseif ($na[1] == "etherstub")
+				$subnet = $na[1];
 			elseif (preg_match("/vswitch/", $na[1]))
 				$subnet = "vswitch";
 			elseif (preg_match("/vlanonly/", $na[1]))
@@ -2067,15 +2173,17 @@ class HostGrid {
 		// List Zpools and their sizes. Ones which can be upgraded are on an
 		// orange field. Red for faulted, amber for degraded
 
-
 		$c_arr = false;
 
 		foreach($data as $row) {
 			$id = $idc = array();
 			$txt = $class = "";
 
-			preg_match("/(\w+) (\w+) \(last scrub: ([^\)]+)\)(.*)$/",
-			$row, $a);
+			if (preg_match("/FAULTED$/", $row))
+				preg_match("/(\w+) (\w+)/", $row, $a);
+			else
+				preg_match("/(\w+) (\w+) \(last scrub: ([^\)]+)\)(.*)$/",
+				$row, $a);
 			
 			// So $a[] is of the form:
 			// [1] => pool name
@@ -2089,7 +2197,7 @@ class HostGrid {
 
 			$txt = "<strong>$a[1]</strong> ($a[2])";
 			
-			if ($a[1] == "FAULTED")
+			if ($a[2] == "FAULTED")
 				$class = "solidred";
 			else {
 				$class = "boxgreen";
@@ -2263,7 +2371,11 @@ class HostGrid {
 
 		$fstyp = (preg_replace("/ .*$/", "", $data[0]));
 
-		return new Cell($data[0], $fstyp);
+		$xcol = (preg_match("/mirror/", $data[0]))
+			? false
+			: $this->cols->icol("solid", "amber");
+
+		return new Cell($data[0], $fstyp, $xcol);
 	}
 
 	protected function show_fs($data)
@@ -2287,7 +2399,8 @@ class HostGrid {
 			preg_match("/^(\S+) (\w+) \[([^\]]+)\] \(([^\)]+)\)(.*)$/",
 			$row, $a);
 
-			// Gives us an array where
+			// For normal, mounted, filesystsems, this gives us an array
+			// where
 			// [0] = whole string from s-audit.sh
 			// [1] = mountpoint
 			// [2] = fs type
@@ -2295,8 +2408,21 @@ class HostGrid {
 			// [4] = device;mount options;zfs options (if applicable)
 			// [5] = "not in vfstab" or empty
 
+			// For unmounted ZFS filesystems
+			// [1] => "unmounted"
+			// [2] => zfs
+			// [3] => referenced size
+			// [4] => dataset name
+
 			if (count($a) != 6) {
-				$c_arr[] = array("ERROR", "error");
+				$c_arr[] = array("ERROR: $a[0]", "error");
+				continue;
+			}
+
+			if ($a[1] == "unmounted") {
+				$txt = "<strong>$a[4]</strong> unmounted ZFS ($a[3]
+				referenced)";
+				$c_arr[] = array($txt);
 				continue;
 			}
 
@@ -2371,7 +2497,6 @@ class HostGrid {
 
 			}
 
-
 			// ROW 3 is mount options. Colour this if it's read-only. Other
 			// odd options we leave it to the viewer to spot (for now)
 
@@ -2440,9 +2565,10 @@ class HostGrid {
 
 	protected function show_export($data)
 	{
-		// Nicely present exported filesystems. At the moment they can be
-		// NFS, SMB, or iSCSI (yes, I know that's not strictly an exported
-		// filesystem...) Colouring is done from the dynamic stylesheet.
+		// Nicely present exported filesystems and disks. Does NFS, SMB (via
+		// ZFS options of the old-skool daemon), iSCSI, LDOM VDisks,
+		// VirtualBox disks and xVM disks.  Colouring is done from the
+		// dynamic stylesheet.
 
 		$fold = (defined("SINGLE_SERVER"))
 			? 80
@@ -2451,45 +2577,35 @@ class HostGrid {
 		$c_arr = false;
 
 		foreach($data as $row) {
-			$txt = $col = $sty = $opts = false;
+			$col = false;
 			$id = array();
+			
+			preg_match("/(\S+) \(([^\)]*)\) \[(.*)\](.*)$/", $row, $a);
 
-			// Break the row up into an array of the form
-			// [1] = share name
-			// [2] = export/filesystem type
-			// [3] = options
+			// Gives us a n array of the form:
+			// [1] => path to export
+			// [2] => export type
+			// [3] => options
+			// [4] => description for NFS
 
-			preg_match("/^(\S+) ([\/\w]+) (.*)$/", $row, $a);
+			$fstyp = $class = $a[2];
 
-			if ($a[2] == "iscsi")
-				$fstyp = "iSCSI";
-			elseif (preg_match("/^smb/", $a[2]))
-				$fstyp = preg_replace("/smb/", "SMB", $a[2]);
-			else
-				$fstyp = strtoupper($a[2]);
+			if ($a[2] == "nfs") {
+				$fstyp = "NFS";
 
-			$txt = "<strong>$a[1]</strong> ($fstyp)";
-
-			$opts = preg_replace("/^\(|\)$/", "", $a[3]);
-
-			if ($fstyp == "NFS") {
-
-				// Does this filesysem have a name? If it does, $a will have
-				// two elements
-				
-				$b = preg_split("/\) \[\"/", $opts);
-
-				if (isset($b[1])) {
-					$opts = $b[0];
-					$id["description"] = preg_replace("/\"\]$/", "", $b[1]);
-				}
+				if (!empty($a[4]))
+					$id["desc"] = preg_replace("/\"\]$/", "", $a[4]);
 
 				// For NFS, we strip off the domain name, if it's defined in
 				// STRIP_DOMAIN, and fold. 
 
+				$opts = $a[3];
+
 				if (STRIP_DOMAIN)
-					$id["opts"] = $this->fold_line(str_replace("." .
+					$opts = $this->fold_line(str_replace("." .
 					STRIP_DOMAIN, "", $opts), $fold);
+
+				$id["opts"] = preg_replace("/,/", " ", $opts);
 
 				// Now we look to see if anything else has mounted this
 				// filesystem. $mntd_nfs is an array which counts the number
@@ -2503,37 +2619,17 @@ class HostGrid {
 						? $this->mntd_nfs[$key]
 						: 0;
 
-					if ($mnts == 0) {
-						$txt .= " (0 known mounts)";
+					if ($mnts == 0)
 						$col = $this->cols->icol("solid", "amber");
-					}
-					elseif ($mnts == 1)
-						$txt .= " (1 known mount)";
-					else
-						$txt .= " ($mnts known mounts)";
+
+					$id["known mounts"] = $mnts;
 				}
 
 			}
-			elseif (preg_match("/^SMB/", $fstyp)) {
+			elseif ($a[2] == "xVM disk" || $a[2] == "vdisk") {
+				$id["binding"] = str_replace("on ", "", $a[3]);
 
-				// For SMB exports, we have a name
-
-				$id["name"] = preg_replace("/[\[\]]/", "", $a[3]);
-				$a[2] = "smb";
-			}
-			elseif ($fstyp == "iSCSI") {
-				
-				// for iSCSI, just show the value of the shareiscsi property
-
-				$id["shareiscsi"] = $opts;
-			}
-			elseif ($fstyp == "VDISK") {
-
-				// Unassigned VDISKS go on an amber field
-
-				$bt = preg_replace("/bound to /", "", $opts);
-
-				if (preg_match("/bound to unassigned$/", $opts)) {
+				if (preg_match("/bound to unassigned$/", $a[3])) {
 
 					if ($bt == "unassigned") {
 						$bt = "UNASSIGNED";
@@ -2541,13 +2637,24 @@ class HostGrid {
 					}
 
 				}
+				$class = "xvm";
 
-				$id["bound to"] = $bt;
+			}
+			elseif (preg_match("/^smb/", $a[2])) {
+
+				// For SMB exports, we have a name
+
+				$id["name"] = preg_replace("/[\[\]]/", "", $a[3]);
+				$class = "smb";
+			}
+			elseif ($a[2] == "iscsi") {
+				$fstyp = "iSCSI";
+				$id["shareiscsi"] = $a[3];
 			}
 
-			if (isset($id)) $txt .= $this->indent_print($id);
 
-			$c_arr[] = array($txt, $a[2], $col);
+			$c_arr[] = array("<strong>$a[1]</strong> ($fstyp)" .
+			$this->indent_print($id), $class, $col);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -2608,16 +2715,15 @@ class HostGrid {
 
 			// Bit of shorthand. Makes things easier to follow.
 
+			$id = $idc = array();
 			$dr = $s["dr"];
 			$ws = $s["ws"];
 			$uri = $s["uri"];
 			$row1 = "";
-			$i = 0;
 
 			// We can have multiple URIs. They're server aliases
 
 			foreach($uri as $u) {
-				$row1 .= "\n<div>";
 
 				// Make the URI link coloured if it looks like we have a
 				// parsed IP list
@@ -2633,12 +2739,8 @@ class HostGrid {
 				else
 					$lc = "strong";
 
-				$row1 .= "<a class=\"$lc\" href=\"http://${u}\">${u}</a>";
+				$txt = "<a class=\"$lc\" href=\"http://${u}\">${u}</a> ($ws)";
 
-				if ($i++ == 0)
-					$row1 .= " ($ws)";
-
-				$row1 .= "</div>";
 			}
 
 			// On the next line down, we print the document root. This is
@@ -2646,7 +2748,6 @@ class HostGrid {
 			// NFS mounts somewhere under it. We only do this if there's a
 			// populated NFS directory array
 
-			$row2 = $row3 = "<div class=\"indent\"";
 			$hn = $this->cz["hostname"][0];
 			
 			if (isset($this->nfs_dirs) && sizeof($this->nfs_dirs) > 0 &&
@@ -2660,20 +2761,15 @@ class HostGrid {
 					// underneath them
 
 					if ($dr == "UNDEFINED" || preg_match("|^$nd.*|", $dr))
-						$col = "red";
+						$idc["doc root"] = "red";
 					elseif (preg_match("|^$dr.*|", $nd))
-						$col = "amber";
-
-					if (isset($col)) {
-						$row2 .= $this->cols->icol("solid", $col, false, 1);
-						break;
-					}
+						$idc["doc root"] = "amber";
 
 				}
 
 			}
 
-			$row2 .= ">doc_root: $dr</div>";
+			$id["doc root"] = $dr;
 
 			// Finally we do the config file. We highlight this if its name
 			// doesn't end .conf. This might not be suitable for all sites.
@@ -2681,16 +2777,16 @@ class HostGrid {
 			// For iPlanet this field is the instance
 
 			if ($ws == "iPlanet")
-				$row3 .= ">instance: $cf</div>";
+				$id["instance"] = $cf;
 			else {
 
 				if (!preg_match("|\.conf$|", $cf))
-					$row3 .= $this->cols->icol("solid", "amber", false, 1); 
+					$idc["config"] = "solidamber";
 
-				$row3 .= ">config: $cf</div>";
+				$id["config"] = $cf;
 			}
 
-			$c_arr[] = array($row1 . $row2 . $row3, $ws);
+			$c_arr[] = array($txt . $this->indent_print($id, $idc), $ws);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -2734,13 +2830,21 @@ class HostGrid {
 
 		$c_arr = array();
 
-		// Discard username/uid pairs in the omit_users array
+		// We first want to get users which aren't installed on this version
+		// of Solaris by default.  We also look at users which are there by
+		// default, but are missing on this system
 
-		$arr = (isset($this->omit->omit_users))
-			? array_diff($data, $this->omit->omit_users)
-			: array();
+		if (isset($this->curr_omit["users"])) {
+			$x_arr = array_diff($data, $this->curr_omit["users"]);
+			$m_arr = array_diff($this->curr_omit["users"], $data);
+		}
+		else {
+			$x_arr = $data;
+			$m_arr = array();
+		}
 
-		foreach($arr as $e) {
+
+		foreach($x_arr as $e) {
 			preg_match("/^(\S+) \((\d+)\)$/", $e, $a);
 			$un = $a[1];	// username
 			$ui = $a[2];	// UID
@@ -2755,17 +2859,26 @@ class HostGrid {
 				if (!in_array($ui, $this->known_users[$un])) {
 					$class = "solidred";
 					$this->known_users[$un][] = $ui;
+					$e .=  "<div class=\"small\">&quot;$un&quot; "
+					. "elsewhere assigned UID: " 
+					. $this->list_user_colls($ui, $this->known_users[$un])
+					. "</div>";
 				}
 
 			}
 			else
 				$this->known_users[$un][] = $ui;
 
+			// Has the UID already been used with a different username?
+
 			if (in_array($ui, array_keys($this->known_uids))) {
 
 				if (!in_array($un, $this->known_uids[$ui])) {
 					$class = "boxred";
 					$this->known_uids[$ui][] = $un;
+					$e .=  "<div class=\"small\">uid $ui used elsewhere for: "
+					. $this->list_user_colls($un, $this->known_uids[$ui])
+					. "</div>";
 				}
 
 			}
@@ -2776,7 +2889,31 @@ class HostGrid {
 
 		}
 
+		foreach($m_arr as $m) {
+			$c_arr[] = array($m, "solidamber");
+		}
+
 		return new listCell($c_arr);
+	}
+
+	protected function list_user_colls($u, $arr)
+	{
+		// Used by show_user to give a list of UIDs or usernames in case of
+		// collision
+
+		$colls = array_diff($arr, array($u));
+
+		if (count($colls) == 1)
+			$ret = $colls[0];
+		else  {
+
+			foreach($colls as $c) {
+				$ret .= ", $c";
+			}
+
+		}
+
+		return $ret;
 	}
 
 	protected function show_authorized_key($data)
@@ -3121,8 +3258,8 @@ class PlatformGrid extends HostGrid
 	protected $key_filename = "key_platform.php";
 		// Helps us include they key file automatically
 
-	protected $card_db;	// Card definitions from defs.php
-	protected $hw_db;	// Card definitions from defs.php
+	protected $card_db;	// Card definitions from misc.php
+	protected $hw_db;	// Card definitions from misc.php
 
 	public function __construct($map, $servers, $c)
 	{
@@ -3135,9 +3272,9 @@ class PlatformGrid extends HostGrid
 		$this->latest_aloms = $this->get_paired_list("platform",
 		"hardware", "ALOM f/w");
 
-		// We need the card definitions in defs.php
+		// We need the card definitions in misc.php
 
-		require_once(LIB . "/defs.php");
+		require_once(DEF_DIR . "/misc.php");
 		$defs = new defs();
 		$this->card_db = $defs->get_data("card_db");
 		$this->hw_db = $defs->get_data("hw_db");
@@ -3160,7 +3297,7 @@ class OSGrid extends PlatformGrid
 
 	protected $key_filename = false;
 
-	protected $sol_upds;	// Solaris update dates, from defs.php
+	protected $sol_upds;	// Solaris update dates, from misc.php
 
     public function __construct($map, $servers, $c)
 	{
@@ -3172,7 +3309,7 @@ class OSGrid extends PlatformGrid
 
 		// We need the definition file
 
-		require_once(LIB . "/defs.php");
+		require_once(DEF_DIR . "/misc.php");
 		$defs = new defs();
 		$this->sol_upds = $defs->get_data("updates");
 	}
@@ -3240,18 +3377,15 @@ class OSGrid extends PlatformGrid
 
 class NetGrid extends HostGrid {
 
-	// We can omit ports, so we need the omit data
+	protected $usual_ports = array(
+		22,		// sshd
+		111,
+		2049,	// nfs
+		4045	// lockd
+		);
 
-	protected $omit = array();
-
-	public function __construct($map, $servers, $c)
-	{
-		require_once(ROOT . "/_conf/omitted_data.php");
-
-		parent::__construct($map, $servers, $c);
-		$this->omit = new omitData();
-	}
-
+		// We expect these ports to be open, so we don't highlight them if
+		// they are
 }
 
 //==============================================================================
@@ -3260,6 +3394,7 @@ class NetGrid extends HostGrid {
 class FSGrid extends HostGrid {
 
 	protected $adj_fields = array(
+		"hostname" => "capacity",
 		"capacity" => "zpool",
 		"zpool" => "disk group");
 
@@ -3310,6 +3445,9 @@ class FSGrid extends HostGrid {
 
 class SecurityGrid extends HostGrid{
 
+	// By default, the security audit page leaves out a lot of data, in an
+	// attempt to keep the interface clean.
+
 	protected $user_list = array();
 		// Working array of users we encounter
 
@@ -3319,25 +3457,61 @@ class SecurityGrid extends HostGrid{
 	protected $known_uids = array();
 		// A list of known UID -> array(username), used to catch collisions
 
-	protected $omit = array();
+	protected $defs = array();
+		// caches the omit file data. Elements are named dist-os.
 
+	protected $curr_omit;
+		// show_server() puts the omit data for the current server in this
+		// so the correct data is always available to the methods that use
+		// it
+
+	/*
 	public function __construct($map, $servers, $c)
 	{
-		require_once(ROOT . "/_conf/omitted_data.php");
 
 		parent::__construct($map, $servers, $c);
-		$this->omit = new omitData();
+	}
+	*/
 
-		if (isset($this->omit->omit_users)) {
+	public function show_server($server)
+	{
+		// If we are omitting data, we need the appropriate security
+		// definition file. This function looks to see if we've already read
+		// the file, which is cached in $this->defs[dist-version], and if
+		// not, it reads it in.
 
-			foreach($this->omit->omit_users as $e) {
-				preg_match("/^(\w+) \((\d+)\)$/", $e, $a);
+		// Whether it's cached or loaded, the omit data is put into the
+		// $curr_omit variable
 
-				$this->known_users[$a[1]] = array($a[2]);
-				$this->known_uids[$a[2]] = array($a[1]);
+		// The function then calls the show_server method in the parent
+		// class
+
+		$this->curr_omit = array();
+
+		$dist = preg_replace("/ /", "_",
+		$this->servers[$server]["os"]["distribution"][0]);
+		preg_match("/.*(5\.\d+).*/",
+		$this->servers[$server]["os"]["version"][0], $a);
+
+		$myos = "${dist}-$a[1]";
+
+		if (isset($this->defs[$myos]))
+			$this->curr_omit = $this->defs[$myos];
+		else {
+
+			$sd_file = DEF_DIR . "/security/sec_defs-${myos}.php";
+				
+			if (file_exists($sd_file)) {
+				require_once($sd_file);
+				$this->curr_omit = $this->defs[$myos] = $sec_data;
 			}
+			else
+				page::warn("No security definition file for
+				&quot;$sd_file&quot;.");
 
 		}
+		
+		return parent::show_server($server);
 	}
 
 }
@@ -3366,7 +3540,7 @@ class SoftwareGrid extends HostGrid
 		"mod_php" => "Sun Web Server"
 		);
 
-	protected $sun_cc_vers;	// Sun Studio versions from defs.php
+	protected $sun_cc_vers;	// Sun Studio versions from misc.php
 
 	public function __construct($map, $servers, $c)
 	{
@@ -3378,7 +3552,7 @@ class SoftwareGrid extends HostGrid
 
 		// We need the defs file for Sun Studio
 
-		require_once(LIB . "/defs.php");
+		require_once(DEF_DIR . "/misc.php");
 		$defs = new defs();
 		$this->sun_cc_vers = $defs->get_data("sun_cc_vers");
 	}

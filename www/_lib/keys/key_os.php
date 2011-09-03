@@ -32,18 +32,10 @@ $grid_key = array(
 		array("different hostid<br/>in local zone", "boxamber", false)
 	),
 
-	"local zone" => array(
-		array("running zone", "solidgreen", false),
-		array("installed zone", "solidamber", false),
-		array("zone in other state", "solidred", false),
-		array("resource caps", "boxblack", false),
-		array("non-native zone", "boxamber", false)
-	),
-
-	"LDOM" => array(
-		array("active domain", "solidgreen", false),
-		array("bound domain", "solidamber", false),
-		array("domain in other state", "solidred", false)
+	"VM" => array(
+		array("running", "solidgreen", false),
+		array("installed/halted", "solidamber", false),
+		array("errored/incomplete", "solidred", false),
 	),
 
 	"uptime" => array(
@@ -53,7 +45,8 @@ $grid_key = array(
 
 	"boot env" => array(
 		array("active now", "boxgreen", false),
-		array("active on reboot", "solidamber", false)
+		array("active on reboot", "boxred", false),
+		array("incomplete environment", "solidamber")
 	),
 
 	"SMF services" => array(
@@ -74,5 +67,23 @@ $grid_key = array(
 	)
 
 );
+
+# Generate the VM column automatically
+
+$eng = array(
+        "lzone" => "local zone",
+        "bzone" => "branded zone",
+        "domu" => "XEN dom0",
+        "dom0" => "XEN dom0",
+        "vbox" => "VirtualBox",
+        "vmware" => "VMWare",
+        "ldmp" => "primary LDOM",
+        "ldm" => "guest LDOM");
+
+
+foreach($this->cols->get_col_list("vm_cols") as $vm=>$col) {
+	$grid_key["VM"][] = array($eng[$vm], $vm);
+}
+
 
 ?>

@@ -60,6 +60,8 @@ if (isset($this->cols->nic_cols)) {
         	$txt = "${net}.0 network";
 			$class = "net" . preg_replace("/\./", "", $net);
 		}
+		else
+			$txt = $net;
 	
     	$grid_key["NIC"][] = array($txt, $class);
 	}

@@ -119,6 +119,19 @@ if ($qs == "index.php" || $qs == "platform.php" || defined("ALL")) {
 }
 
 //----------------------------------------------------------------------------
+// O/S audits - colours::vm_cols
+
+if ($qs == "os.php" || defined("ALL")) {
+	echo "\n/* begin vm_cols */\n";
+
+	foreach($cols->get_col_list("vm_cols") as $name=>$hex) 
+		echo "\n." . strtolower(str_replace(" ", "_", $name)) . " {
+			border: 2px solid $hex }\n";
+
+	echo "\n\n/* end vm_cols */\n";
+}
+
+//----------------------------------------------------------------------------
 // hosted services audits - colours::ws_cols and ::db_cols
 
 // Web server and DB server colours 

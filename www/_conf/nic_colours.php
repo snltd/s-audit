@@ -23,13 +23,13 @@
 //
 //============================================================================
 
-
 // This array tells us how to colour NICs. The subnets and colours are
 // site-specific, so you will most likely want to change them.
 
 $nic_cols = array(
-	"10.0.2" => "#62A189",			// aqua (VirtualBox internal net)
-	"192.168.1" => "#c27fac",		// purple
+	"10.0.2" => "#62A189",			// aqua (Windows VirtualBox internal net)
+	"192.168.56" => "#59A6C2",		// VirtualBox
+	"192.168.1" => "#C598C1",		// purple
 	"10.10.8" => "#967e4a",			// brown
 	"10.10.7" => "#61ab52",			// green
 	"10.10.4" => "#f1ef5c",			// yellow
@@ -37,10 +37,11 @@ $nic_cols = array(
 
 //-- Do not remove entries below here. You can change the colours ------------
 
+	"alom" => "#e9a655",			// ALOM cables
 	"unconfigured" => "#a8a8a8",	// Unconfigured, but plumbed interfaces
 	"vlan" => "#a8a8a8",			// VLANned interfaces
 	"vswitch" => "#7a89bb",			// Virtual Switches
-	"alom" => "#e9a655"				// ALOM cables
+	"etherstub" => "#6D8C73"		// etherstubs
 );
 
 ?>

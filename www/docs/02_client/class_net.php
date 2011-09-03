@@ -60,6 +60,11 @@ $pg = new docPage($menu_entry);
 	<dd>Currently the only supported name service types are DNS and
 	NIS.</dd>
 
+	<dt>routing</dt>
+	<dd>Tells you if IP routing and/or forwarding is enabled. IPv4 and IPv6
+	are reported separately. Only enabled services are shown, so on a system
+	with routing and forwarding disabled, expect no information.</dd>
+
 	<dt>port</dt>
 	<dd>Gets a list of all open ports, and attempts to work out which
 	program is using each one. Output is of the form</dd>

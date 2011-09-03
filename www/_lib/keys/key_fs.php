@@ -36,7 +36,8 @@ $grid_key = array(
 
 	"root fs" => array(
 		array("UFS root", "ufs", false),
-		array("ZFS root", "zfs", false)
+		array("ZFS root", "zfs", false),
+		array("not mirrored", "solidamber", false)
 	),
 
 	"fs" => array(

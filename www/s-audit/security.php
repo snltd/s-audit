@@ -16,7 +16,7 @@ require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 
 $map = new ZoneMap();
-$s = new GetServers($map, false, "security");
+$s = new GetServers($map, false, array("os", "security"));
 $grid = new SecurityGrid($map, $s->get_array(), "security");
 
 $pg = new audPage("Security audit", $grid->server_count(),

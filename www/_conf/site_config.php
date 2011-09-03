@@ -34,6 +34,18 @@ define("OMIT_PORT_THRESHOLD", 5000);
 	// If this is defined, open ports above this number will not be
 	// displayed
 
+define("OMIT_STANDARD_USERS", true);
+	// If this is defined, standard Solaris users are not shown on the
+	// security audit page
+
+define("OMIT_STANDARD_CRON", true);
+	// If this is defined, standard cron jobs are not shown on the security
+	// audit page
+
+define("OMIT_STANDARD_ATTRS", true);
+	// If this is defined, standard user_attrs are not shown on the security
+	// audit page
+
 define("SS_HOST_COLS", 6);
     // How many columns of local zones on the single server view page
 

@@ -15,12 +15,8 @@
 $generic_key = array(
 
 	"hostname" => array(
-		array("physical server", "server", false),
-		array("local zone", "zone", false),
-		array("VirtualBox", "vb", false),
-		array("primary LDOM", "ldmp", false),
-		array("guest LDOM", "ldm", false),
-		array("global zone", false, "font-weight: bold")
+		array("<strong>physical server</strong>/VM", "sa", false),
+		array("local zone", "za", false),
 	),
 
 	"audit completed" => array(

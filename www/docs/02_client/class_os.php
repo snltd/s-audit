@@ -44,21 +44,39 @@ $pg = new docPage($menu_entry);
 	older, or the "xxx" build number for 5.11.</dd>
 
 	<dt>boot env</dt>
-	<dd>Lists any boot environments, if the host supports them. The name of
-	the environment is given first, followed by the mountpoint and any
-	active flags.</dd>
+	<dd>Lists <tt>beadm</tt>, Live Upgrade, and miniroot failsafe boot
+	environments. The type of environment is always given first and followed
+	by the name.</dd>
+	
+	<dd>For <tt>beadm</tt> environments, the mountpoint is given in
+	parentheses, followed by the boot flags. An &quot;N&quot; means the
+	environment is active at the time of the audit, an &quot;R&quot; means
+	the environment will be active after the next reboot.</dd>
+
+	<dd>For Live Upgrade, the state (complete or incomplete) is shown in
+	parentheses, followed by the same boot flags as are used for
+	<tt>beadm</tt> environments.</dd>
+
+	<dd>Failsafe miniroots are shown only if they exist as a
+	<tt>*miniroot*</tt> file in <tt>/boot</tt>, <strong>and</strong> if it
+	exists in the grub menu.</dd>
 
 	<dt>hostid</dt>
 	<dd>Prints the hostid.</dd>
 
-	<dt>local_zone</dt>
-	<dd>Lists the local zones on the box, giving the brand and state of each
-	one, and the zonepath, or zone root. Only run in global zones.</dd>
-
-	<dt>LDOM</dt>
-	<dd>Lists the guest domains on the box, reporting the domain name,
-	state, number of assigned VCPUs, amount of assigned physical RAM, and
-	the console port of each. Omitted in local zones.</dd>
+	<dt>VM</dt>
+	<dd>Lists the local zones, logical domains, VirtualBoxes or XEN domUs
+	hosted on the box. The VM type is given first, followed by the VM's name
+	(as the host sees it, which is not necessarily the hostname of the guest
+	O/S itself). VM info follows in parentheses. For local zones this is the
+	zone brand and the zone's state; for LDOMs the port
+	number the console runs on and the state of the LDOM; for VBoxes
+	the O/S type and the domain state; and for XEN domains, the O/S type and
+	state of the domain. (Note that all paravirtualized OSes report as
+	&quot;Linux&quot; - this is a limit of the XEN framework.) VM resource
+	caps are given in [square brackets], CPU first, then memory. If a local
+	zone has no resource caps, the brackets are empty. Local zones also
+	report the zone path. The test is not run in local zones.</dd>
 
 	<dt>scheduler</dt>
 	<dd>If the system's process scheduler class has been altered, this check

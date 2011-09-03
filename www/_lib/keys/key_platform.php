@@ -21,6 +21,8 @@ $grid_key = array(
 	"hardware" => array(
 		array("SPARC hardware", false,
 			$this->cols->icol("box", "sparc", "plat_cols")),
+		array("XEN platform", false,
+			$this->cols->icol("box", "xen", "plat_cols")),
 		array("32-bit O/S", "solidamber", false)
 	),
 
@@ -63,6 +65,7 @@ $grid_key = array(
 		array("optical drive", "cd", false),
 		array("tape drive", "tp", false),
 		array("fibre array", "fc", false),
+		array("RAID volume", "rvol", false),
 		array("loaded CD/DVD", "cd", $this->cols->icol("solid", "amber")),
 		array("mounted CD/DVD", "cd", $this->cols->icol("solid", "green"))
 	),

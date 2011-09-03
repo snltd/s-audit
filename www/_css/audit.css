@@ -24,7 +24,7 @@
 }
 
 div.indent { /* intented divs, e.g. on hosted services */
-	margin-left: 20px;
+	margin-left: 2em;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -77,46 +77,44 @@ div.strl { /* strong text on its own line */
 
 /*-- backgrounds for rows --------------------------------------------------*/
 
-.server, td.svhn { /* global zones/servers. Used in <tr> and <td> */
+.sa {	/* normal global zone */
 	background-color: #C0C9E4;
 }
 
-.zone, td.zhn { /* analagous to .server, but for local zones */
+.sb {	/* alternate global zone */
+	background-color: #B4BCD5;
+}
+
+.za {	/* normal local zone */
 	background-color: #DCDCDC;
 }
 
-.ldmp { /* analagous to .server, but for primary LDMs */
-	background-color: #A2B9A3;
-}
-
-.ldm { /* analagous to .server, but for LDMs */
-	background-color: #C4D9CE;
-}
-
-.vb { /* analagous to .server, but for VirtualBoxes */
-	background-color: #9D97CA;
-}
-
-.ldm, .ldmp, .server .vb {
-	color: black;
+.zb {	/* alternate local zone */
+	background-color: #CECECE;
 }
 
 /*-- hostnames -------------------------------------------------------------*/
 
-td.ldmp, td.ldm, td.vb { /* Stop word-breaking in the hostname column */
-	white-space: nowrap;
-}
-
-td.zonehn, td.serverhn { /* hostname for local zones */
+div.zonehn, div.serverhn { /* hostname for local zones */
 	white-space: nowrap;
 	text-align: left;
 	padding-left: 15px;
 }
 
-td.serverhn { /* hostname for global zones/physical servers */
+div.serverhn { /* hostname for global zones/physical servers */
 	font-weight: bold;
 	padding-left: 3px;
 }
+
+td.zlx, td.znoinf { /* lx branded zones and non-running zones */
+	background: #C7C761;
+	vertical-align: middle;
+}
+
+td.zlx {	/* lx branded zones */
+	background: #df8439;
+}
+
 
 /*-- versioning ------------------------------------------------------------*/
 
@@ -141,7 +139,7 @@ td.serverhn { /* hostname for global zones/physical servers */
 	padding: 1px;
 }
 
-ul.smallaudit, ul.smallauditl, ul.smallindent {
+ul.smallaudit, ul.smallauditl, ul.smallindent, div.small {
 	
 	/* smallaudit and smallauditl are centred and left-aligned lists with
 	 * small writing */

@@ -63,11 +63,11 @@ define("CB_DIR", DOC_ROOT . "/_files");
 define("CB_URL", DOC_URL . "/_files");
 	// URL to code blocks and HTMLized code blocks
 
-define("PKG_DEF_DIR", LIB . "/pkg_defs");
-	// Where to find package definition files
+define("DEF_DIR", LIB . "/defs");
+	// Where definition files are stored
 
-define("PCH_DEF_DIR", LIB . "/pch_defs");
-	// Where to find patch definition files
+define("SEC_DEF_DIR", LIB . "/defs/security");
+	// Where to find username/cron job/user_attr definition files
 
 define("MAX_AF_VER", 3.0);
 define("MIN_AF_VER", 3.0);

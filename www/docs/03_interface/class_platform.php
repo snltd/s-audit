@@ -62,8 +62,12 @@ may be LDOM, VirtualBox or VMWare.</dd>
 	);
 ?>
 
+<dd>Global zones are denoted by a blue box. If a system does not have a blue
+box in this field then it does not support zones.</dd>
+
 <dd>For non-global zones, the nature of the zone (whole or sparse root) is
 listed, along with the brand, if it is not native.</dd>
+
 
 <dt>CPU</dt>
 <dd>Shows the number of CPUs along with their clock speed and number of

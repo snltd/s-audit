@@ -6,9 +6,9 @@
 # ------------------
 #
 # Part of the support files for the s-audit interface. This script creates a
-# ini style file which lists the default users, cron jobs, and user_attrs on
-# a clean install of a machine. The files it creates are used on the
-# security audit page.
+# file containing  a single PHP array which lists the default users, cron
+# jobs, and user_attrs on a clean install of a machine. These data are used
+# on the security audit page.
 #
 # The script writes to sec_defs-DISTRO-5.x.php, in the current working
 # directory. Copy the resulting file to the _lib/defs/security subdirectory
@@ -43,40 +43,50 @@ DIST=${1:-Solaris}
 
 # Now we know what to call the file, and we can open it 
 
-OUTFILE="sec_defs-$DIST-$(uname -r).data"
+OUTFILE="sec_defs-$DIST-$(uname -r).php"
 
-cat <<-EOPHP >$OUTFILE
-;=============================================================================
-;
-; s-audit security definition file for $DIST $(uname -r).
-;
-; Generated $(date) by ${0##*/}
-;
-;=============================================================================
+exec 1>$OUTFILE
 
-[users]
+cat << EOPHP 
+<?php
+
+//============================================================================
+//
+// s-audit security definition file for $DIST $(uname -r).
+//
+// Generated $(date) by ${0##*/}
+//
+//============================================================================
+
+\$sec_data = array(
+
 EOPHP
-
-# Users are very easy
-
-cut -d: -f1,3 /etc/passwd >>$OUTFILE
-
-# Crontabs. Prefix every cron job with "username:"
-
-print "\n[crontabs]" >>$OUTFILE
-
-find /var/spool/cron/crontabs -type f -a ! -name \*.au | while read f
-do
-	sed "/^#/d;s/.*/${f##*/}:&/" $f
-done >>$OUTFILE
 
 # user attrs, if this system has them
 
 if [[ -f /etc/user_attr ]]
 then
-	print "\n[user_attrs]"
-	grep -v "^#" /etc/user_attr
-fi >>$OUTFILE
+	print '	"user_attrs" => array('
+	sed -n '/^[^#]/s/.*/		"&",/p' /etc/user_attr | sed '$s/,$/),/'
+fi
+
+# Users 
+
+print '\n	"users" => array('
+
+cut -d: -f1,3 /etc/passwd | sed 's/:/ (/;s/$/)/;s/.*/		"&",/' \
+| sed '$s/,$/),/'
+
+# Crontabs. Prefix every cron job with "username:"
+
+print  '\n	"crontabs" => array('
+
+find /var/spool/cron/crontabs -type f -a ! -name \*.au | while read f
+do
+	sed "/^#/d;s/.*/${f##*/}:&/" $f
+done | sed 's/"/\\"/g;s/.*/		"&",/' | sed '$s/,$/)/'
+
+print ");\n\n?>"
 
 # That's it.
 

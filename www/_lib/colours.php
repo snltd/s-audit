@@ -31,7 +31,7 @@ class colours {
 	protected $cols = array(
 		"green" => "#89bf84",
 		"red" => "#ca6a5b",
-		"amber" => "#DACE4D",
+		"amber" => "#C7C761",
 		"blue" => "#2a1ad6",
 		"pink" => "#E197C5",
 		"grey" => "#bbb", 
@@ -53,7 +53,21 @@ class colours {
 		"smb" => "#571C56",
 		"smbfs" => "#571C56",
 		"vdisk" => "#167318",
+		"xvm" => "#437061",
 		"iscsi" => "#DF1711",
+	);
+
+	// $vm_cols is a list of colours used in the VM column of the O/S audit page
+
+	protected $vm_cols = array(
+		"lzone" => "#D68251",
+		"bzone" => "#C7C761",
+		"domu" => "#703D3E",
+		"dom0" => "#985355",
+		"vbox" => "#2B2E70",
+		"vmware" => "#437061",
+		"ldmp" => "#2A480E",
+		"ldm" => "#21701A"
 	);
 
 	// $ws_cols is a list of colours used to identify different webserver
@@ -77,14 +91,15 @@ class colours {
 		"disk" => "#230997",	// disk drives
 		"cd" => "#ccc",			// optical drives
 		"fc" => "#7b7a94", 		// fibre arrays
-		"tp" => "#c7a49c"		// tape drives
+		"tp" => "#c7a49c",		// tape drives
+		"rvol" => "#167318"		// h/w RAID volume
 	);
 
 	// $plat_cols is a list of colours used to identify different hardware
 	// types
 	
 	protected $plat_cols = array(
-		"x86" => "#7b7a94",
+		"xen" => "#7b7a94",
 		"sparc" => "#c7a49c"
 	);
 

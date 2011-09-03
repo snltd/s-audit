@@ -2,7 +2,7 @@
 
 //============================================================================
 //
-// defs.php
+// misc.php
 // --------
 //
 // This file holds "translations" of internal version numbers and code names

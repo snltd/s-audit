@@ -774,13 +774,13 @@ class comparePlatform extends compareGeneric{
 	protected $no_col = array("hardware", "CPU", "serial number", "ALOM
 	IP");
 
-	protected $hw_db;   // Card definitions from defs.php
+	protected $hw_db;   // Card definitions from misc.php
 
     public function __construct($map, $data_a, $data_b)
     {
         // We need the card definitions in defs.php
 
-        require_once(LIB . "/defs.php");
+        require_once(LIB . "/defs/misc.php");
         $defs = new defs();
         $this->card_db = $defs->get_data("card_db");
         $this->hw_db = $defs->get_data("hw_db");
@@ -895,8 +895,7 @@ class compareNet extends compareGeneric{
     protected function package_link($name)
     {
         // Make a chunk of HTML to have little mouseover descriptions of
-        // package names. Requires the pkg_defs.php file, which must be
-        // generated on cs-build-01
+        // package names. Requires a definition file
 
         global $pkgdefs;
 

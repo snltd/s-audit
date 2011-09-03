@@ -16,7 +16,8 @@ $grid_key = array(
 
 	"user" => array(
 		array("username with multiple UIDs", "solidred", false),
-		array("UID with multiple usernames", "boxred", false)
+		array("UID with multiple usernames", "boxred", false),
+		array("missing user", "solidamber", false)
 	),
 
 	"empty password" => array(
