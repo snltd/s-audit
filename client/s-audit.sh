@@ -157,7 +157,7 @@ L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count package_count
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	svnserve sendmail exim cronolog mailman splunk sshd named ssp symon
-	samba x vbox"
+	samba x vbox wcons"
 G_APP_TESTS="vxvm vxfs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
 L_TOOL_TESTS="openssl rsync mysql_c pgsql_c sqlplus svn_c java perl php_cmd
@@ -1642,7 +1642,7 @@ function get_routes
 
 	route -p show >/dev/null 2>&1 && HAS_PER=1
 
-	netstat -nr | egrep -v '127.0.0.1|224.0.0.0' | \
+	netstat -nr | egrep -v '127.0.0.1|224.0.0.0' | sort | \
 	while read dest gw fl ref use int
 	do
 		unset X I
@@ -2411,6 +2411,29 @@ function get_vbox
 	can_has VBoxManage && disp VirtualBox $(VBoxManage --version)
 }
 
+function get_wcons
+{
+	# Is WebConsole running and listening?
+
+	if can_has smcwebserver
+	then
+		s="system/webconsole"
+		
+		if [[ $(svcs -H -o state $s) == "online" ]]
+		then
+			msg="running"
+			
+			[[ $(svcprop -p options/tcp_listen $s) == "true" ]] \
+				&& msg="$msg and listening"
+		else
+			msg="not running"
+		fi
+
+		disp "WebConsole" $msg
+	fi
+
+}
+
 function get_sshd
 {
 	# Get the version of the SSH daemon. Seems the only way to get it is to
@@ -3121,7 +3144,7 @@ function get_root_fs
 
 			RDSK=${RDEV%s*}
 			RDSK=${RDSK##*/}
-			raidctl -l | $EGS "^${RDSK}[$WSP]|Volume:$RDSK$" \
+			raidctl -l 2>/dev/null | $EGS "^${RDSK}[$WSP]|Volume:$RDSK$" \
 				&& FSM="(HW RAID)"
 		fi
 
@@ -3194,7 +3217,8 @@ function get_fs
 				zx="${zx}${p}=${v},"
 			done
 
-			extra="${extra};${zx%,}$zsup"
+			extra="${extra};${zx%,}$zsup;$(zfs list -Hrt snapshot $mdv | \
+			grep -c ${mdv}@) snapshots"
 
 		# If we're in a global zone, don't report NFS, SMBFS or LOFS
 		# filesystems mounted under zone roots
@@ -3367,7 +3391,7 @@ function get_user_attr
 	if [[ -f $ATTR_FILE ]]
 	then
 
-		egrep -v "^[$WSP]*#|^$" $ATTR_FILE | while read line
+		egrep -v "^[$WSP]*#|^$" $ATTR_FILE | while read -r line
 		do
 			disp user_attr "$line"
 		done
