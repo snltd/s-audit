@@ -67,7 +67,35 @@ $pad = (defined("ALL"))
 	? "7px"
 	: "0";
 
-echo "\n" . preg_replace("/, $/", " { padding: $pad }", $col_grp) . 
+echo "\n" . preg_replace("/, $/", " { padding: $pad }", $col_grp),
+"\n\n/* hostname boxes */\n";
+
+// Hostname boxes and key. First global, then local
+
+$ga = "td.phys, ";
+$gk = "li.kphys, ";
+$za = "td.lz, ";
+$zk = "li.lz, ";
+
+foreach($cols->get_col_list("m_cols") as $name=>$hex) {
+	echo "\ntd.${name}, li.k$name { border: 2px solid $hex }";
+	$ga .= "td.${name}, ";
+	$gk .= "li.k${name}, ";
+}
+
+echo "\n\n", preg_replace("/, $/", " {\n  white-space: nowrap;\n  " .
+"text-align: left;\n  font-weight: bold;\n  padding-left: 3px;\n}", $ga),
+"\n\n", preg_replace("/, $/", " { background-color: #c0c9e4 }", $gk);
+
+foreach($cols->get_col_list("z_cols") as $name=>$hex) {
+	echo "\ntd.$name, li.k$name { border: 2px solid $hex }";
+	$za .= "td.${name}, ";
+	$zk .= "li.k${name}, ";
+}
+
+echo "\n\n", preg_replace("/, $/", " {\n  white-space: nowrap;\n  " .
+"font-weight: normal;\n  text-align: left;\n  padding-left: 15px;\n}", $za),
+"\n\n", preg_replace("/, $/", " { background-color: #dcdcdc }", $zk);
 "\n\n/* end cols */\n";
 
 //----------------------------------------------------------------------------

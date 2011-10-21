@@ -72,6 +72,9 @@ class HostGrid {
 	private $lc;
 		// last row class
 
+	private $row_sfx;
+		// helps get cells the right colour. "a" or "b"
+
 	//------------------------------------------------------------------------
 	// METHODS
 
@@ -465,7 +468,9 @@ class HostGrid {
 
 			$z = $data["hostname"][0];
 			
-			// use the map to get the virtualization
+			// use the map to find out if this is a host or a zone. We
+			// alternate colours with "a" and "b" to make it easier to read
+			// across the grid
 
 			if ($this->map->is_global($z) && $this->lc != "sa")
 				$row_class = "sa";
@@ -555,10 +560,10 @@ class HostGrid {
 
 			if (file_exists($data)) {
 
-				if (filesize($data) == 0)
-					$err_str = "zero size file _ERR_";
-				else
-					$err_str = "wrong format file _ERR_";
+				$err_str = (filesize($data) == 0)
+					? "zero size file _ERR_"
+					: "wrong format file _ERR_";
+
 			}
 			elseif(preg_match("/^\./", $data))
 				$err_str = "Missing information for global zone. Local zones
@@ -678,20 +683,68 @@ class HostGrid {
 
 	protected function show_hostname($data, $c = false)
 	{
-		// Ask the map if this is a global zone or not
+		// Coloured according to virtualization
 
-			/*
-			if (in_array($z, $this->map->list_vbox()))
-				$row_class = "vb";
-			elseif (in_array($z, $this->map->list_pldoms()))
-				$row_class = "ldmp";
-			elseif (in_array($z, $this->map->list_ldoms()))
-				$row_class = "ldm";
-			elseif ($this->map->is_global($z))
-				$row_class = "server";
-			else
-				$row_class = "zone";
-			*/
+		$z = $data[0];
+
+		// The row background is set for either global or local zones
+
+		$row_class = ($this->map->is_global($z))
+			? "server"
+			: "zone";
+
+		// The hostname cell is coloured according to the virtualization (or
+		// lack of it)
+
+		// Get the virtualization. We always have this because we always
+		// have platform audit data
+
+		$v = (isset($this->servers[$z]["platform"]["virtualization"]))
+			? $this->servers[$z]["platform"]["virtualization"][0]
+			: "unknown";
+
+		// The basic visualization type is vb - this is all we need for most
+		// things, but we may need to refer back to $v for more info
+
+		$vt = preg_replace("/ \(.*$/", "", $v);
+
+		// Now work out the class. Default to "unknown".
+
+		$c = "unk";
+
+		if ($vt == "none") // physical server
+			$c = "phys";
+		elseif ($vt == "zone") {
+
+			if ($v == "zone (sparse/native)")
+				$c = "szone";
+			elseif ($v == "zone (whole root/native)")
+				$c = "lz";
+			else 
+				$c = "lz";
+		}
+		elseif ($vt == "VirtualBox")
+			$c = "vbox";
+		elseif ($vt == "primary LDOM")
+			$c = "ldmp";
+		elseif ($vt == "guest LDOM")
+			$c = "ldm";
+		elseif ($vt == "VMware")
+			$c = "vmware";
+		elseif ($vt == "xVM dom0")
+			$c = "dom0";
+		elseif ($vt == "xVM domU")
+			$c = "domu";
+		elseif ($vt == "unknown") {
+			
+			// unknown could be branded, or not-running zones
+
+			if (isset($this->servers[$z]["platform"]["zone brand"]))
+				$c = "bzone";
+			elseif (isset($this->servers[$z]["platform"]["zone status"]))
+				$c = "lz";
+
+		}
 
 		if ($c)
 			$class = "error";
@@ -700,10 +753,7 @@ class HostGrid {
 		else
 			$class = "zonehn";
 
-		return new Cell("<div class=\"$class\">" . $this->ss_link($data[0])
-		. "</div>");
-
-
+		return new Cell($this->ss_link($z), $c);
 	}
 
 	protected function ss_link($zn, $as_global = false)
@@ -850,8 +900,6 @@ class HostGrid {
 		else
 			$frame = false;
 			
-			//: $this->cols->icol("box", "sparc", "plat_cols");
-
 		// Put a line break in if we're not in single server mode
 
 		$arch = (!defined("SINGLE_SERVER"))
@@ -1024,10 +1072,9 @@ class HostGrid {
 
 		$physical = $arr[0];
 
-		if ($physical == 1)
-			$physical = "";
-		else
-			$physical = "$physical x ";
+		$physical = ($physical == 1)
+			? ""
+			: "$physical x ";
 
 		$speed = preg_replace("/M.*$/", "", $speed);
 
@@ -1175,7 +1222,7 @@ class HostGrid {
 		$zn = $this->cz["hostname"][0];
 		$class = false;
 
-		if (!$this->map->is_global($zn)) {
+		if (!empty($this->servers) && !$this->map->is_global($zn)) {
 
 			if ($this->get_parent_prop($zn, "os", "version") !=
 			preg_replace("/ zone$/", "", $data[0]))
@@ -1218,7 +1265,7 @@ class HostGrid {
 		// If we're a zone, check to see if we have the same O/S as the
 		// parent
 
-		if (!$this->map->is_global($zn)) {
+		if (!empty($this->servers) && !$this->map->is_global($zn)) {
 			if ($this->get_parent_prop($zn, "os", "release") !=
 			preg_replace("/ zone$/", "", $data[0]))
 				$class = "boxamber";
@@ -1229,15 +1276,17 @@ class HostGrid {
 
 	protected function show_hostid($data)
 	{
-		// a zone has 
+		// if a zone has a different hostid to its parent, we hightlight it
 
 		$zn = $this->cz["hostname"][0];
 		$id = $data[0];
 		$class = false;
 
-		if (!$this->map->is_global($zn)) {
+		if (!empty($this->servers) && !$this->map->is_global($zn)) {
+
 			if ($this->get_parent_prop($zn, "os", "hostid") != $id)
 				$class = "boxamber";
+
 		}
 
 		return new Cell($id, $class);
@@ -1272,7 +1321,7 @@ class HostGrid {
 
 		// If this is a local zone, get the parent's uptime also
 
-		if (!$this->map->is_global($zn))
+		if (!empty($this->servers) && !$this->map->is_global($zn))
 			$pu = $this->uptime_in_m($this->get_parent_prop($zn, "uptime",
 			"os"));
 
@@ -1388,8 +1437,8 @@ class HostGrid {
 
 		// Now look to see if the kernel is the same as the parent
 
-		if (!$this->map->is_global($zn) && ($data[0] !=
-		$this->get_parent_prop($zn, "os", "kernel")))
+		if (!empty($this->servers) && !$this->map->is_global($zn) &&
+			($data[0] != $this->get_parent_prop($zn, "os", "kernel")))
 			$col = $this->cols->icol("box", "amber");
 			
 		return new Cell($data[0], $class, $col);
@@ -1465,7 +1514,8 @@ class HostGrid {
 		
 		$class = false;
 
-		if (!$this->map->is_global($this->cz["hostname"][0])) {
+		if (!empty($this->servers) &&
+			!$this->map->is_global($this->cz["hostname"][0])) {
 			$p= $this->map->get_parent_zone($this->cz["hostname"][0]);
 			
 			if (isset($this->servers[$p]["os"]["patches"][0])) {
@@ -1720,7 +1770,7 @@ class HostGrid {
 			// If this port is in the "usual ports" array, don't highlight
 			// it
 
-			$class = in_array($a[0], $this->usual_ports)
+			$class = in_array($a[0], $GLOBALS["usual_ports"])
 				? false
 				: "solidamber";
 
@@ -2846,6 +2896,10 @@ class HostGrid {
 
 		foreach($x_arr as $e) {
 			preg_match("/^(\S+) \((\d+)\)$/", $e, $a);
+
+			if (count($a) != 3)
+				continue;
+
 			$un = $a[1];	// username
 			$ui = $a[2];	// UID
 			$class = false;
@@ -3136,14 +3190,17 @@ class HostGrid {
 		$ld = sizeof($this->map->list_ldoms());
 		$lz = sizeof($this->map->list_locals());
 		$vb = sizeof($this->map->list_vbox());
+		$vm = sizeof($this->map->list_vmws());
+		$xvm = sizeof($this->map->list_domus());
+		$unk = sizeof($this->map->list_unknowns());
 		$others = (count($this->map) - PER_PAGE);
 		$parts = 0;
 
-		// Logical domains, virtualboxes and physical servers all have
-		// global zones, so work out how many are physical machines there
-		// are
+		// Logical domains, virtualboxes VMWware instances, XEN domains and
+		// physical servers all have global zones, so work out how many are
+		// actual hosts there are
 
-		$phys = $gz - $ld - $vb;
+		$phys = $gz - $ld - $vb - $vm - $xvm - $unk;
 
 		$ret_str = "displaying ";
 		
@@ -3172,14 +3229,52 @@ class HostGrid {
 			$parts++;
 		}
 
+		// XEN domains
+
+		if ($xvm > 0) {
+			$ret_str .= ($lz == 0 && $ld == 0 && $vm == 0 && $unk == 0)
+				? " and"
+				: ",";
+
+			$ret_str .= " <strong>$xvm</strong> XEN domain";
+
+			if ($xvm != 1) $ret_str .= "s";
+
+			$parts++;
+		}
+
+		// VMWare hosts
+
+		if ($vm > 0) {
+			$ret_str .= ($lz == 0 && $ld == 0 && $unk == 0) ? " and" : ",";
+
+			$ret_str .= " <strong>$vm</strong> VMware instance";
+
+			if ($vm != 1) $ret_str .= "s";
+
+			$parts++;
+		}
+
 		// Now LDOMs
 
 		if ($ld > 0) {
-			$ret_str .= ($lz == 0) ? " and" : ",";
+			$ret_str .= ($lz == 0 && $unk == 0) ? " and" : ",";
 
 			$ret_str .= " <strong>$ld</strong> logical domain";
 
 			if ($ld != 1) $ret_str .= "s";
+
+			$parts++;
+		}
+
+		// Undetermined platforms
+
+		if ($unk > 0) {
+			$ret_str .= ($lz == 0) ? " and" : ",";
+
+			$ret_str .= " <strong>$unk</strong> undetermined platform";
+
+			if ($unk != 1) $ret_str .= "s";
 
 			$parts++;
 		}
@@ -3460,16 +3555,6 @@ class OSGrid extends PlatformGrid
 // NET AUDIT
 
 class NetGrid extends HostGrid {
-
-	protected $usual_ports = array(
-		22,		// sshd
-		111,
-		2049,	// nfs
-		4045	// lockd
-		);
-
-		// We expect these ports to be open, so we don't highlight them if
-		// they are
 }
 
 //==============================================================================
@@ -3548,14 +3633,6 @@ class SecurityGrid extends HostGrid{
 		// show_server() puts the omit data for the current server in this
 		// so the correct data is always available to the methods that use
 		// it
-
-	/*
-	public function __construct($map, $servers, $c)
-	{
-
-		parent::__construct($map, $servers, $c);
-	}
-	*/
 
 	public function show_server($server)
 	{
@@ -4139,14 +4216,26 @@ class Page {
 		$ret = "\n<div id=\"header\"><span id=\"logo\"><a href=\"" 
 		. $this->link_to . "\">s-audit</a></span> ::"
 		. " $this->type";
-				
-		if (isset($this->s_count))
+
+		if (isset($_GET["g"]))
+			$ret .= $this->header_group_name($_GET["g"]);
+
+		if (!empty($this->s_count))
 			$ret .= " :: $this->s_count";
 
 		if (method_exists($this, "add_doc_links"))
 			$ret .= $this->add_doc_links($fn);
 
 		return $ret . "\n</div> <!-- end header -->" . $this->add_content();
+	}
+
+	protected function header_group_name($group)
+	{
+		// Print the name of the group we're viewing. Split out into a
+		// separate method so it can be overridden on single server views
+
+		return " of <strong><a href=\"single_server.php?g=$group"
+		. "\">$group</a></strong> group ";
 	}
 
 	protected function add_content()
@@ -4186,6 +4275,22 @@ class Page {
 
 		return $ret . "</div>";
 		
+	}
+
+	public function f_error($msg = "undefined error", $depth = 0)
+	{
+		// For fatal errors outside a grid. The $depth argument is to close
+		// off open DIVs. Use with care and the pages will stay valid.
+
+		echo "\n\n<div class=\"f_err\">\n<h3>FATAL ERROR</h3>\n\n"
+		. "<p>$msg</p>\n</div>";
+
+		if ($depth)
+			for ($i = 1; $i < $depth; $i++) echo "\n\n</div>";
+
+		Page::close_page();
+
+		exit();
 	}
 
 	public function error($msg = "undefined error")
@@ -4299,6 +4404,26 @@ class ssPage extends audPage {
 
 	protected $styles = array("basic.css", "audit.css", "single_server.css");
 
+	public function __construct($title)
+	{
+		if (preg_match("/@/", $title))
+			$title = preg_replace("/@/", " (zone on ", $title) . ")";
+
+		parent::__construct($title, false);
+	}
+
+	protected function header_group_name($group)
+	{
+		// Print the name of the group we're viewing. Split out into a
+		// separate method so it can be overridden on single server views
+
+		return (isset($_GET["s"]))
+			? " (member of <strong><a href=\"single_server.php?g=$group"
+			. "\">$group</strong> group)"
+			: parent::header_group_name($group);
+	}
+
+
 }
 
 //----------------------------------------------------------------------------
@@ -4373,6 +4498,10 @@ class docPage extends Page {
 class indexPage extends docPage {
 	
 	// Class for the "available groups" default landing page
+
+	protected $styles = array("basic.css", "audit.css", "doc.css",
+	"landing.css");
+		// Stylesheets to apply
 
 	protected $link_to = "http://snltd.co.uk/s-audit/";
 

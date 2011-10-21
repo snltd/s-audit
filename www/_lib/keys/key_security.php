@@ -58,4 +58,3 @@ if (defined("OMIT_STANDARD_ATTRS"))
 	);
 
 ?>
-?>

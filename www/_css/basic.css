@@ -123,3 +123,11 @@ div.t_info {
 	background-color: #ffee99;
 	text-align: center;
 }
+
+div.f_err { /* fatal errors */
+	border: 2px solid black;
+	clear: both;
+	margin: 8em;
+	padding: 0 2em 2em;
+}
+

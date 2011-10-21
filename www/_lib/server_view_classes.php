@@ -37,14 +37,14 @@ class serverView extends HostGrid {
 	protected $gzd;
 		// global zone platform and O/S audit data
 
-	public function __construct($data, $map)
+	public function __construct($map, $servers)
 	{
 		// Populate the variables above
 
 		$this->hostname = $_GET["s"];
 
 		$this->map = $map;
-		$this->data &= $data;
+		$this->servers = $servers;
 
 		if (preg_match("/@/", $this->hostname)) {
 			$zn = explode("@", $this->hostname);
@@ -54,8 +54,8 @@ class serverView extends HostGrid {
 		else
 			$this->parent = $this->hostname;
 
-		$this->zdata = $data[$this->hostname];
-		$this->gzd = $data[$this->parent];
+		$this->zdata = $servers[$this->hostname];
+		$this->gzd = $servers[$this->parent];
 	}
 
 	public function show_grid()
@@ -71,7 +71,8 @@ class serverView extends HostGrid {
 			if (!class_exists($class))
 				$class = "singleGeneric";
 
-			$ret .= new $class($type, $data, $this->map, $this->gzd);
+			$ret .= new $class($type, $data, $this->map, $this->gzd,
+			$this->data);
 		}
 
 		return $ret;
@@ -117,9 +118,20 @@ class singleGeneric extends HostGrid {
 		// first letter of the class name. This can be overriden by setting
 		// $type in the inheriting class
 
-		require_once(ROOT . "/_conf/omitted_data.php");
+		$this->cz = $data;
+		require_once(DEF_DIR . "/misc.php");
 		
-		$this->omit = new omitData();
+		$defs = new defs();
+
+		// Set all the defs here because the way the inheritence works, you
+		// can't do it from the relevant child classes. Doesn't make any
+		// difference anyway
+
+		$this->card_db = $defs->get_data("card_db");
+		$this->hw_db = $defs->get_data("hw_db");
+		$this->sol_upds = $defs->get_data("updates");
+        $this->sun_cc_vers = $defs->get_data("sun_cc_vers");
+
 		$this->cols = new Colours;
 
 		if (!isset($this->type))
@@ -168,7 +180,7 @@ class singleGeneric extends HostGrid {
 			// If we're on the first column, start a new table row
 
 			if ($c == 0)
-				$ret .= "<tr class=\"zone\">";
+				$ret .= "<tr class=\"za\">";
 
 			// Some cells span the whole table. They're listed in the
 			// $one_cols array. If we hit one of those, we need to close off
@@ -182,7 +194,7 @@ class singleGeneric extends HostGrid {
 
 				if ($c != 0) 
 					$ret .= new Cell(false, false, false, false,
-					(($this->columns - $c) * 2)) . "</tr>\n<tr class=\"zone\">";
+					(($this->columns - $c) * 2)) . "</tr>\n<tr class=\"za\">";
 
 				$val_cell = preg_replace("/<td/", "<td colspan=\"" .
 				(($this->columns * 2) - 1) . "\"", $this->show_cell($field,
@@ -214,7 +226,7 @@ class singleGeneric extends HostGrid {
 	{
 		// Print an "audit completed" bar across the whole table
 	
-		return "\n<tr class=\"zone\"><th colspan=\"" . ($columns - 1)
+		return "\n<tr class=\"za\"><th colspan=\"" . ($columns - 1)
 		. "\">audit completed</th>"
 		. $this->show_audit_completed($this->data["audit completed"])
 		. "</tr>";
@@ -241,19 +253,10 @@ class singleGeneric extends HostGrid {
 
 //----------------------------------------------------------------------------
 
+/*
 class singlePlatform extends singleGeneric {
-
-	// Platform needs the card definition database
-	
-	public function __construct($type, $data, $map, $gzd)
-	{
-		require_once(LIB . "/defs.php");
-		$defs = new defs();
-		$this->card_db = $defs->get_data("card_db");
-		$this->hw_db = $defs->get_data("hw_db");
-		parent::__construct($type, $data, $map, $gzd);
-	}
 }
+*/
 
 //----------------------------------------------------------------------------
 
@@ -263,26 +266,12 @@ class singleOS extends singleGeneric {
 
 	protected $type = "O/S";
 	protected $one_cols = array("local zone", "LDOM");
-
-	public function __construct($type, $data, $map, $gzd)
-	{
-		// Get the Solaris version defs
-
-		require_once(LIB . "/defs.php");
-		$defs = new defs();
-		$this->sol_upds = $defs->get_data("updates");
-
-		parent::__construct($type, $data, $map, $gzd);
-	}
-
 }
 
 //----------------------------------------------------------------------------
 
 class singleNet extends singleGeneric {
-
 	protected $one_cols = array("NIC");
-
 }
 
 //----------------------------------------------------------------------------
@@ -307,9 +296,7 @@ class singleApp extends singleGeneric {
 
 		// We need the defs file for the Sun Studio version
 
-		require_once(LIB . "/defs.php");
-		$defs = new defs();
-        $this->sun_cc_vers = $defs->get_data("sun_cc_vers");
+		//require_once(LIB . "/defs.php");
 
 		if ($d <= 4)
 			$this->columns = $d;
@@ -317,6 +304,7 @@ class singleApp extends singleGeneric {
 			$this->columns = 4;
 
 		parent::__construct($type, $data, $map, $gzd);
+
 	}
 
 	protected function show_generic($data)
@@ -344,12 +332,14 @@ class singleApp extends singleGeneric {
 
 //----------------------------------------------------------------------------
 
+/*
 class singleTool extends singleApp {
 
 	// Just change the displayed name.
 
 	protected $type = "Tool";
 }
+*/
 
 //----------------------------------------------------------------------------
 
@@ -439,12 +429,12 @@ class singlePatch extends singleGeneric
 
 			if ($field == "package") {
 				$pdef = 5 ;	// 5 columns for packages
-				$hover = PKG_DEF_DIR . "/pkg_def-${dist}-${ver}-${hw}.php";
+				$hover = DEF_DIR . "/package/pkg_def-${dist}-${ver}-${hw}.php";
 			}
 			//-- patch lists -------------------------------------------------
 			else {
 				$pdef = 7;	// 12 columns for patches
-				$hover = PCH_DEF_DIR . "/pch_def-${ver}-${hw}.php";
+				$hover = DEF_DIR . "/patch/pch_def-${ver}-${hw}.php";
 			}
 
 			// Include the hover map, if we have it
@@ -479,12 +469,12 @@ class singlePatch extends singleGeneric
 				$fcol = false;
 			
 				if ($c == 0) 
-					$ret .= "\n  <tr class=\"zone\">";
+					$ret .= "\n  <tr class=\"za\">";
 
 				// Highlight partially installed packages with a red border
 
 				if (preg_match("/ \(/", $p)) {
-					$bcol = inlineCol::box("red");
+					$bcol = $this->cols->icol("box", "red");
 					$p = preg_replace("/ .*$/", "", $p);
 				}
 				else
@@ -563,18 +553,14 @@ class singlePatch extends singleGeneric
 Class serverListGrid extends HostGrid
 {
 	// This class displays a grid of server and zone names known to the
-	// system. It doesn't extend the existing grid classes because it's
-	// completely different.
+	// system.
 
 	private $map;		// map of all servers
-	private $gkey;		// grid key
 	private $columns; 	// columns in table
 
 	public function __construct($map)
 	{
 		$this->map = $map;
-		require_once(KEY_DIR . "/key_single_server.php");
-		$this->gkey = $generic_key;
 
 		// See how many zones each server has. The maximum will be the
 		// number of columns in the table, unless SS_HOST_COLS is exceeded
@@ -607,7 +593,7 @@ Class serverListGrid extends HostGrid
 		foreach($this->map->list_globals() as $server)
 			$ret .= $this->show_server($server);
 		
-		return $ret . $this->grid_key() . "\n</table>\n";
+		return $ret . "\n</table>\n";
 	}
 
 	public function show_server($server)
@@ -636,21 +622,12 @@ Class serverListGrid extends HostGrid
 
 		$i = 0; // column count. Should not exceed $this->cols
 
-		// The first column is a global zone. But is it an LDOM or a Vbox?
-
-		if (in_array($server, $this->map->list_vbox()))
-			$class = "vb";
-		elseif (in_array($server, $this->map->list_ldoms()))
-			$class = "ldm";
-		else
-			$class = "svhn";
-
-		$ret = "<tr>" . new Cell($this->s_link($server), $class);
+		$ret = "<tr>" . new Cell($this->s_link($server), "sa");
 
 		// Now do the local zones
 
 		foreach($zones as $z) {
-			$ret .= new Cell($this->s_link($z, $server), "zhn");
+			$ret .= new Cell($this->s_link($z, $server), "za");
 
 			// handle row padding. This probably isn't scrictly necessary, I
 			// think all browsers handle short rows properly, but I like to

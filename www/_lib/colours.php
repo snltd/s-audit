@@ -57,17 +57,38 @@ class colours {
 		"iscsi" => "#DF1711",
 	);
 
-	// $vm_cols is a list of colours used in the VM column of the O/S audit page
+	// $vm_cols is a list of colours used in the hostname column. 
 
 	protected $vm_cols = array(
-		"lzone" => "#D68251",
-		"bzone" => "#C7C761",
-		"domu" => "#703D3E",
-		"dom0" => "#985355",
-		"vbox" => "#2B2E70",
-		"vmware" => "#437061",
-		"ldmp" => "#2A480E",
-		"ldm" => "#21701A"
+		"lzone" => "#D68251",	// local zone
+		"bzone" => "#df8439",	// branded zone
+		"domu" => "#703D3E",	// XEN domU
+		"dom0" => "#985355",	// XEN dom0
+		"vbox" => "#2B2E70",	// VirtualBox
+		"vmware" => "#437061",	// VMWare instance
+		"ldmp" => "#2A480E",	// primary logical domain
+		"ldm" => "#21701A",		// guest logical domain
+		"unk" => "#DC8A82"		// unknown virtualization
+	);
+
+	// Colours used in the hostname column. First machines, mostly virtual.
+	// These match up with the $vm_cols array
+
+	protected $m_cols = array(
+		"vbox" => "#2B2E70",	// VirtualBox
+		"vmware" => "#437061",	// VMWare instance
+		"ldmp" => "#2A480E",	// primary logical domain
+		"ldm" => "#21701A",		// guest logical domain
+		"dom0" => "#985355",	// XEN dom0
+		"domu" => "#703D3E",	// XEN domU
+		"unk" => "#DC8A82"		// unknown virtualization
+	);
+
+	// now zones
+	
+	protected $z_cols = array(
+		"szone" => "#439069",	// sparse root zone
+		"bzone" => "#df8439"	// branded zone
 	);
 
 	// $ws_cols is a list of colours used to identify different webserver

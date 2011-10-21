@@ -16,7 +16,7 @@ $generic_key = array(
 
 	"hostname" => array(
 		array("<strong>physical server</strong>/VM", "sa", false),
-		array("local zone", "za", false),
+		array("native zone", "za", false),
 	),
 
 	"audit completed" => array(
@@ -26,5 +26,25 @@ $generic_key = array(
 	)
 
 );
+
+$eng = array(
+	"unk" => "unknown platform",
+	"lzone" => "local zone",
+	"bzone" => "branded zone",
+	"szone" => "sparse root zone",
+	"domu" => "XEN domU",
+	"dom0" => "XEN dom0",
+	"vbox" => "VirtualBox",
+	"vmware" => "VMWare",
+	"ldmp" => "primary LDOM",
+	"ldm" => "guest LDOM");
+
+foreach($this->cols->get_col_list("m_cols") as $vm=>$col) {
+	$generic_key["hostname"][] = array($eng[$vm], "k$vm");
+}
+
+foreach($this->cols->get_col_list("z_cols") as $vm=>$col) {
+	$generic_key["hostname"][] = array($eng[$vm], "k$vm");
+}
 
 ?>

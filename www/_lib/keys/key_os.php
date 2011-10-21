@@ -71,6 +71,7 @@ $grid_key = array(
 # Generate the VM column automatically
 
 $eng = array(
+		"unk" => "unknown",
         "lzone" => "local zone",
         "bzone" => "branded zone",
         "domu" => "XEN dom0",
@@ -82,6 +83,7 @@ $eng = array(
 
 
 foreach($this->cols->get_col_list("vm_cols") as $vm=>$col) {
+	if ($vm == "phys") continue;
 	$grid_key["VM"][] = array($eng[$vm], $vm);
 }
 

@@ -53,17 +53,17 @@ class ZoneMap extends ZoneMapBase {
 		if (isset($group))
 			$audit_dir = AUDIT_DIR . "/${group}/hosts";
 		else
-			page::error("No audit group.");
+			page::ferror("No audit group.");
 
 		// Check we've got some data
 
 		if (!is_dir($audit_dir))
-			page::error("missing directory. [${audit_dir}]");
+			page::ferror("missing directory. [${audit_dir}]");
 
 		$server_dirs = $this->fs->get_files($audit_dir, "d");
 
 		if (sizeof($server_dirs) == 0)
-			page::error("no audit data. [${audit_dir}]");
+			page::ferror("no audit data. [${audit_dir}]");
 
 		// Throw away server_dirs we aren't interested in, but not if we're
 		// on the single server view page
@@ -175,24 +175,43 @@ class GetServers extends GetServersBase {
 
 			$hn = $server["platform"]["hostname"][0];
 
-			// Catch non-running zones
+			// Catch non-running or branded zones - they just show up as "zone"
 
 			$v = (isset($server["platform"]["virtualization"][0]))
-				? preg_replace("/ .*$/", "",
-				$server["platform"]["virtualization"][0])
+				? $server["platform"]["virtualization"][0]
 				: "zone";
+			
+			// type of VM
 
-			if ($v != "zone")
+			$t = preg_replace("/ .*/", "", $v);
+
+			// c_g is the current global zone. If we're not examining a
+			// zone, set it to the current hostname.
+
+			if ($t != "zone")
 				$c_g = $hn;
 
-			if ($v == "VirtualBox")
+			if ($t == "VirtualBox")
 				$map->vbox[] = $hn;
-			elseif ($v == "primary")
+			elseif ($t == "primary")
 				$map->pldoms[] = $hn;
-			elseif ($v == "guest")
+			elseif ($t == "guest")
 				$map->ldoms[] = $hn;
-			elseif($v == "zone")
+			elseif ($t == "xVM") {
+
+				if (preg_match("/domU/", $v))
+					$map->domu[] = $hn;
+				else
+					$map->dom0[] = $hn;
+
+			}
+			elseif($t == "VMware")
+				$map->vmws[] = $hn;
+			elseif($t == "zone") {
 				$map->locals[] = $map->servers[$c_g][] = $hn;
+				}
+			elseif($t == "undetermined")
+				$map->unknowns[] = $hn;
 			
 		}
 

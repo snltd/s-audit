@@ -40,15 +40,15 @@ ul.navlist, th, td.keyhead, td.sskeyhead {
 	clear: both;
 	text-align: right;
 	color: #fff;
-	background-color: #2E3175;
-	border-top: 1px solid #383C8E;
+	background-color: #2e3175;
+	border-top: 1px solid #383c8e;
 	border-bottom: 1px solid #eee;
 	font-size: 8pt;
 	margin: 0 0 20px 0;
 }
 
 li.here {
-	background-color: #5C77BD;
+	background-color: #5c77bd;
 }
 
 
@@ -78,36 +78,25 @@ div.strl { /* strong text on its own line */
 /*-- backgrounds for rows --------------------------------------------------*/
 
 .sa {	/* normal global zone */
-	background-color: #C0C9E4;
+	background-color: #c0c9e4;
 }
 
 .sb {	/* alternate global zone */
-	background-color: #B4BCD5;
+	background-color: #b4bcd5;
 }
 
 .za {	/* normal local zone */
-	background-color: #DCDCDC;
+	background-color: #dcdcdc;
 }
 
 .zb {	/* alternate local zone */
-	background-color: #CECECE;
+	background-color: #cecece;
 }
 
 /*-- hostnames -------------------------------------------------------------*/
 
-div.zonehn, div.serverhn { /* hostname for local zones */
-	white-space: nowrap;
-	text-align: left;
-	padding-left: 15px;
-}
-
-div.serverhn { /* hostname for global zones/physical servers */
-	font-weight: bold;
-	padding-left: 3px;
-}
-
 td.zlx, td.znoinf { /* lx branded zones and non-running zones */
-	background: #C7C761;
+	background: #c7c761;
 	vertical-align: middle;
 }
 
@@ -115,15 +104,14 @@ td.zlx {	/* lx branded zones */
 	background: #df8439;
 }
 
-
 /*-- versioning ------------------------------------------------------------*/
 
 .ver_l { /* latest version of something */
-	background: #A5C5B0;
+	background: #a5c5b0;
 }
 
 .ver_o { /* old versions of something */
-	background: #DC8A82;
+	background: #dc8a82;
 }
 
 /*-- embedded lists --------------------------------------------------------*/

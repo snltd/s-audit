@@ -1,4 +1,13 @@
-/* Special stylesheet for vim processed scripts */
+/*==========================================================================
+ *
+ * doc.css
+ * -------
+ *
+ * Styles for scripts and stuff syntax-coloured by Vim.
+ *
+ * s-audit (c) 2011 SNLTD
+ *
+ *==========================================================================*/
 
 .Special {
 	color: #ff40ff

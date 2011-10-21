@@ -42,7 +42,8 @@ are adding, and they should follow the &quot;ini&quot; file format.</p>
 <p>The file must contain at least one section, which equates to a field.
 Fields are defined in <tt>[</tt>square brackets<tt>]</tt>.  After the field
 definition, add information for host in <tt>hostname=value</tt> format,
-one host per line.</p>
+one host per line. If &quot;value&quot; contains whitespace or special
+characters, it must be quoted.</p>
 
 <p>The special keyword <tt>AFTER</tt> can be used to request that the
 interface inserts your static field immediately after a given field in the
@@ -76,6 +77,12 @@ s-infra-02=42389
 [ALOM F/W]
 s-infra-02=6.7.11
 s-infra-01=6.7.11
+
+[location]
+s-infra-01="data centre"
+s-infra-02="data centre"
+s-ws-01="comms room"
+s-ws-02="comms room"
 </pre>
 
 <h2>Location</h2>

@@ -51,8 +51,20 @@ class ZoneMapBase {
 		// List of logical domains which are not physical servers.  Subset
 		// of $globals
 
+	public $domu = array();
+		// XEN domUs
+	
 	public $vbox = array();
 		// List of virtualboxes. Subset of $globals
+
+	public $xvms = array();
+		// list of XEN virtual machines. Subset of $globals
+
+	public $vmws = array();
+		// List of VMware virtual machines. Subset of $globals
+
+	public $unknowns = array();
+		// Unknown platforms
 
 	public $servers = array();
 		// on the face of it, like $this->globals, but associative. Each key
@@ -103,6 +115,34 @@ class ZoneMapBase {
 		// Returns an array of all virtualboxes
 
 		return $this->vbox;
+	}
+
+	public function list_vmws()
+	{
+		// Returns an array of hosts running as VMware instances
+
+		return $this->vmws;
+	}
+
+	public function list_unknowns()
+	{
+		// Returns an array of machines with unknown virtualization
+
+		return $this->unknowns;
+	}
+
+	public function list_dom0s()
+	{
+		// Returns an array of hosts running as XEN dom0 domains
+
+		return $this->dom0;
+	}
+
+	public function list_domus()
+	{
+		// Returns an array of hosts running as XEN domU domains
+
+		return $this->domu;
 	}
 
 	public function list_locals()

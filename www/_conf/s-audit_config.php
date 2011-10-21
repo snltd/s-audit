@@ -76,6 +76,14 @@ define("MIN_AF_VER", 3.0);
 define("C_YEAR", "2011");
 	// Year for (c) messages
 
+$usual_ports = array(
+	22,     // sshd
+	111,
+	2049,   // nfs
+	4045    // lockd
+);
+	// The ports we expect to be open. Used for network audits
+
 // We always need our basic classes
 
 require_once(LIB . "/display_classes.php");

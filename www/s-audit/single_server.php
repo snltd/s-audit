@@ -39,13 +39,20 @@ if (($server)) {
 	// in this array. GetServers always gets platform data, so no need to
 	// specify it here
 
-	if ($map->is_global($server))
+	// If this is a global, no need to get the locals, but if not, get the
+	// parent information
+
+	if ($map->is_global($server)) {
 		define("NO_ZONES", 1);
+		$s_list = array($server);
+	}
+	else
+		$s_list = array($server, preg_replace("/.*@/", "", $server));
 
 	$data = new GetServers($map, $server, array("os", "net", "fs", "app",
 	"tool", "hosted", "security", "patch"));
 
-	$view = new serverView($data->get_array(), $map);
+	$view = new serverView($map, $data->get_array());
 }
 
 else {

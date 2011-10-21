@@ -1,4 +1,13 @@
-/* classes for the IP listing page */
+/*==========================================================================
+ *
+ * ip_listing.css
+ * --------------
+ *
+ * Styles required for the IP address list page
+ *
+ * s-audit (c) 2011 SNLTD
+ *
+ *==========================================================================*/
 
 .resolved { /* addresses which resolve and ping */
 	background: #acce9a
