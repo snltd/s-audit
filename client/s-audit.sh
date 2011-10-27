@@ -2413,7 +2413,7 @@ function get_vbox
 
 function get_wcons
 {
-	# Is WebConsole running and listening?
+	# Is WebConsole running and listening? Solaris 10 first
 
 	if can_has smcwebserver
 	then
@@ -2429,9 +2429,14 @@ function get_wcons
 			msg="not running"
 		fi
 
-		disp "WebConsole" $msg
+		# Now SMC on Solaris 9
+
+	elif [[ -f /usr/sadm/lib/smc/bin/smcboot ]]
+	then
+		is_running smcboot && msg=running || msg="not running"
 	fi
 
+	disp "SMC" $msg
 }
 
 function get_sshd
