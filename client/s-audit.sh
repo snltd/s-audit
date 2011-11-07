@@ -107,30 +107,30 @@ EXTRAS="/etc/s-audit_extras"
 if [[ -n $HAS_DL ]] && dladm 2>&1 | $EGS "show-ether.*-o"
 then
 
-	if dladm show-ether -p >/dev/null 2>&1
+	if dladm show-link -p >/dev/null 2>&1
 	then
-		DL_DEVLIST_CMD='dladm show-link -p | cut -d\" -f2'
-		DL_TYPE_CMD='dladm show-link -p $S0 | cut -d\" -f4'
-		DL_LINK_CMD='dladm show-link -p $S0 | cut -d\" -f8'
-		DL_SPEED_CMD='dladm show-ether -p $S0 | cut -d\" -f10'
+		DL_DEVLIST_CMD='show-link -p | cut -d\" -f2'
+		DL_TYPE_CMD='show-link -p $S0 | cut -d\" -f4'
+		DL_LINK_CMD='show-link -p $S0 | cut -d\" -f8'
+		DL_SPEED_CMD='show-ether -p $S0 | cut -d\" -f10'
 	else
-		DL_DEVLIST_CMD='dladm show-link -po link'
-		DL_TYPE_CMD='dladm show-link -po class $S0'
-		DL_LINK_CMD='dladm show-link -po state $S0'
-		DL_SPEED_CMD='dladm show-ether -pospeed-duplex $S0'
+		DL_DEVLIST_CMD='show-link -po link'
+		DL_TYPE_CMD='show-link -po class $S0'
+		DL_LINK_CMD='show-link -po state $S0'
+		DL_SPEED_CMD='show-ether -pospeed-duplex $S0'
 	fi
 
-	DL_ZONE_CMD='dladm show-linkprop -c -pzone -o value $S0 | 
+	DL_ZONE_CMD='show-linkprop -c -pzone -o value $S0 | 
 	sed "s/^.*=\"\([^\"]*\)\"/\1/"'
 
 elif [[ -n $HAS_DL ]]
 then
-	DL_DEVLIST_CMD='dladm show-dev -p | cut -d" " -f1'
-	DL_TYPE_CMD='dladm show-link -p $S0 | sed "s/^.*type=\([^ ]*\).*$/\1/"'
-	DL_LINK_CMD='dladm show-dev -p $S0 | sed "s/^.*link=\([^ ]*\).*$/\1/"'
-	DL_ZONE_CMD='dladm show-linkprop -c $S0 |
+	DL_DEVLIST_CMD='show-dev -p | cut -d" " -f1'
+	DL_TYPE_CMD='show-link -p $S0 | sed "s/^.*type=\([^ ]*\).*$/\1/"'
+	DL_LINK_CMD='show-dev -p $S0 | sed "s/^.*link=\([^ ]*\).*$/\1/"'
+	DL_ZONE_CMD='show-linkprop -c $S0 |
 	sed -n "/Y=\"zone\"/s/^.*VALUE=\"\([^\"]*\).*$/\1/p"'
-	DL_SPEED_CMD='dladm show-dev -p $S0 |
+	DL_SPEED_CMD='show-dev -p $S0 |
 	sed "s/^.*speed=\([^ ]*\).*duplex=\(.*\)$/\1Mb:\2/"'
 fi
 
@@ -157,8 +157,8 @@ L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count package_count
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	svnserve sendmail exim cronolog mailman splunk sshd named ssp symon
-	samba x vbox wcons"
-G_APP_TESTS="vxvm vxfs vcs ldm $L_APP_TESTS nb_c nb_s" 
+	samba x vbox smc"
+G_APP_TESTS="vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
 L_TOOL_TESTS="openssl rsync mysql_c pgsql_c sqlplus svn_c java perl php_cmd
 	python ruby cc gcc pca nettracker saudit scat explorer"
@@ -1118,6 +1118,8 @@ function get_lux_enclosures
 	# the firmware revision, for each FC attached device that luxadm can
 	# find.
 
+	is_root || return
+
 	# Get unique node WWNs, which should identify each attached device.
 
 	luxadm probe 2>/dev/null \
@@ -1197,7 +1199,8 @@ function get_cards
 		do
 			desc=${desc#\(}
 			desc=${desc%\)}
-			disp "card" "$desc ($extra $slot@${hz}MHz)"
+
+			disp "card" "$desc ($name $slot@${hz}MHz) $extra"
 		done
 
 	fi
@@ -1353,7 +1356,7 @@ function mk_nic_devlist
 
 	if is_global && is_root && [[ -n $HAS_DL ]]
 	then
-		DLST2=$(eval $DL_DEVLIST_CMD)
+		DLST2=$(eval dladm $DL_DEVLIST_CMD)
 	elif is_global
 	then
 		DLST2=$(ls /dev | egrep "e1000g|bge|qfe|hme|ce|pcn|ge|dmfe|iprb" \
@@ -1399,7 +1402,7 @@ function get_nic
 		# whatever. This needs privs on some OSes, so silence the error
 
 		[[ $S0 == *:* ]] || ! is_global \
-		|| nic_type=$(eval $DL_TYPE_CMD 2>/dev/null)
+		|| nic_type=$(eval dladm $DL_TYPE_CMD 2>/dev/null)
 
 		if [[ -n $S1 ]]
 		then
@@ -1420,7 +1423,7 @@ function get_nic
 
 			IPMP=$(ifconfig $S0 | grep -w groupname)
 
-			[[ -n $IPMP ]] && S5=${IPMP##* }
+			[[ -n $IPMP ]] && S5="IPMP=${IPMP##* }"
 
 			# Is this address under the control of DHCP?
 
@@ -1471,13 +1474,13 @@ function get_nic
 				# If the interface is "up" then we can assume it's doing
 				# something. If not, call it "uncabled" and give up
 
-				if [[ $(eval $DL_LINK_CMD) == "up" ]]
+				if [[ $(eval dladm $DL_LINK_CMD) == "up" ]]
 				then
 
 					# Is the interface owned by a zone? If it is, it must be
 					# for an exclusive IP instance
 
-					IPZONE=$(eval $DL_ZONE_CMD)
+					IPZONE=$(eval dladm $DL_ZONE_CMD)
 
 					if [[ -n $IPZONE ]]
 					then
@@ -1522,9 +1525,9 @@ function get_nic
 
 			# Use dladm if we can. If not, try kstat, then ndd
 
-			if [[ -n $HAS_DL ]] && eval $DL_DEVLIST_CMD | $EGS "^$S0"
+			if [[ -n $HAS_DL ]] && eval dladm $DL_DEVLIST_CMD | $EGS "^$S0"
 			then
-				S4=$(eval $DL_SPEED_CMD)
+				S4=$(eval dladm $DL_SPEED_CMD)
 			elif can_has kstat
 			then
 				KDEV=${S0%[0-9]*}
@@ -2411,32 +2414,38 @@ function get_vbox
 	can_has VBoxManage && disp VirtualBox $(VBoxManage --version)
 }
 
-function get_wcons
+function get_smc
 {
-	# Is WebConsole running and listening? Solaris 10 first
+	# Is SMC running and listening? Solaris 10 first
 
 	if can_has smcwebserver
 	then
-		s="system/webconsole"
-		
-		if [[ $(svcs -H -o state $s) == "online" ]]
-		then
-			msg="running"
-			
-			[[ $(svcprop -p options/tcp_listen $s) == "true" ]] \
-				&& msg="$msg and listening"
-		else
-			msg="not running"
-		fi
+		V=$(smcwebserver --version)
 
-		# Now SMC on Solaris 9
+		if (( $OSVERCMP < 510 ))
+		then
+			netstat -an | $EGS "6789.*LISTEN" && msg="running"
+		else
+			s="system/webconsole"
+		
+			if [[ $(svcs -H -o state $s) == "online" ]]
+			then
+				msg="running"
+			
+				[[ $(svcprop -p options/tcp_listen $s) == "true" ]] \
+					&& msg="$msg and listening"
+			else
+				msg="not running"
+			fi
+
+		fi
 
 	elif [[ -f /usr/sadm/lib/smc/bin/smcboot ]]
 	then
 		is_running smcboot && msg=running || msg="not running"
 	fi
 
-	disp "SMC" $msg
+	[[ -n $msg ]] && disp "SMC" "${V##* } ($msg)"
 }
 
 function get_sshd
@@ -2504,6 +2513,13 @@ function get_vxfs
 	# querying the loaded module list
 
 	disp "VxFS" $(modinfo | sed -n '/vxfs/s/^.*xFS \([^ ]*\).*/\1/p')
+}
+
+function get_scs
+{
+	# Get the Sun cluster version
+	
+	can_has scinstall && is_run_ver "Sun Cluster" cl_eventd $(scinstall -p)
 }
 
 function get_vcs
@@ -3025,7 +3041,7 @@ function get_capacity
 	
 	for fstyp in ufs vxfs
 	do
-		df -kF$fstyp | sed '1d'
+		df -kF$fstyp 2>/dev/null | sed '1d'
 	done | while read dev sz usd av cap mpt
 	do
 		((avail = $avail + $sz * 1024))
