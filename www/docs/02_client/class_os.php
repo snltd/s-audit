@@ -21,19 +21,19 @@ $pg = new docPage($menu_entry);
 <h2>Checks</h2>
 
 <dl>
-	<dt>os_dist</dt>
+	<dt>distribution (os_dist)</dt>
 	<dd>Tries to work out the &quot;distribution&quot; of the operating
 	environment. Normally this is Solaris, but nowadays may be OpenSolaris,
 	<a href="http://www.nexenta.org">Nexenta</a>, <a
 	href="http://www.belenix.org">BeleniX</a>, or others. Displays as
 	&quot;distribution&quot;.</dd>
 
-	<dt>os_ver</dt>
+	<dt>version (os_ver)</dt>
 	<dd>Displays the SunOS version of the operating system. For Solaris
 	releases, also displays the marketing release number, for instance
 	&quot;Solaris 2.6&quot;. Displays as &quot;version&quot;.</dd>
 
-	<dt>os_rel</dt>
+	<dt>release (os_rel)</dt>
 	<dd>Prints the release of the operating environment. For recent Solaris
 	releases this is the month/year release date; for older Solarises it
 	will try to get the WoS number. Other distributions will vary. Displays
