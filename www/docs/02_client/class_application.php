@@ -213,6 +213,10 @@ running and which are not.  This may change in a future release.  </p>
 	VxFS, this is done by querying the loaded kernel module. Omitted in
 	local zones, and requires root privileges.</dd>
 
+	<dt>SMC</dt>
+	<dd>Reports the version of Sun Web Console, Sun Java Web Console, or
+	SMC.</dd>
+
 	<dt>x</dt>
 	<dd>If X server software is found on the box, this test reports on the
 	variety (XSun or <a href="http://www.x.org/wiki/">Xorg</a>) and, for

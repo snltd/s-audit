@@ -217,6 +217,15 @@ systems, you're lucky.</dd>
 	echo $dh->colour_key($dh->grid_key["storage"]);
 ?>
 
+<dt>EEPROM</dt>
+<dd>Lists selected EEPROM settings. Standard EEPROM parameters such as
+<tt>diag-level</tt> are in a blue box, device aliases (devaliases) are in
+red.</dd>
+
+<?php
+	echo $dh->colour_key($dh->grid_key["EEPROM"]);
+?>
+
 <dt>printer</dt>
 <dd>Lists any printers to which the host has access. They may or may not
 be physically attached. The default printer is denoted.</dd>
