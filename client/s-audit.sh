@@ -143,7 +143,7 @@ CL_LS=" platform os net fs app tool hosted security patch "
 # lists are always bookended by "hostname" and "time". 
 
 G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
-	optical lux_enclosures tape_drives cards printers" 
+	optical lux_enclosures tape_drives cards printers eeprom" 
 L_PLATFORM_TESTS="virtualization printers"
 
 G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
@@ -152,19 +152,19 @@ L_NET_TESTS=$G_NET_TESTS
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
 	vboxes scheduler svc_count package_count patch_count pkg_repo uptime "
-L_OS_TESTS="os_dist os_ver os_rel kernel hostid svc_count package_count 
+L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count 
 	patch_count pkg_repo uptime"
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	svnserve sendmail exim cronolog mailman splunk sshd named ssp symon
-	samba x vbox smc"
+	samba x vbox smc ai_srv"
 G_APP_TESTS="vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
 L_TOOL_TESTS="openssl rsync mysql_c pgsql_c sqlplus svn_c java perl php_cmd
 	python ruby cc gcc pca nettracker saudit scat explorer"
 G_TOOL_TESTS="sccli sneep vts $L_TOOL_TESTS"
 
-G_HOSTED_TESTS="site_apache site_iplanet db_mysql"
+G_HOSTED_TESTS="site_apache site_iplanet db_mysql ai"
 L_HOSTED_TESTS=$G_HOSTED_TESTS
 
 G_PATCH_TESTS="patch_list package_list"
@@ -1112,6 +1112,23 @@ function get_printers
 
 }
 
+function get_eeprom
+{
+	# Get selected EEPROM data and device aliases
+
+	eeprom | egrep \
+	"scsi-initiator|use-nvramrc|diag-level|auto-boot|boot-device|local-mac" | \
+	while read e
+	do
+		disp "EEPROM" $e
+	done
+
+	eeprom | grep devalias | while read d
+	do
+		disp "EEPROM" "devalias ${d#*devalias }"
+	done
+}
+
 function get_lux_enclosures
 {
 	# Prints a string of the form "Vendor Product-ID (fw REV)" where REV is
@@ -1465,6 +1482,9 @@ function get_nic
 					"/dev=switch@${S0#vsw}/s/^.*net-dev=\([^|]*\).*$/\1/p")"
 				fi
 
+			elif [[ $nic_type == "aggr" ]]
+			then
+				S1="aggregate"
 			elif [[ $nic_type == "etherstub" ]]
 			then
 				S1="etherstub"
@@ -1502,23 +1522,38 @@ function get_nic
 				S1="uncabled"
 			fi
 
-			[[ $nic_type == "vnic" ]] \
-				&& S6="vnic over $(dladm show-link -poover $S0)"
-
 		fi
 
 		# Did the interface have a vswitch on it?
 
 		[[ $VSW_IF_LIST == *" $S0 "* ]] && S6="+vsw"
 
-		# So long as the interface isn't "uncabled", and is a physical port,
-		# we can probably get its speed. Some interfaces, we can't
+		# You can't get a speed for uncabled, or PCN interfaces.
 
 		if [[ $S0 == *"pcn"* && $S1 != "uncabled" ]]
 		then
 			S4="unknown"
-		elif [[ $nic_type == "vnic" || $nic_type == "etherstub" ]]
+		elif [[ $nic_type == "aggr" ]]
 		then
+			# put the underlying NICs, policy and LACP policy in S5
+
+			S5="over $(dladm show-link $S0 -p -o over | tr \  ,) \
+			$(dladm show-aggr -po policy,addrpolicy)"
+		elif [[ $nic_type == "vnic" ]]
+		then
+			# Put the underlying NIC in S5, the speed in S6 and the MAC in
+			# $mac for later. I believe VNICs are full duplex
+
+			dladm show-vnic $S0 -po over,speed | tr : \  | read S5 S4
+
+			mac=$(dladm show-vnic $S0 -po macaddress)
+			S4="${S4}000000-f"
+			S5="over $S5"
+		
+		elif [[ $nic_type == "etherstub" ]]
+		then
+			# You can only get the MTU for etherstubs. Doesn't seem worth
+			# bothering
 			:
 		elif [[ $S1 != "uncabled" ]] && is_root && is_global
 		then
@@ -1565,9 +1600,9 @@ function get_nic
 
 		[[ $S4 == *"unknown"* ]] && S4="unknown"
 
-		# S2 going to be the MAC address
+		# S2 going to be the MAC address, which we already have for VNICs
 
-		if is_root
+		if is_root && [[ -z $mac ]]
 		then
 			mac=$(ifconfig $S0 2>/dev/null | sed -n "/ether/s/^.*r //p")
 
@@ -2448,6 +2483,22 @@ function get_smc
 	[[ -n $msg ]] && disp "SMC" "${V##* } ($msg)"
 }
 
+function get_ai_srv
+{
+	# Is there an AI install or package (repo) server running?
+
+	for srv in install pkg
+	do
+		unset x
+		s=$(svcs -Ho state ${srv}/server 2>/dev/null)
+
+		[[ -n $s ]] && x="not running"
+		[[ $s == "online" ]] && x="running"
+
+		[[ -n $x ]] && disp "AI server" "$srv server (${x})"
+	done
+}
+
 function get_sshd
 {
 	# Get the version of the SSH daemon. Seems the only way to get it is to
@@ -2518,8 +2569,15 @@ function get_vxfs
 function get_scs
 {
 	# Get the Sun cluster version
+
+	scr=/etc/cluster/release 
 	
-	can_has scinstall && is_run_ver "Sun Cluster" cl_eventd $(scinstall -p)
+	if [[ -f $scr ]]
+	then
+		scv=$(sed -n '1s/^.*Cluster \([^ ]*\) .*$/\1/p' $scr)
+		is_running cluster || scx="(not running)"
+		disp "Sun Cluster" ${scv:-unknown} $scx
+	fi
 }
 
 function get_vcs
@@ -3012,8 +3070,42 @@ function get_db_mysql
 
 function get_ai
 {
-	# Get install services on an AI server
-	:
+	# Get install services on an AI server. List AI service name with path
+	# and architecture
+
+	if can_has installadm 
+	then
+
+		installadm list 2>&1 | sed '1,2d' | while read n st a p pth
+		do
+			disp "AI service" "$n $pth (${a}/${st})"
+		done
+
+		# Now list the install clients by MAC address, with the associated
+		# install service and architecture
+
+		installadm list -c 2>&1 | sed '1,2d' | while read s cm a pth
+		do
+
+			# installadm output is not easily parsable. It only prints the
+			# install service name once, so we may have to shift the
+			# variables along. We also record the last service name seen in
+			# ls
+
+			if [[ -z $pth ]]
+			then
+				pth=$a
+				a=$cm
+				cm=$s
+				s=$ls
+			fi
+
+			ls=$cm
+			disp "AI client" "$cm $s (${a})"
+		done
+
+	fi
+
 }
 
 #-- FILESYSTEM AUDIT FUNCTIONS -----------------------------------------------
