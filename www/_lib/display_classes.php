@@ -1194,14 +1194,14 @@ class HostGrid {
 				$txt = "$cname<br/>$a[2]";
 			}
 			else {
-				preg_match("/^(\S+) \((\S+) (.*)\)$/", $datum, $a);
+				preg_match("/^(\S+) \((\S+) (.*)\)(.*)$/", $datum, $a);
 
 				if (count($a) < 2)
 					break;
 
-				$cname = (in_array($a[2],
+				$cname = (in_array(trim($a[4]),
 				array_keys($this->card_db["pci"])))
-					? "<strong>" .  $this->card_db["pci"][$a[2]] .
+					? "<strong>" .  $this->card_db["pci"][trim($a[4])] .
 					"</strong> ($a[2] $a[1])"
 					: "<strong>$a[2] $a[1]</strong>";
 
@@ -1672,9 +1672,9 @@ class HostGrid {
 
 			switch($a[4]) {
 
-				case "down":		// lx brand zones
-				case "incomplete":	// local zones
-				case "aborted":		// VBox
+				case "down":			// lx brand zones
+				case "incomplete":		// local zones
+				case "aborted":			// VBox
 					$sc = "solidred";
 					break;
 
@@ -1683,6 +1683,7 @@ class HostGrid {
 					break;
 
 				case "idle":			// xVM
+				case "configured":		// local zone
 					$sc = "solidamber";
 					break;
 
@@ -1695,7 +1696,6 @@ class HostGrid {
 
 				default:
 					$sc = false;
-					echo $a[4];
 			}
 
 			$idc["state"] = $sc;
@@ -2344,7 +2344,7 @@ class HostGrid {
 		foreach($data as $dg) {
 			$id = $idc = array();
 	
-			preg_match("/(\w+) \((\w+)\) \[([^\]]*)\](.*)$/", $dg, $a);
+			preg_match("/(\w+) \((\S+)\) \[([^\]]*)\](.*)$/", $dg, $a);
 
 			// Gives us and array of the form:
 			// [1] => disk group name
@@ -2353,6 +2353,10 @@ class HostGrid {
 			// [4] => [ERRS: n disk/m plex] or nothing
 
 			// The name and state are easy
+
+			// If the state has "cds" or whatever tagged on, remove it
+
+			$a[2] = preg_replace("/,.*/", "", $a[2]);
 
 			$txt = "<strong>$a[1]</strong> ($a[2])";
 

@@ -60,7 +60,7 @@ class colours {
 	// $vm_cols is a list of colours used in the hostname column. 
 
 	protected $vm_cols = array(
-		"lzone" => "#D68251",	// local zone
+		"lzone" => "#8B9ADF",	// local zone
 		"bzone" => "#df8439",	// branded zone
 		"domu" => "#703D3E",	// XEN domU
 		"dom0" => "#985355",	// XEN dom0
