@@ -140,6 +140,7 @@ if ($qs == "index.php" || $qs == "platform.php" || defined("ALL")) {
 	echo "\n/* begin platformcols */\n";
 
 	foreach(array_merge($cols->get_col_list("stor_cols"),
+	$cols->get_col_list("eeprom_cols"),
 	$cols->get_col_list("card_cols")) as $name=>$hex)
 		echo "\n.$name { border: 2px solid ${hex} }";
 

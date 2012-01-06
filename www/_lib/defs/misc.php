@@ -103,17 +103,18 @@ class defs {
 	private $card_db =  array(
 
 			"sbus" => array(
+				"QLGC,isp/sd" => "QLogic FCAL HBA",
 				"SUNW,qfe" => "Sun Quad Fast Ethernet",
-				"SUNW,socal/sf" => "Sun differential SCSI",
-				"QLGC,isp/sd" => "QLogic FCAL HBA"
+				"SUNW,socal/sf" => "Sun differential SCSI"
 			),
 
 			"pci" => array(
 				"FCX2-6562" => "JNI dual-port HBA",
-				"QLA2342" => "QLogic FCAL HBA",
-				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet",
+				"FCX2-6562-L" => "JNI dual-port HBA",
 				"LSI,1030" => "LSI diffrential SCSI",
-				"SUNW,pci-ce" => "Sun Gigaswift Ethernet (fc)"
+				"QLA2342" => "QLogic FCAL HBA",
+				"SUNW,pci-ce" => "Sun Gigaswift Ethernet (fc)",
+				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet"
 			)
 		);
 

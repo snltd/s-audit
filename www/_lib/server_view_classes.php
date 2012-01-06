@@ -428,8 +428,17 @@ class singlePatch extends singleGeneric
 			//-- package lists -----------------------------------------------
 
 			if ($field == "package") {
-				$pdef = 5 ;	// 5 columns for packages
-				$hover = DEF_DIR . "/package/pkg_def-${dist}-${ver}-${hw}.php";
+
+				// IPS packages have much longer names than SVR4 ones, so
+				// use two columns for the former, five for the latter. Use
+				// system/network, because every zone has to have it
+
+				$pdef = (in_array("system/network", array_values($val)))
+					? 2
+					: 5;
+
+				$hover = DEF_DIR . preg_replace("/ /", "_",
+				"/package/pkg_defs-${dist}-${ver}-${hw}.php");
 			}
 			//-- patch lists -------------------------------------------------
 			else {

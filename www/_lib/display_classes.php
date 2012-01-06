@@ -868,7 +868,7 @@ class HostGrid {
 
 		$sn = $data[0];
 		
-		$class = ($sn == "TIMED OUT") 
+		$class = ($sn == "TIMED OUT" || $sn == "UNSPECIFIED") 
 			? "solidred"
 			: false;
 
@@ -1196,6 +1196,9 @@ class HostGrid {
 			else {
 				preg_match("/^(\S+) \((\S+) (.*)\)$/", $datum, $a);
 
+				if (count($a) < 2)
+					break;
+
 				$cname = (in_array($a[2],
 				array_keys($this->card_db["pci"])))
 					? "<strong>" .  $this->card_db["pci"][$a[2]] .
@@ -1210,6 +1213,32 @@ class HostGrid {
 		}
 
 		return new listCell($c_arr, "smallaudit", false, 1);
+	}
+
+	protected function show_eeprom($data)
+	{
+		// display EEPROM settings and devaliases
+
+		$c_arr = array();
+
+		foreach($data as $datum) {
+
+			if (preg_match("/^devalias/", $datum)) {
+				$a = explode(" ", $datum);
+				$class = "deva";
+				$txt = "<strong>$a[1]</strong> $a[2]";
+			}
+			else {
+				$class = "parm";	
+				$a = explode("=", $datum);
+				$txt = "<strong>$a[0]</strong>=$a[1]";
+			}
+
+
+			$c_arr[] = array($txt, $class);
+		}
+
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	//-- o/s -----------------------------------------------------------------
@@ -1501,10 +1530,10 @@ class HostGrid {
 			$url = preg_replace("/[\(\)]/", "", $a[1]);
 			$lt = preg_replace("/^\(http:\/\/|\/\)$/", "", $a[1]);
 
-			$c_arr[] = array("$a[0] (<a href=\"$url\">$lt</a>)", $class);
+			$c_arr[] = array("<strong>$a[0]</strong> (<a href=\"$url\">$lt</a>)", $class);
 		}
 
-		return new listCell($c_arr);
+		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
 	protected function show_patches($data)
@@ -1872,7 +1901,7 @@ class HostGrid {
 		//   [2] - MAC address (possibly "unknown")
 		//   [3] - hostname / zonename
 		//   [4] - speed-duplex / speed:duplex
-		//   [5] - IPMP group / DHCP
+		//   [5] - IPMP group / DHCP / VNIC info / aggregate info
 		//   [6] - +vsw / VLAN
 		//
 		// These line-up with the Sn variables in the auditor script
@@ -1925,6 +1954,11 @@ class HostGrid {
 
 				if ($na[4] == "unknown")
 					$speed = $na[4];
+
+				// cluster clprivnets don't report a speed. Ignore those
+
+				elseif ($na[4] == "-half")
+					unset($speed);
 				else {
 			
 					// Split the speed/duplex into two parts
@@ -1971,7 +2005,7 @@ class HostGrid {
 			if ($na[5] == "DHCP")
 				$id["DHCP"] = "yes";
 			elseif ($na[5] && preg_match("/^IPMP/", $na[5]))
-				$id["IPMP"] = preg_replace("/^.*=/", $na[5]);
+				$id["IPMP"] = preg_replace("/^.*=/", "", $na[5]);
 
 			// Then +vswitch or VLAN info
 
@@ -2348,8 +2382,8 @@ class HostGrid {
 			$id["volumes"] = $b[4];
 			$id["plexes"] = $b[5];
 
-			if ($b[4] > 0) {
-				$id["plexes"] .= " ($b[4] unused)";
+			if ($b[6] > 0) {
+				$id["plexes"] .= " ($b[6] unused)";
 				$idc["plexes"] = "solidamber";
 			}
 
@@ -2955,6 +2989,7 @@ class HostGrid {
 		// Used by show_user to give a list of UIDs or usernames in case of
 		// collision
 
+		$ret = "";
 		$colls = array_diff($arr, array($u));
 
 		if (count($colls) == 1)

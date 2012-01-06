@@ -56,6 +56,11 @@ $grid_key = array(
 		array("SBUS card", "sbus", false)
 	),
 
+	"EEPROM" => array(
+		array("parameter", "parm", false),
+		array("devalias", "deva", false)
+	),
+
 	"printer" => array(
 		array("default printer", "boxgreen", false),
 	),

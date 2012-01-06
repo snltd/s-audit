@@ -129,6 +129,11 @@ class colours {
 		"sbus" => "#c7a49c"
 	);
 
+	protected $eeprom_cols = array(
+		"parm" => "#7b7a94",
+		"deva" => "#c7a49c"
+	);
+
 	public function __construct()
 	{
 		// Get the nic_colours[] array. We have to use a _SERVER path

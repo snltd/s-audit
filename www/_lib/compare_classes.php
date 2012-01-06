@@ -402,8 +402,12 @@ class compareGeneric extends HostGrid {
 		}
 		
 		for($i = 0; $i < $diffs; $i++) {
+
+			if (!isset($ma[$i])) $ma[$i] = false;
+			if (!isset($mb[$i])) $mb[$i] = false;
+
 			$tmp_arr = array("a" => $ma[$i], "b" => $mb[$i]);
-        
+
 			// Things that aren't being coloured may be in the fancy array
 
 			if (in_array($row, $this->no_colour)) {
@@ -471,7 +475,7 @@ class compareGeneric extends HostGrid {
 class comparePlatform extends compareGeneric {
 
 	protected $no_colour = array("hostname", "audit completed", "hardware",
-	"virtualization", "serial number", "ALOM IP", "CPU", "card", "memory",
+	"virtualization", "serial number", "ALOM IP", "card", "memory",
 	"storage");
 
 	protected $fancy = array("ALOM IP", "storage");
@@ -480,7 +484,8 @@ class comparePlatform extends compareGeneric {
 class compareOS extends compareGeneric {
 
 	protected $no_colour = array("hostname", "audit completed", "hostid",
-	"local zone");
+	"local zone", "distribution", "VM", "scheduler", "SMF services",
+	"packages", "patches", "boot env", "publisher");
 }
 
 class compareNet extends compareGeneric {

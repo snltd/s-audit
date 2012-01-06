@@ -29,6 +29,9 @@
 $nic_cols = array(
 	"10.0.2" => "#62A189",			// aqua (Windows VirtualBox internal net)
 	"192.168.56" => "#59A6C2",		// VirtualBox
+	"172.16.0" => "#68BDDC",		// Sun Cluster private link
+	"172.16.1" => "#7277DC",		// Sun Cluster private link
+	"172.16.193" => "#3A7ADC",		// Sun Cluster clprivnet
 	"192.168.1" => "#C598C1",		// purple
 	"10.10.8" => "#967e4a",			// brown
 	"10.10.7" => "#61ab52",			// green
