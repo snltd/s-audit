@@ -161,7 +161,7 @@ L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 G_APP_TESTS="vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c nb_s" 
 
 L_TOOL_TESTS="openssl rsync mysql_c pgsql_c sqlplus svn_c java perl php_cmd
-	python ruby cc gcc pca nettracker saudit scat explorer"
+	python ruby node cc gcc pca nettracker saudit scat explorer"
 G_TOOL_TESTS="sccli sneep vts $L_TOOL_TESTS"
 
 G_HOSTED_TESTS="site_apache site_iplanet db_mysql ai"
@@ -2721,6 +2721,15 @@ function get_ruby
 		RV=$($BIN -v)
 		RV=${RV#* }
 		disp "ruby@$BIN" ${RV%% *}
+	done
+}
+
+function get_node
+{
+	for BIN in $(find_bins node)
+	do
+		NV=$($BIN -v)
+		disp "node.js@$BIN" ${NV#v}
 	done
 }
 
