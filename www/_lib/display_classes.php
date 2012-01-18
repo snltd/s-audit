@@ -4186,6 +4186,8 @@ class Page {
 
 	protected $link_root = "";
 
+	protected $h_links = false;
+
 	public function __construct($title)
 	{
 		if (empty($this->link_to))
@@ -4204,6 +4206,12 @@ class Page {
 		// content. The closing HTML is done by the main page file calling
 		// the close_page() method. I have put the <head> tags in to make it
 		// clear what functions make what part of the page.
+
+		// Set a global variable to say the page has been properly opened.
+		// This is checked by f_error() so it can print a valid HTML page if
+		// it is called before the page has been properly created.
+
+		$GLOBALS["pg_open"] = true;
 
 		return $this->start_page() . "\n<head>" . $this->add_styles()
 		. $this->add_metas() . "\n  <title>$this->title</title>\n</head>\n"
@@ -4321,9 +4329,17 @@ class Page {
 		// For fatal errors outside a grid. The $depth argument is to close
 		// off open DIVs. Use with care and the pages will stay valid.
 
-		echo "\n\n<div class=\"f_err\">\n<h3>FATAL ERROR</h3>\n\n"
-		. "<p>$msg</p>\n</div>";
+		// We may have been called before the page was constructed. If so,
+		// create the HTML we're missing
 
+		if (!isset($GLOBALS["pg_open"])) {
+			$pg = new Page("fatal error");
+		}
+
+		echo "\n\n<div class=\"f_err\">\n<h3>S-AUDIT FATAL ERROR</h3>\n\n"
+		. "<p>$msg</p>\n\n<p><a href=\"" . ROOT_URL 
+		. "/index.php\">Return to front page</a>.</p>";
+		
 		if ($depth)
 			for ($i = 1; $i < $depth; $i++) echo "\n\n</div>";
 
@@ -4672,23 +4688,27 @@ class navigateHoriz {
 		$ret = "\n<ul class=\"navlist\" id=\"navlist\">";
 		$here = $_SERVER["PHP_SELF"];
 
-		foreach($this->links as $pg => $txt) {
+		if (is_array($this->links)) {
+
+			foreach($this->links as $pg => $txt) {
 			
-			$match = "$this->root/$pg";
+				$match = "$this->root/$pg";
 
-			// If match doesn't end .php, assume it's a directory, and tag
-			// on the name of this page
+				// If match doesn't end .php, assume it's a directory, and
+				// tag on the name of this page
 
-			if (!preg_match("/\.php$/", $match))
-				$match .= "/" . basename($_SERVER["PHP_SELF"]);
+				if (!preg_match("/\.php$/", $match))
+					$match .= "/" . basename($_SERVER["PHP_SELF"]);
 
-			// Don't link to the page we're already on.  You can get
-			// multiple "/"s in the match string
+				// Don't link to the page we're already on.  You can get
+				// multiple "/"s in the match string
 
-			$ret .= (preg_replace("/\/{2,}/", "/", $match) == $here)
-				? "\n<li class=\"here\">$txt</li>"
-				: "<li><a href=\"$this->root/${pg}$this->qs\">$txt</a></li>";
+				$ret .= (preg_replace("/\/{2,}/", "/", $match) == $here)
+					? "\n<li class=\"here\">$txt</li>"
+					: "<li><a href=\"$this->root/${pg}$this->qs\">$txt"
+					. "</a></li>";
 
+			}
 		}
 		
 		return $ret . "</ul>";
@@ -4728,7 +4748,12 @@ class queryString {
 
 			$qs .= "g=$_GET[g]";
 		}
+		elseif (isset($_POST["g"])) {
 
+			if ($qs) $qs .= "&";
+
+			$qs .= "g=$_POST[g]";
+		}
 		// h may be carried through, or toggled if $tz is set
 
 		if ($tz) {

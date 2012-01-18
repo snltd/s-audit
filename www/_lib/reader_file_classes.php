@@ -53,17 +53,17 @@ class ZoneMap extends ZoneMapBase {
 		if (isset($group))
 			$audit_dir = AUDIT_DIR . "/${group}/hosts";
 		else
-			page::ferror("No audit group.");
+			page::f_error("No audit group.");
 
 		// Check we've got some data
 
 		if (!is_dir($audit_dir))
-			page::ferror("missing directory. [${audit_dir}]");
+			page::f_error("missing directory. [${audit_dir}]");
 
 		$server_dirs = $this->fs->get_files($audit_dir, "d");
 
 		if (sizeof($server_dirs) == 0)
-			page::ferror("no audit data. [${audit_dir}]");
+			page::f_error("no audit data. [${audit_dir}]");
 
 		// Throw away server_dirs we aren't interested in, but not if we're
 		// on the single server view page

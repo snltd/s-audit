@@ -161,7 +161,7 @@ class comparePage extends audPage {
 
 //----------------------------------------------------------------------------
 
-class compareView extends HostGrid {
+class compareView {
 	
 	// This class groups together functions needed to compare two servers,
 	// and display the results of that comparison. It works like the
@@ -236,8 +236,16 @@ class compareView extends HostGrid {
 }
 
 //----------------------------------------------------------------------------
+// Generic compare. Every audit class has its own compareClass which is an
+// extension of this
 
-class compareGeneric extends HostGrid {
+class compareGeneric {
+
+	// Some fields need pre-processing. This could be because they, like
+	// NICs, come machine-parseable so aren't easy to read, or it could be
+	// because, like network port information, we discard some data. For
+	// that reason we can create preproc_field() methods. If they exist,
+	// they're called. 
 
 	private $hosts;
 
@@ -246,13 +254,19 @@ class compareGeneric extends HostGrid {
 
 	private $html;
 
-	protected $no_colour = array("hostname", "audit completed");
+	protected $no_colour = array();
+		// Don't colour these even if they're different. Used for things
+		// like IP addresses, or for numbers of packages, where one number
+		// isn't necessarily "better" than the other.
 
 	protected $no_compare = array();
 		// Don't compare fields in this array. You won't see them on the
 		// grid at all
 
-	private $width = "650em";
+	protected $sparse_list = array();
+		// Fields which are displayed with "holes" in them
+
+	private $width = "width:80em";
 		// The width of the compare grid (all columns combined)
 
 	private $colwidth;
@@ -260,6 +274,29 @@ class compareGeneric extends HostGrid {
 
 	public function __construct($type, $data, $map)
 	{
+		// Start off by printing the header
+
+		if (!isset($this->disp_name))
+			$this->disp_name = $type;
+
+		$this->html = "\n\n<table align=\"center\" style=\"$this->width\">"
+		. "\n<tr><td class=\"nocol\"><h1>" . ucfirst($this->disp_name)
+		. " audit comparison</h1></td>"
+		. "</tr>\n</table>\n";
+		
+		// If all we have is hostname and audit completed, we're done
+
+		$i = 0;
+
+		foreach($data as $svr => $dat) {
+			$i += count($dat);
+		}
+
+		if ($i == 4) {
+			$this->html .= "<p class=\"center\">No data to compare.</p>";
+			return;
+		}
+
 		$this->map = $map;
 
 		// Get the hostnames and all the rows we're going to compare
@@ -281,13 +318,25 @@ class compareGeneric extends HostGrid {
 
 		}
 
+		// We may need to move "audit completed" to the last row
+
+		if (end($rows) != "audit completed") {
+			$k = array_search("audit completed", $rows);
+			unset($rows[$k]);
+			$rows[] = "audit completed";
+		}
+
 		$this->data = $data;
 		$this->rows = $rows;
 		$this->colwidth = round(100 / $this->cols) . "%";
+		$this->html .= $this->compare_class();
 
-		$this->html = "\n\n<table align=\"center\" width=\"$this->width\">"
-		. "\n<tr><td class=\"nocol\"><h1>$type audit comparison</h1></td>"
-		. "</tr>\n</table>\n" . $this->compare_class();
+
+		if (method_exists($this, "cmp_key")) {
+			$this->html .= "\n\n<table align=\"center\" style=\""
+			. $this->width . "\">\n<tr><td class=\"nocol\"><p class=\"center\">"
+			. $this->cmp_key() .  "</p></td></tr></table>";
+		}
 	}
 
 	protected function compare_class()
@@ -295,12 +344,45 @@ class compareGeneric extends HostGrid {
 		// Print the comparison tables for the class
 
 		$ret = "\n\n<table cellspacing=\"1\" class=\"audit\" align=\"center\""
-		. " width=\"$this->width\">\n";
+		. " style=\"$this->width\">\n";
 
 		// Step through each row
 
 		foreach($this->rows as $row) {
-			$method = "compare_$row";
+
+			// Some fields have can special functions which we use to
+			// compare them.  The rest use the compare_generic() method.
+			// Work out what that method should be called, see if it exists,
+			// and call
+
+			$method_base = preg_replace("/\s/", "_", $row);
+			$pre_method = "preproc_$method_base";
+			$cmp_method = "compare_$method_base";
+			$post_method = "postproc_$method_base";
+
+			// Application and tool have a preproc_generic
+
+			if (!method_exists($this, $pre_method) && method_exists($this,
+				"preproc_generic"))
+				$pre_method = "preproc_generic";
+
+			$cmp_data =$this->get_cmp_data($row);
+
+			if (method_exists($this, $pre_method)) {
+
+				// We have at least two servers to compare, so there are at
+				// least two arrays of data to process. Put a loop here to
+				// do them all, rather than having to loop in every single
+				// preproc_() method
+
+				$proc_arr = array();
+
+				foreach($cmp_data as $svr) {
+					$proc_arr[] = $this->$pre_method($svr);
+				}
+
+				$cmp_data = $proc_arr;
+			}
 
 			// the $no_compare[] array may tell us we don't wish to compare
 			// this row.
@@ -309,45 +391,68 @@ class compareGeneric extends HostGrid {
 				$rowdat = "don't compare";
 				continue;
 			}
-
-			elseif(method_exists($this, $method)) {
-				$rowdat = $this->$method($this->get_cmp_data($row));
+			elseif(method_exists($this, $cmp_method)) {
+				$rowdat = $this->$cmp_method($cmp_data);
 			}
-			else
-				$rowdat = $this->compare_generic($this->get_cmp_data($row),
-				$row);
+			else {
+
+				$rowdat = (in_array($row, $this->sparse_list))
+					? $this->compare_sparse($cmp_data, $row)
+					: $this->compare_generic($cmp_data, $row);
+			}
+
+			// Do we need to post-process the compared data?
+
+			if (method_exists($this, $post_method))
+				$rowdat = $this->$post_method($rowdat);
 
 			// We colour the left-hand column red or green, depending on
 			// whether we found a difference or not. First, though, we work
 			// out all the host rows 
 
 			$d = "";
-			$keycol = "green";
+			$keycol = "solidgreen";
 
 			foreach($rowdat as $line) {
 
 				if ($d != "")
 					$d .= "\n<tr>";
 
-				if (isset($line["all"]))
-					$d .= new Cell($line["all"], false, false, false,
+				if (isset($line["all"])) {
+
+					$cl = (isset($line["call"]))
+						? $line["call"]
+						: false;
+
+					$d .= new Cell($line["all"], $cl, false, false,
 					$this->cols);
+				}
 				else {
+
+					if (!isset($line["ca"])) $line["ca"] = false;
+					if (!isset($line["cb"])) $line["cb"] = false;
+
 					$d .= new Cell($line["a"], $line["ca"], false,
 					$this->colwidth) . new Cell($line["b"], $line["cb"], false,
 					$this->colwidth);
-					$keycol = "red";
+					$keycol = "solidred";
 				}
 
 				$d .= "</tr>";
 			}
 
-			$ret .= "\n<tr><th class=\"solid$keycol\" ";
+			if ($row == "hostname") {
+				$ret .= "\n\n<tr><td class=\"blank\"></td>$d";
+			}
+			else {
+				$ret .= "\n<tr><th class=\"$keycol\" ";
 			
-			if (count($rowdat) > 1)
-				$ret .= "rowspan=\"" . count($rowdat) . "\"";
+				if (count($rowdat) > 1)
+					$ret .= "rowspan=\"" . count($rowdat) . "\"";
+
+				$ret .= ">$row</th>$d";
+			}
 			
-			$ret .= ">$row</td>$d";
 		}
 
 		return $ret . "\n</table>";
@@ -373,6 +478,14 @@ class compareGeneric extends HostGrid {
 
 	protected function compare_generic($data, $row)
 	{
+		// This is the method which does 90% of the comparisons. Returns an
+		// array of arrays, each of which has these possible elements:
+		// [all] = value  : both values are the same
+		// [a] = value in LH column
+		// [b] = value in RH column
+		// [ca] = class for LH column
+		// [cb] = class for RH column
+
 		// First find things that are the same
 
 		$ret = array();
@@ -380,8 +493,6 @@ class compareGeneric extends HostGrid {
 		foreach(array_intersect($data[0], $data[1]) as $match) {
 			$ret[] = array("all" => $match, "ca" => false, "cb" => false);
 		}
-
-		// Things that are different. We need to do this both ways
 
 		// Now get the differences looking both ways. We do the
 		// array_values() call so the indicies start at zero
@@ -400,7 +511,15 @@ class compareGeneric extends HostGrid {
 			$ma = array_pad($ma, $sa, false);
 			$diffs = $sb;
 		}
+
+		// Do we need to get the highest version?
+
+		if (method_exists($this, "get_highver") && !in_array($row,
+			$this->no_colour))
+			$hv = $this->get_highver($data);
 		
+		// Go through the differences, colouring (or not) as we go
+
 		for($i = 0; $i < $diffs; $i++) {
 
 			if (!isset($ma[$i])) $ma[$i] = false;
@@ -408,14 +527,21 @@ class compareGeneric extends HostGrid {
 
 			$tmp_arr = array("a" => $ma[$i], "b" => $mb[$i]);
 
-			// Things that aren't being coloured may be in the fancy array
-
 			if (in_array($row, $this->no_colour)) {
+				$tmp_arr["ca"] = $tmp_arr["cb"] = false;
+			}
+			elseif(isset($hv)) {
 
-				//if (in_array($row, $this->fancy_display))
-					//$tmp_ar
-				////else
-					$tmp_arr["ca"] = $tmp_arr["cb"] = false;
+				if (preg_match("/$hv/", $ma[$i]))
+					$tmp_arr["ca"] = "ver_l";
+				elseif(!empty($ma[$i]))
+					$tmp_arr["ca"] = "ver_o";
+
+				if (preg_match("/$hv/", $mb[$i]))
+					$tmp_arr["cb"] = "ver_l";
+				elseif(!empty($mb[$i]))
+					$tmp_arr["cb"] = "ver_o";
+
 			}
 			else {
 
@@ -434,6 +560,112 @@ class compareGeneric extends HostGrid {
 		}
 
 		return $ret;
+	}
+
+	protected function compare_sparse($data)
+	{
+		// Make a big array of everything, sort it, then see what's in
+		// what. It's not really a comparison, just separates everthing on
+		// both hosts into one, the other, or both.
+
+		$whole = $tmp_arr = $ret = array();
+
+		$a = $data[0];
+		$b = $data[1];
+		
+		$whole = array_merge($a, $b);
+
+		$whole = array_unique($whole);
+		natsort($whole);
+
+		foreach($whole as $el) {
+			
+			if (in_array($el, $a) && in_array($el, $b))
+				$tmp_arr["all"] = $el;
+			elseif (in_array($el, $a))
+				$tmp_arr = array("a" => $el, "b" => false);
+			else
+				$tmp_arr = array("a" => false, "b" => $el);
+
+			$ret[] = $tmp_arr;
+		}
+
+		return $ret;
+
+	}
+
+	protected function compare_hostname($data)
+	{
+		// Hostname gets a special row so we can set classes
+
+		$a = array(
+
+			array(
+				"a" => $data[0][0],
+				"b" => $data[1][0],
+				"ca" => "keyhead",
+				"cb" => "keyhead"
+			)
+
+		);
+
+		return $a;
+	}
+
+	protected function compare_audit_completed($data)
+	{
+		// Work out the time difference between oldest and newest audits,
+		// and colour accordingly. First row spans both columns and tells
+		// you the time difference between the oldest and newest audits.
+		// Seconds row displays the time of each
+
+		$d_arr = array();
+
+		$now = mktime();
+
+		foreach($data as $datum) {
+			$d = preg_split("/[:\s\/]+/", $datum[0]);
+			$d_arr[] = mktime($d[0], $d[1], $d[2], $d[3], $d[4], $d[5]);
+		}
+		
+		sort($d_arr);
+		reset($d_arr);
+		$first = current($d_arr);
+		$last = end($d_arr);
+		$diff = $last - $first;
+
+		// If we're comparing two dates, say they're x apart, if it's more
+		// than two, talk about a spread
+
+		$string = (count($data) == 2)
+			? "apart"
+			: "spread";
+
+		$diff_col = "green";
+
+		if ($diff == 0) {
+			$txt = "identical times";
+		}
+		elseif ($diff < 60) {
+			$txt = "$diff second(s) $string";
+		}
+		elseif ($diff < 3600) {
+			$txt = round($diff / 60) . " minute(s) $string";
+		}
+		elseif ($diff < 216000) {
+			$txt = round(($diff / 3660), 1) . " hour(s) $string";
+			$diff_col = "amber";
+		}
+		else {
+			$txt = round($diff / 216000) . " day(s) $string";
+			$diff_col = "red";
+		}
+	
+		return array(
+			array("all" => "$txt", "call" => "solid$diff_col"),
+			array("a" => $data[0][0], "b" => $data[1][0], "ca" => false,
+			"cb" => false)
+		);
 	}
 
 	public function safe_compare($a, $b)
@@ -457,516 +689,425 @@ class compareGeneric extends HostGrid {
 		return (current($arr) == $a) ? false : true;
 	}
 
-	protected function fancy_display($data)
+	protected function preproc_bold_first_word($data, $sep = ":")
 	{
-		// If it exists, use the show_ method to display data
+		// For things that start "something:", put "something" in bold
 
-		pr($data);
-
+		return preg_replace("/^(.*)($sep)/U", "<strong>$1$2</strong>",
+		$data);
 	}
 
 	public function __toString()
 	{
 		return $this->html;
-	}
-
-}
-
-class comparePlatform extends compareGeneric {
-
-	protected $no_colour = array("hostname", "audit completed", "hardware",
-	"virtualization", "serial number", "ALOM IP", "card", "memory",
-	"storage");
-
-	protected $fancy = array("ALOM IP", "storage");
-}
-
-class compareOS extends compareGeneric {
-
-	protected $no_colour = array("hostname", "audit completed", "hostid",
-	"local zone", "distribution", "VM", "scheduler", "SMF services",
-	"packages", "patches", "boot env", "publisher");
-}
-
-class compareNet extends compareGeneric {
-
-	protected $no_colour = array("hostname", "audit completed", "NTP",
-	"name service", "DNS server", "port", "route", "NIC");
-}
-
-/*
-    public function grid_header()
-    {
-		// We override the HardwareGrid function because we want to specify
-		// column widths
-
-        return "\n<tr><td></td><th width=\"40%\">". $this->fields[0]
-		. "</th><th width=\"40%\">". $this->fields[1] . "</th></tr>";
-    }
-
-    public function grid_body()
-    {
-		// Loop through each audit class. The constructor in the class we
-		// call will create the table rows
-
-		$ret = "";
-
-		foreach($this->sa as $type=>$data) {
-			$class = "compare$type";
-	
-			if (!class_exists($class))
-				$class = "compareGeneric";
-				
-			//pr($data);
-
-			$ret .= new $class($this->map, $data, $this->sb[$type]);
-		}
-
-		return $ret;
-    }
-
-	protected function grid_key()
-	{
-		// We don't currently have a key
-		
-		return false;
 	}
 
 }
 
 //----------------------------------------------------------------------------
+// PLATFORM AUDITS
 
-class compareGeneric extends HostGrid {
+class comparePlatform extends compareGeneric {
 
-	// This works like singleGeneric in single server views. Each audit
-	// class has a compareClass class which extends this one. They do all
-	// the work
+	protected $no_colour = array("hostname", "audit completed", "hardware",
+	"virtualization", "serial number", "ALOM IP", "card", "memory",
+	"storage", "EEPROM");
 
-	protected $da;
-	protected $db;
-		// Data for zone A and zone B
-	
-	protected $html;
-		// HTML we return
-
-	protected $omit = array("hostname", "audit completed");
-		// These fields are not shown
-	
-	protected $no_col = array();
-
-	public function __construct($map, $da, $db)
+	protected function preproc_storage($data)
 	{
-		// First off get a list of rows. There may be elements in $da that
-		// aren't in $db and vice versa
+		return $this->preproc_bold_first_word($data);
+	}
 
-		$rows = array_unique(array_merge(array_keys($da), array_keys($db)));
+	protected function preproc_EEPROM($data)
+	{
+		return $this->preproc_bold_first_word($data, "=");
+	}
 
-		$this->da = $da;
-		$this->db = $db;
+}
 
-		$this->cols = new Colours;
+//----------------------------------------------------------------------------
+// O/S AUDITS
 
-		$this->map = $map;
+class compareOS extends compareGeneric {
 
-		foreach($rows as $row) {
-			$this->html .= $this->compare_row($row);
+	protected $no_colour = array("hostname", "audit completed", "hostid",
+	"uptime", "local zone", "distribution", "VM", "scheduler",
+	"SMF services", "packages", "patches", "boot env", "publisher");
+
+	protected $disp_name = "O/S";
+
+	public function __construct($type, $data, $map)
+	{
+		// If the distributions aren't the same. don't colour the version or
+		// kernel
+
+		$dist_arr = array();
+
+		foreach($data as $svr=>$dat) {
+			$dist_arr[] = $dat["distribution"];
 		}
+
+		$dists = array_unique($dist_arr);
+
+		if (count($dists > 1)) {
+			$this->no_colour[] = "version";
+			$this->no_colour[] = "kernel";
+			$this->no_colour[] = "release";
+		}
+
+		parent::__construct($type, $data, $map);
 
 	}
 
-    public function compare_row($row)
-    {
-		// This function does most of the work in comparing servers. It
-		// is fed in the name of the data to compare ($row -- it's the
-		// left-hand column label on the grid, and it's also the key of the
-		// arrays we're comparing). If looks to see if a dedicated method
-		// exists for comparing the data, and if not, it does the comparison
-		// itself.  Watch out for multiple exits!
-
-        $a = $b = false;
-
-		// It's possible that we don't even want to compare this data
-
-        if (in_array($row, $this->omit))
-            return;
-
-		// A bit of shorthand
-
-        if (isset($this->da[$row]))
-            $a = $this->da[$row];
-
-        if (isset($this->db[$row]))
-            $b = $this->db[$row];
-
-		// Is there any data to compare? if not, let's go.
-
-		if (!$a && !$b)
-			return;
-
-		// Some fields have special functions which we use to compare them.
-		// The rest use the compare_generic() method. Work out what that
-		// method should be called, see if it exists, and call
-
-		$method = preg_replace("/\s/", "_", "compare_$row");
-
-		$fields = (method_exists($this, $method))
-			? $this->$method($row, $a, $b)
-			: $this->compare_generic($row, $a, $b);
-
-		$class = (preg_match("/colspan/", $fields))
-			? "solidgreen"
-			: "solidred";
-
-		return ($fields)
-			? "\n<tr class=\"server\"><td class=\"$class\" "
-			. "width=\"20%\">$row</td>$fields</tr>"
-			: false;
-    }
-
-    public function compare_generic($row, $a, $b)
-    {
-		// Generic comparison function. Colours the highest numbered field
-		// green and the lowest red, unless the row we're studying is in the
-		// no_cols[] array
-
-		// If we've been given arrays with multiple elements, pass lists to
-		// the compare_lists() function
-
-        if (sizeof($a) > 1 || sizeof($b) > 1) {
-            $ret = $this->compare_lists($row, $a, $b);
-        }
-        else {
-
-			// We have single element arrays. Convert them to strings, trim
-			// them, and if we're left with just a "-", set it to a blank
-			// string
-
-            $a = trim($a[0]);
-            $b = trim($b[0]);
-
-            // Do nothing if both fields are empty strings
-
-            if ($a == "" && $b == "")
-                $ret = false;
-
-			// If both strings are the same, put them in a green box
-
-            elseif ($a == $b) {
-				$ret = $this->show_col($row, array($a), 2);
-            }
-            else {
-
-				// Unless we've been asked not to, compare $a and $b. 
-				// Colour the larger number green and the smaller red.
-				// Because we're dealing with funny version numbers, a
-				// direct "<" comparison can't be trusted
-
-                if (!in_array($row, $this->no_col) && $a != "" && $b != "") {
-
-                    if ($this->safe_compare($a, $b)) {
-                        $lcol = "solidgreen";
-                        $rcol = "solidred";
-                    }
-                    else {
-                        $lcol = "solidred";
-                        $rcol = "solidgreen";
-                    }
-
-                }
-                else
-                    $lcol = $rcol = false;
-
-                $ret = new Cell($a, $lcol) .  new Cell($b, $rcol);
-            }
-
-        }
-
-        return $ret;
-    }
-
-	private function show_col($row, $data, $span = false)
+	protected function preproc_boot_env($data)
 	{
-		// Use the show_ functions to present data
+		return $this->preproc_bold_first_word($data);
+	}
 
-		$method = "show_$row";
+	protected function preproc_VM($data)
+	{
+		// For now I'm just going to bold the VM type and strip out any [].
+		// Might do more with this in future
 
-		if ($span) {
+		return $this->preproc_bold_first_word(preg_replace("/\[\]/", "",
+		$data));
+	}
 
-			$ret = (method_exists($this, $method))
-				? preg_replace("/<td/", "<td colspan=\"2\"", 
-				$this->$method($data))
-				: new listCell($data, false, 2);
-			
-		}
-		else {
+}
 
-			$ret = (method_exists($this, $method))
-				? $this->$method($data)
-				: new listCell($data);
+//----------------------------------------------------------------------------
+// NETWORK AUDITS
+
+class compareNet extends compareGeneric {
+
+	protected $no_colour = array("hostname", "audit completed", "NTP",
+	"name service", "DNS server", "port", "route", "NIC", "routing");
+
+	protected $sparse_list = array("port");
+
+	protected function preproc_name_service($data)
+	{
+		return $this->preproc_bold_first_word($data);
+	}
+
+	protected function preproc_route($data)
+	{
+		return $this->preproc_bold_first_word($data, "\s");
+	}
+
+	protected function preproc_port($data)
+	{
+		// As on the net audit, we may want to remove high numbered ports.
+		// Process the info in the same way too
+
+		$ret = array();
+
+		foreach($data as $datum) {
+			$a = explode(":", $datum);
+
+			if ((defined("OMIT_PORT_THRESHOLD")) && ($a[0] >
+				OMIT_PORT_THRESHOLD))
+				continue;
+
+			if (empty($a[1])) $a[1] = "-";
+			if (empty($a[2])) $a[2] = "-";
+				
+			$ret[] = "<strong>$a[0]</strong> ($a[1]/$a[2])";
 		}
 
 		return $ret;
-
 	}
 
-    protected function compare_lists($row, $a, $b, $fn = false)
-    {
-        // Compare lists of things on two servers. This is a simplified
-        // version of compare_patch. See that function for comments.
-
-        if (!is_array($a))
-            $a = array();
-
-        if (!is_array($b))
-            $b = array();
-
-        if ($a == $b) {
-			$ret = $this->show_col($row, $a, 2);
-        }
-        else {
-            $diffed_a = array_diff($a, $b);
-            $diffed_b = array_diff($b, $a);
-            $combined = array_merge($diffed_a, $diffed_b);
-            sort($combined);
-
-            $col_a = $col_b = "\n<ul>";
-
-            $i = 1;
-            $rows = sizeof($combined);
-
-            foreach($combined as $element) {
-
-                $prt = $element;
-
-                if ($fn)
-                    $prt = $this->$fn($prt);
-
-                $col_a .= "\n  <li>";
-                $col_b .= "\n  <li>";
-
-                // It's in one list or the other. Otherwise, we wouldn't be
-                // here
-
-                if (in_array($element, $diffed_a)) {
-                    $col_a .= $prt;
-                    $col_b .= "&nbsp;";
-                }
-                else {
-                    $col_a .= "&nbsp";
-                    $col_b .= $prt;
-                }
-
-                $col_a .= "</li>";
-                $col_b .= "</li>";
-
-            }
-            $ret = new Cell("${col_a}\n</ul>") . new
-            Cell("${col_b}\n</ul>");
-        }
-
-        return $ret;
-    }
-
-	public function __toString()
+	protected function preproc_nic($data)
 	{
-		return $this->html;
-	}
 
-}
+		$ret = array();
 
-class comparePlatform extends compareGeneric{
-	
-	protected $no_col = array("hardware", "CPU", "serial number", "ALOM
-	IP");
+		foreach($data as $datum) {
+			$a = explode("|", $datum);
+			$speed = "unknown speed";
 
-	protected $hw_db;   // Card definitions from misc.php
+			// Split the speed/duplex into two parts
 
-    public function __construct($map, $data_a, $data_b)
-    {
-        // We need the card definitions in defs.php
-
-        require_once(LIB . "/defs/misc.php");
-        $defs = new defs();
-        $this->card_db = $defs->get_data("card_db");
-        $this->hw_db = $defs->get_data("hw_db");
-
-        parent::__construct($map, $data_a, $data_b);
-    }
-
-}
-
-class compareOS extends compareGeneric{
-	
-	protected $no_col = array("hostid", "uptime");
-}
-
-class compareNet extends compareGeneric{
-	
-	protected $no_col = array("NIC");
-}
-
-
-/*
-
-    protected function compare_uptime($row, $a, $b, $fn = false)
-	{
-		// Use the display function to make uptime nicely human-readable
-
-		return $this->show_uptime($a) . $this->show_uptime($b);
-	}
-
-	protected function compare_fs($row, $a, $b)
-	{
-		$ao = $bo = array();
-
-		if (is_array($a)) {
-			sort($a);
-
-			foreach ($a as $el) {
-				$z = preg_split("/\s+/", $el, 2);
-				$ao[] = "<div><strong>$z[0]</strong></div><div>$z[1]</div>";
+			$sa = preg_split("/:|-/", $a[4]);
+			
+			// Now $sa[0] is the speed, $sa[1] is the duplex. I don't want
+			// the "b" on the speed.
+			
+			$sa[0] = str_replace("b", "", $sa[0]);
+			
+			// Make the speed "1G" if it's 1000M. Also look out for long
+			// strings from kstat.
+			
+			if ($sa[0] == "1000M" || $sa[0] == "1000000000")
+				$sa[0] = "1G";
+			elseif ($sa[0] == "100000000")
+				$sa[0] = "100M";
+			elseif ($sa[0] == "10000000")
+				$sa[0] = "10M";
+			
+			// Make the duplex part "full" if it's only "f", and "half" if
+			// it's only "h"
+			
+			if (sizeof($sa) > 1) {
+			
+				if ($sa[1] == "f")
+					$sa[1] = "full";
+				elseif ($sa[1] == "h")
+					$sa[1] = "half";
+			
+				$speed = "${sa[0]}bit/$sa[1] duplex";
 			}
-
-		}
+			
+			$ret[] = "<strong>$a[0]:</strong> $a[1] ($speed) $a[5]";
 		
-		if (is_array($b)) {
-			sort($b);
-
-			foreach ($b as $el) {
-				$z = preg_split("/\s/", $el, 2);
-				$bo[] = "<div><strong>$z[0]</strong></div><div>$z[1]</div>";
-			}
-
 		}
 
-		return new multicell($ao, "smallrow") . new multicell($bo, "smallrow");
+		return $ret;
 	}
 
-	public function compare_local_zone($row, $a, $b)
+	protected function cmp_key()
 	{
-		// Compare zones. Just sort the lists and print them side by side,
-		// with a bit of nice formatting. Also works for LDOMs.
 
-		$ao = $bo = array();
+		// If we've stripped out high numbered ports, say so
 
-		if (is_array($a)) {
-			sort($a);
+		if (defined("OMIT_PORT_THRESHOLD"))
+			return "NOTE: in the &quot;port&quot; comparison, open ports
+			above " .  OMIT_PORT_THRESHOLD . " are not being displayed.";
+	}
+}
 
-			foreach ($a as $el) {
-				$z = preg_split("/\s+/", $el, 3);
-				$ao[] = "<div><strong>$z[0]</strong></div><div>$z[1]</div>"
-				. "<div>$z[2]</div>";
+//----------------------------------------------------------------------------
+// FILESYSTEM AUDITS
+
+class compareFS extends compareGeneric {
+
+	protected $no_colour = array("hostname", "audit completed", "zpool",
+	"root fs", "fs", "export", "capacity", "disk group");
+
+	protected $disp_name = "Filesystem";
+
+	protected function preproc_zpool($data)
+	{
+		// Bold the pool name and bin the scrub info
+
+		$data = preg_replace("/\(.*\) /", "", $data);
+		return $this->preproc_bold_first_word($data, "\s");
+
+	}
+
+	protected function preproc_capacity($data)
+	{
+		// Bold the capacity. Might do more with this one day. Can't decide
+		// now.
+
+		return $this->preproc_bold_first_word($data, "\s");
+	}
+
+	protected function preproc_disk_group($data)
+	{
+		// Just bold the disk group name and show the number of disks in it.
+		// Bin the rest.
+
+		$data = preg_replace("/ .*\[(\d+ disk).*$/", " [$1(s)]", $data);
+		return $this->preproc_bold_first_word($data, "\s");
+	}
+
+	protected function preproc_fs($data)
+	{
+		// Keep the mountpoint, filesystem type and device. Leaving anything
+		// else makes comparisons pointless because it'll never match. Omit
+		// options.
+
+		$ret = array();
+
+		foreach($data as $datum) {
+			if (!preg_match("/unmounted/", $datum))
+				$ret[] = $datum;
+		}
+
+		return preg_replace("/^(\S+) (\w+).*\(([^;]*);.*$/",
+		"<strong>$1</strong> $3 ($2)", $ret);
+	}
+
+	protected function preproc_export($data)
+	{
+		// Bold the export name, keep the export type, bin the rest
+	
+		return preg_replace("/^(\S+) (\(\w+\)).*$/", "<strong>$1</strong> $2",
+		$data);
+	}
+
+
+}
+
+//----------------------------------------------------------------------------
+// APPLICATION AUDITS
+
+class compareApp extends compareGeneric {
+
+	protected $disp_name = "Application";
+
+	protected $no_colour = array("AI server");
+
+	private $cmp_vals = array();
+
+	protected function preproc_generic($data)
+	{
+		// Split up the version and the path info
+	
+		return preg_replace("/@=(.*).*$/", " [$1]$2", $data);
+
+	}
+
+	protected function postproc_sshd($data)
+	{
+		// Don't colour if we're comparing SunSSH and OpenSSH. Just look at
+		// the first letter 
+	
+		$cmp_arr = array();
+
+		foreach($data as $row => $dat) {
+			if (!empty($dat["a"])) $cmp_arr[] = $dat["a"][0];
+			if (!empty($dat["b"])) $cmp_arr[] = $dat["b"][0];
+		}
+
+		$cmp_arr = array_unique($cmp_arr);
+
+		return (count($cmp_arr) == 1)
+			? $data
+			: $this->uncolour($data);
+
+	}
+
+	protected function postproc_x_server($data)
+	{
+		// Don't colour if we have XSun. (We'd be either comparing to Xorg,
+		// or always get an identical match as XSun doesn't report a
+		// version.)
+
+		$xsun = false;
+
+		foreach($data as $row => $dat) {
+
+			if (!isset($dat["a"])) $dat["a"] = false;
+			if (!isset($dat["b"])) $dat["b"] = false;
+
+			if (preg_match("/Xsun/", $dat["a"]) || preg_match("/Xsun/",
+				$dat["b"])) {
+				$xsun = true;
+				break;
 			}
 
 		}
+
+		return ($xsun)
+			? $this->uncolour($data)
+			: $data;
+
+	}
+
+	private function uncolour($data)
+	{
+		// strip colouring info out of an array
+
+		$ret = array();
+		$cols = array("ca" => true, "cb" => true);
+
+		foreach($data as $datum) {
+			$ret[] = array_diff_key($datum, $cols);
+		}
+
+		return $ret;
+	}
+
+
+	protected function get_highver($data)
+	{
+		// We may have two versions of python on one box and four on
+		// another. This attempts to handle that by finding the highest
+		// version. This information is fed back into the compare_generic()
+		// method.
 		
-		if (is_array($b)) {
-			sort($b);
+		$vers = array();
 
-			foreach ($b as $el) {
-				$z = preg_split("/\s/", $el, 3);
-				$bo[] = "<div><strong>$z[0]</strong></div><div>$z[1]</div>"
-				. "<div>$z[2]</div>";
-			}
-
+		foreach($data as $svr) {
+			$vers = array_merge($vers, $svr);
 		}
 
-		return new multicell($ao, "smallrow") . new multicell($bo, "smallrow");
+		// strip off the path, and sort. Get the highest version
+
+		$vers = preg_replace("/\s*[\(\[].*$/", "", $vers);
+		natsort($vers);
+
+		return end($vers);
 	}
 
-	protected function compare_ldom($row, $a, $b)
-	{
-		// I refer you to compare_zone();
+}
 
-		return $this->compare_local_zone($row, $a, $b);
+//----------------------------------------------------------------------------
+// TOOL AUDITS
+
+class compareTool extends compareApp {
+
+	protected $disp_name = "Tool";
+
+	protected $no_colour = array();
+}
+
+//----------------------------------------------------------------------------
+// SECURITY AUDITS
+
+class compareSecurity extends compareGeneric {
+
+	protected $sparse_list = array("user");
+
+	protected $no_colour = array("user_attr", "root shell", "dtlogin",
+	"cron job");
+
+	protected function preproc_user_attr($data)
+	{
+		return $this->preproc_bold_first_word($data);
 	}
 
-    protected function $ret["a"] .= new Cell($a_prt, $myclass);
-                $ret["b"] .= new Cell("&nbsp;", $myclass);
-            }
-            elseif($b) {
-                $ret["a"] .= new Cell("&nbsp;", $myclass);
-                $ret["b"] .= new Cell($b_prt, $myclass);
-            }
-
-            $ret["a"] .= "</tr>";
-            $ret["b"] .= "</tr>";
-        }
-
-        return $ret;
-
-    }
-
-    protected function package_link($name)
-    {
-        // Make a chunk of HTML to have little mouseover descriptions of
-        // package names. Requires a definition file
-
-        global $pkgdefs;
-
-        $tip = "unknown package";
-
-        if (isset($pkgdefs)) {
-
-            if (isset($pkgdefs[$name])) {
-                $tip = $pkgdefs[$name];
-            }
-
-        }
-
-        return "<div title=\"$tip\">$name</div>";
-    }
-
-    protected function patch_link($prt)
-    {
-        // Turns patch numbers into clickable links to sunsolve
-
-        return "<a href=\"http://sunsolve.sun.com/search/document.do"
-        . "?assetkey=1-21-${prt}-1\">$prt</a>";
-    }
-
-    protected function compare_database($row, $a, $b)
+	protected function preproc_dtlogin($data)
 	{
-		// Just format a list of databases.
+		// Split up the version and the path info
+	
+		return preg_replace("/@=(.*).*$/", " [$1]$2", $data);
 
-        return $this->compare_trimmed_lists($row, $a, $b);
-    }
+	}
 
-    protected function compare_website($row, $a, $b)
+	protected function preproc_cron_job($data)
 	{
-		// Just format a list of sites.
+		// Cron jobs need HTMLizing. Also put the user in bold
 
-        return $this->compare_trimmed_lists($row, $a, $b);
-    }
+		$ret = array();
 
-    protected function compare_trimmed_lists($row, $a, $b)
-    {
-        // Strip off all extraneous data and pass what's left (after
-        // removing duplicates) to the compare_lists function
+		foreach($data as $datum) {
+			$ret[] = htmlentities($datum);
+		}
 
-        $call_a = $call_b = array();
+		return $this->preproc_bold_first_word($ret);
+	}
+}
 
-        if (!is_array($a))
-            $a = array();
+//----------------------------------------------------------------------------
+// HOSTED SERVICES AUDITS
 
-        if (!is_array($b))
-            $b = array();
+class compareHosted extends compareGeneric {
 
-        foreach($a as $el)
-            $call_a[] = preg_replace("/ .*$/", "", $el);
+	protected $disp_name = "Hosted Services";
+}
 
-        foreach($b as $el)
-            $call_b[] = preg_replace("/ .*$/", "", $el);
+//----------------------------------------------------------------------------
+// PATCH AND PACKAGE AUDITS
 
-        return $this->compare_lists($row, array_unique($call_a),
-        array_unique($call_b));
-    }
+class comparePatch extends compareGeneric {
 
-    protected function compare_package($row, $a, $b)
-    {
-        return $this->compare_lists($row, $a, $b, "package_link");
-    }
+	protected $disp_name = "Patch and Package";
 
-*/
+	protected $sparse_list = array("patch", "package");
+}
 
 ?>
