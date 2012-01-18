@@ -56,7 +56,7 @@ if (isset($in["z1"]) && isset($in["z2"])) {
 		$pg->f_error("no audit data for $z2");
 
 	if ($z1 == $z2)
-		$pg->f_error("You can't compare a zone with itself");
+		$pg->f_error("You can't compare a host with itself");
 
 	// Get the zone data. If both zones are global, don't bother with the
 	// locals
@@ -64,14 +64,12 @@ if (isset($in["z1"]) && isset($in["z2"])) {
 	if ($map->is_global($z1) && $map->is_global($z2))
 		define("NO_ZONES", 1);
 
-	$data = new GetServers($map, array($z1, $z2), array("os", "net"));
-
-	//$data = new GetServers($map, array($z1, $z2), array("os", "net", "fs",
-	//"app", "tool", "hosted", "security", "patch" ));
+	$data = new GetServers($map, array($z1, $z2), array("os", "net", "fs",
+	"app", "tool", "hosted", "security", "patch" ));
 
 	$view = new compareView($data->get_array(), $map);
 
-	echo $view->show_grid("40%", true);
+	echo $view->show_grid("40%", true), $pg->spacer();
 }
 else
 	$pg->f_error("comparison needs two zones");

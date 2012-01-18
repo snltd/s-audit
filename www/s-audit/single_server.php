@@ -76,7 +76,6 @@ else {
 	overview.</p>";
 }
 
-echo $view->show_grid(), "<div class=\"spacer\">&nbsp;</div>";
-$pg->close_page();
+echo $view->show_grid(), $pg->spacer(), $pg->close_page();
 
 ?>

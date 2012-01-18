@@ -53,6 +53,10 @@ td.nocol { /* used for the "audit comparison" rows */
 	background: none;
 }
 
+td.blank { /* left of hostname row */
+	background: none;
+}
+
 input, select { /* cycle gadgets used to select servers on compare page */
 	font: 11px normal helvetica, sans-serif;
 }
