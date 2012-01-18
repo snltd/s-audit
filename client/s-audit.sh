@@ -3182,10 +3182,11 @@ function get_zpools
 
 				# get the last scrub
 
-				lscr=$(zpool status $zp | egrep "scrub:|scan:" | \
+				lscr=$(zpool status $zp | egrep " scrub: | scan: " | \
 				sed 's/^.*s on //')
 
-				[[ -z $lscr || $lscr == *"none requested"* ]] && lscr="none"
+				[[ -z $lscr || $lscr == *"none requested"* 
+				|| $lscr == *canceled* || $lscr = *resilver* ]] && lscr="none"
 
 				zpext="(last scrub: $lscr)"
 
