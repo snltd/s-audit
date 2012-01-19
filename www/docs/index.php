@@ -13,7 +13,9 @@ $pg = new docPage("about s-audit");
 In this case &quot;audit&quot; is not used in the sense of account or
 filesystem auditing - <tt>s-audit</tt> is not like <tt>audit(1m)</tt> or
 <tt>bart(1m)</tt> - rather, it reports on what a Solaris system is made of,
-and can do.</p>
+and can do. The nearest tool to it is probably Sun Explorer, but s-audit
+collects higher-level information, and presents it in a much friendlier
+way.</p>
 
 <p>I wrote the first version of <tt>s-audit</tt> when I began working on a
 large virtualization project on an essentially undocumented system, and I

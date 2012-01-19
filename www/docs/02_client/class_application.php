@@ -27,7 +27,7 @@ regarded as <em>tools</em>.</p>
 <p>If an application is installed in multiple locations, all instances will
 be reported.</p>
 
-<p><tt>s-audit.sh</tt> will try to find out whether or not each application
+<p><tt>s-audit.sh</tt> will try to work out whether or not each application
 it finds is currently running, and will report accordingly. If it finds
 multiple instances of an application, at least one of which is running,
 <tt>s-audit.sh</tt> is not currently able to tell which instances are
@@ -44,6 +44,12 @@ running and which are not.  This may change in a future release.  </p>
 
 
 <h2>Checks</h2>
+
+<p>The range of applications which s-audit looks for is very limited. The
+whole development of s-audit has been driven by the author's requirements,
+so the default applications and tools are the ones used on systems which the
+author administered whilst s-audit was being written. The number of
+supported applications will grow in the future.</p>
 
 <p>These checks are performed in an application audit.</p>
 

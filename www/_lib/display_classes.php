@@ -2559,7 +2559,7 @@ class HostGrid {
 
 			$txt = (empty($a[5]))
 				? "\n<div>$txt</div>"
-				: "\n<div class=\"solidpink\"$txt</div>";
+				: "\n<div class=\"solidpink\">$txt</div>";
 
 			// ROW 2 is disk usage. Use amber and red fields for fses more
 			// than 80 and 90% full respectively
@@ -4031,7 +4031,7 @@ class SoftwareGrid extends HostGrid
 		
 		$nf = sizeof($this->fields);
 
-		return $this->grid_key_header($nf) .
+		return $this->grid_key_header($nf) . "<tr>" .
 		$this->grid_key_col($this->grid_key["hostname"]) .
 		$this->grid_key_col($this->grid_key["general"], ($nf - 2)) .
 		$this->grid_key_col($this->grid_key["audit completed"]) . "</tr>";
