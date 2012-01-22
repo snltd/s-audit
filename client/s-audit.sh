@@ -32,7 +32,7 @@ WSP="	 "
 	# A space and a literal tab. ksh88 won't accept \t
 
 MY_VER="3.0"
-	# The version of the script. PLEASE UPDATE
+	# The version of the script
 
 typeset -R15 RKEY
 	# Right alignment of LH column in disp() function
@@ -154,10 +154,10 @@ G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
 	optical lux_enclosures tape_drives cards printers eeprom" 
 L_PLATFORM_TESTS="virtualization printers"
 
-G_NET_TESTS="net"
-#G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
-	#snmp ports routes rt_fwd net"
-L_NET_TESTS=$G_NET_TESTS
+G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
+	snmp ports routes rt_fwd net"
+L_NET_TESTS="name_service dns_serv nis_domain name_server snmp ports routes
+	rt_fwd net"
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
 	vboxes scheduler svc_count package_count patch_count pkg_repo uptime "
@@ -1011,14 +1011,14 @@ function get_cpus
 	if (($OSVERCMP >= 510))
 	then
 		CPUN=$(psrinfo -p)
-		CL=$(psrinfo -vp 0 | sed 1q)
+		CPUL=$(psrinfo -vp 0 | sed 1q)
 
 		if [[ $CL == *cores* ]]
 		then
-			print $CL | cut -d\  -f 5,8 | read c v
+			print $CPUL | cut -d\  -f 5,8 | read c v
 			CPUX="x $c cores ($v virtual)"
 		else
-			CPUC=$(print $CL | sed '/physical/!d;s/^.*has \([0-9]*\).*$/\1/')
+			CPUC=$(print $CPUL | sed '/physical/!d;s/^.*has \([0-9]*\).*$/\1/')
 			(($CPUC > 1)) && CPUX="x $CPUC virtual"
 		fi
 
@@ -1730,7 +1730,7 @@ function get_net
 			dispdat="$nic ${type}${o_over} ${addr} ${hname}${o_speed}${o_mac}"
 		fi
 	
-		disp NIC "$dispdat" $xtra
+		disp net "$dispdat" $xtra
 	done
 }
 
@@ -4175,4 +4175,5 @@ then
 fi
 
 clean_up
+
 exit 0
