@@ -110,28 +110,36 @@ then
 	if dladm show-link -p >/dev/null 2>&1
 	then
 		DL_DEVLIST_CMD='show-link -p | cut -d\" -f2'
-		DL_TYPE_CMD='show-link -p $S0 | cut -d\" -f4'
-		DL_LINK_CMD='show-link -p $S0 | cut -d\" -f8'
-		DL_SPEED_CMD='show-ether -p $S0 | cut -d\" -f10'
+		DL_TYPE_CMD='show-link -p $nic | cut -d\" -f4'
+		DL_LINK_CMD='show-link -p $nic | cut -d\" -f8'
+		DL_SPEED_CMD='show-ether -p $nic | cut -d\" -f10'
 	else
 		DL_DEVLIST_CMD='show-link -po link'
-		DL_TYPE_CMD='show-link -po class $S0'
-		DL_LINK_CMD='show-link -po state $S0'
-		DL_SPEED_CMD='show-ether -pospeed-duplex $S0'
+		DL_TYPE_CMD='show-link -po class $nic'
+		DL_LINK_CMD='show-link -po state $nic'
+		DL_SPEED_CMD='show-ether -pospeed-duplex $nic'
 	fi
 
-	DL_ZONE_CMD='show-linkprop -c -pzone -o value $S0 | 
+	DL_AO_CMD='show-link $nic -po over | tr " " ,'
+	DL_AP_CMD='show-aggr -po policy,addrpolicy $a'
+	DL_AM_CMD='show-aggr -xpo address $a | sed 1q'
+	DL_ZONE_CMD='show-linkprop -c -pzone -o value $nic | 
 	sed "s/^.*=\"\([^\"]*\)\"/\1/"'
 
 elif [[ -n $HAS_DL ]]
 then
-	DL_DEVLIST_CMD='show-dev -p | cut -d" " -f1'
-	DL_TYPE_CMD='show-link -p $S0 | sed "s/^.*type=\([^ ]*\).*$/\1/"'
-	DL_LINK_CMD='show-dev -p $S0 | sed "s/^.*link=\([^ ]*\).*$/\1/"'
-	DL_ZONE_CMD='show-linkprop -c $S0 |
+	DL_DEVLIST_CMD='show-link -p | cut -d" " -f1'
+	DL_TYPE_CMD='show-link -p $nic | sed "s/^.*type=\([^ ]*\).*$/\1/"'
+	DL_LINK_CMD='show-dev -p $nic | sed "s/^.*link=\([^ ]*\).*$/\1/"'
+	DL_ZONE_CMD='show-linkprop -c $nic |
 	sed -n "/Y=\"zone\"/s/^.*VALUE=\"\([^\"]*\).*$/\1/p"'
-	DL_SPEED_CMD='show-dev -p $S0 |
+	DL_SPEED_CMD='show-dev -p $nic |
 	sed "s/^.*speed=\([^ ]*\).*duplex=\(.*\)$/\1Mb:\2/"'
+	DL_AO_CMD='show-aggr -p $a | cut -d= -f3 | sed "1d;s/ address//" 
+	| tr "\n" ,'
+	DL_AP_CMD='show-aggr -p $a | 
+	sed -n "1s/^.*icy=\([^ ]*\) .*type=\(.*\)$/\1:\2/p"'
+	DL_AM_CMD='show-aggr -p $a | sed -n "1s/^.*address=\([^ ]*\) .*$/\1/p"'
 fi
 
 #-- TEST LISTS ---------------------------------------------------------------
@@ -146,8 +154,9 @@ G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
 	optical lux_enclosures tape_drives cards printers eeprom" 
 L_PLATFORM_TESTS="virtualization printers"
 
-G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
-	snmp ports routes rt_fwd nic"
+G_NET_TESTS="net"
+#G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
+	#snmp ports routes rt_fwd net"
 L_NET_TESTS=$G_NET_TESTS
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
@@ -846,7 +855,20 @@ function get_hardware
 	[[ $HW_CHIP == "sparc" ]] && CH="SPARC"
 	can_has isainfo && BITS=$(isainfo -b)
 
-	disp hardware "$HW_OUT (${BITS:-32}-bit ${CH:-x86})"
+	# Is this part of a cluster?
+
+	if can_has cluster
+	then
+		cnm=" [member of SC $(cluster list)]"
+	elif can_has scconf
+	then
+		cnm=" [member of SC $(scconf -p | sed -n '/Cluster name/s/^.* //p')]"
+	elif can_has haclus
+	then
+		cnm=" [member of VCS $(haclus -value ClusterName)]"
+	fi
+
+	disp hardware "$HW_OUT (${BITS:-32}-bit ${CH:-x86})$cnm"
 }
 
 function get_os_dist
@@ -983,13 +1005,23 @@ function get_memory
 function get_cpus
 {
 	# Get CPU information. Solaris 10 has the -p option, and understands the
-	# concept of physical and virtual processors
+	# concept of physical and virtual processors. 11 can distinguish cores
+	# and threads on T-series
 
 	if (($OSVERCMP >= 510))
 	then
 		CPUN=$(psrinfo -p)
-		CPUC=$(psrinfo -pv 0 | sed '/physical/!d;s/^.*has \([0-9]*\).*$/\1/')
-		(($CPUC > 1)) && CPUX="x $CPUC cores"
+		CL=$(psrinfo -vp 0 | sed 1q)
+
+		if [[ $CL == *cores* ]]
+		then
+			print $CL | cut -d\  -f 5,8 | read c v
+			CPUX="x $c cores ($v virtual)"
+		else
+			CPUC=$(print $CL | sed '/physical/!d;s/^.*has \([0-9]*\).*$/\1/')
+			(($CPUC > 1)) && CPUX="x $CPUC virtual"
+		fi
+
 	else
 		CPUN=$(psrinfo | wc -l)
 	fi
@@ -1359,7 +1391,7 @@ function mk_nic_devlist
 {
 	# Create a list of all network devices on the box. Used by get_nic().
 	# Used to be used by get_mac() which no longer exists. Could be
-	# reincorporated into get_nic() at some point
+	# reincorporated into get_net() at some point
 
 	# Get the plumbed interfaces. This'll work on anything, even a zone.
 
@@ -1383,267 +1415,322 @@ function mk_nic_devlist
 	for d in $DLST $DLST2
 	do
 		print $d
-	done | sort -u
+	done | grep -v / | sort -u
 }
 
-function get_nic
+function get_llt_net
+{
+	# if we're a VCS node, get LLT interfaces. Same format as get_net, and
+	# called by it
+
+	LLT_LS=$(hasys -display $(uname -n) -attribute LinkHbStatus \
+	| sed '1d;s/^.*Status *//;s/ [A-Z]*/ /g')
+
+	[[ -z $LLT_LS ]] && return
+
+	over=$(print $LLT_LS | sed 's/ \{1,\}/,/g')
+
+	[[ -n $OUT_P ]] \
+		&& disp net "LLT|||||$over|||" || disp net "LLT link over $over"
+
+	for nic in $LLT_LS
+	do
+
+		[[ -n $OUT_P ]] \
+			&& disp net "$nic|LLT||||||" || disp net "$nic LLT link"
+	
+	done
+}
+
+function get_net
 {
 	# Get information on all the network interfaces, whether they're cabled,
 	# plumbed, or whatever.
 
-	# Later, we're going to look to see if all the interfaces have an LDOM
-	# vswitch on them, so let's get a list of the ones that do
+	DEVLIST=$(mk_nic_devlist)
+	
+	# If we're a primary domain, get a list of vswitched interfaces
 
 	if is_root && can_has ldm
 	then
 		VSW_IF_LIST=" $(ldm list-domain -p -o network primary | \
 		sed -n '/^VSW/s/^.*net-dev=\([^|]*\).*$/\1/p' | tr '\n' ' ') "
 	fi
-	
-	# Get a list of devices
 
-	DEVLIST=$(mk_nic_devlist)
-
-	# We assemble a groups of strings S1....Sn
-
-	for S0 in $DEVLIST
+	for nic in $DEVLIST
 	do
-		unset HNAME S2 S3 S4 S5 S6 SD mac
+		unset type addr mac hname ipmp dhcp over xtra out ipzone speed \
+		o_over o_mac o_speed
 
-		# Ask ifconfig for the IP address of this device
+		# First, get the type. 
 
-		S1="$(ifconfig $S0 2>/dev/null \
-			| sed -n '/inet/s/^.*inet \([^ ]*\).*$/\1/p')"
-		
-		# Look to see if an interface is a vlan, vnic, etherstub or
-		# whatever. This needs privs on some OSes, so silence the error
+		if [[ $nic == *[0-9]:[0-9]* ]]
+		then
+			type=virtual
+		elif [[ $nic == clprivnet* ]]
+		then
+			type="clprivnet"
+		elif (($OSVERCMP < 510 ))
+		then
+			type=phys
+		else
+			type=$(eval dladm $DL_TYPE_CMD 2>/dev/null)
+		fi
 
-		[[ $S0 == *:* ]] || ! is_global \
-		|| nic_type=$(eval dladm $DL_TYPE_CMD 2>/dev/null)
+		# Old dladms can't show the class
 
-		if [[ -n $S1 ]]
+		if [[ $type == "non-vlan" ]]
+		then
+			if [[ $nic == vsw* ]]
+			then
+				type="vswitch"
+			elif [[ $nic == aggr* ]]
+			then
+				type="aggr"
+			else
+				type=phys
+			fi
+
+		fi
+
+		# Now get extra info depending on the type
+
+		if [[ $type == "vnic" ]]
 		then
 
-			# This interface has an address. Does it belong to a zone? If it
-			# does, tag the zone name on to the address, (in brackets). If
-			# not, look to see if the address is 0.0.0.0, which it will be
-			# if the interface is not configured in this zone.
+			# Get the underlying NIC, the speed, and the MAC address I
+			# believe VNICs are always full duplex. Over is a ? in a zone
 
-			if ifconfig $S0 | $EGS zone
+			mac=$(dladm show-vnic $nic -po macaddress)
+			dladm show-vnic $net -po over,speed | tr : \  | read over s
+
+			[[ $s == 1000 ]] && speed="1G-f"
+			[[ $s == 100 ]] && speed="100M-f"
+		
+		elif [[ $type == "etherstub" ]]
+		then
+			:
+		elif [[ $type == "aggr" ]]
+		then
+
+			# For aggregates, get the physical links, policy, and MAC
+
+			over=$(eval dladm $DL_AO_CMD)
+			over=${over%,}
+			xtra=$(eval dladm $DL_AP_CMD)
+			mac=$(eval dladm $DL_AM_CMD)
+		elif [[ $type == "clprivnet" ]]
+		then
+			# For cluster private interconnects, get the underlying NICs
+	
+			if can_has clintr
 			then
-				S3=$(ifconfig $S0 | sed -n 's/^.*zone \([^ ]*\).*$/\1/p')
-			else
-				[[ $S1 == "0.0.0.0" ]] && S1="unconfigured in global"
+				over=$(clintr show -n $HOSTNAME \
+				| sed -n '/Transport Adapter:/s/^.* //p')
+			elif can_has scstat
+			then
+				over=$(scstat -W -h $HOSTNAME | sed -n \
+				"/$HOSTNAME/s/^.*$HOSTNAME:\([a-z0-9]*\).*$/\1/p")
 			fi
 
-			# Is this address part of an IPMP group?
+			over=$(print $over | tr " " ,)
+		elif [[ $type == "vswitch" ]]
+		then
+			
+			# If we can run the ldm program, we can find out which device
+			# this vswitch is bound to
 
-			IPMP=$(ifconfig $S0 | grep -w groupname)
-
-			[[ -n $IPMP ]] && S5="IPMP=${IPMP##* }"
-
-			# Is this address under the control of DHCP?
-
-			ifconfig $S0 | $EGS DHCP && S5="DHCP"
-
-			# Denote VLANned interfaces
-
-			[[ $nic_type == "vlan" ]] && S6="vlan"
-
-			# Finally, record the hostname, if we can. DHCP connected
-			# interfaces may not have a proper hostname.dev file, so we'll
-			# use the uname output from earlier. There may be extra stuff in
-			# the hostname file for IPMP, so we just take the first word
-
-			if [[ -s /etc/hostname.$S0 ]]
+			if is_root && can_has ldm
 			then
-				HNAME=$(sed '1!d;s/[  ].*$//' /etc/hostname.$S0)
-				S3=${HNAME:-$HOSTNAME}
+				over="$(ldm ls-domain -p -o network primary | sed -n \
+				"/dev=switch@${nic#vsw}/s/^.*net-dev=\([^|]*\).*$/\1/p")"
 			fi
 
-		else
-			# We hit this if ifconfig couldn't get an address for this
-			# interface. In the old days we'd assume that meant the
-			# interface wasn't in use, but now it could be anything.
+		fi
 
-			# LDOM virtual switches seem to be automatically called "vswx"
+		if [[ $type == "phys" || $type == "vnic" || $type == "virtual" ]]
+		then
 
-			if [[ $S0 == "vsw"* ]]
+			# Ask ifconfig for the IP address 
+
+			addr="$(ifconfig $nic 2>/dev/null \
+				| sed -n '/inet/s/^.*inet \([^ ]*\).*$/\1/p')"
+		
+			if [[ -n $addr ]]
 			then
-				S1="vswitch"
 
-				# If we can run the ldm program, we can find out which
-				# device this switch is bound to
+				# This interface has an address. Get the name of the zone or
+				# host to which it belongs
 
-				if is_root && can_has ldm
+				if ifconfig $nic | $EGS zone
 				then
-					S1="$S1 on $(ldm ls-domain -p -o network primary \
-					| sed -n \
-					"/dev=switch@${S0#vsw}/s/^.*net-dev=\([^|]*\).*$/\1/p")"
+					hname=$(ifconfig $nic \
+					| sed -n 's/^.*zone \([^ ]*\).*$/\1/p')
+				elif [[ $addr == "0.0.0.0" ]]
+				then
+					hname="unconfigured"
+
+					is_global && hname="$hname in global"
+				else
+
+					[[ -s /etc/hostname.$nic ]] \
+						&& hname=$(sed '1!d;s/[  ].*$//' /etc/hostname.$nic)
+
+					hname=${hname:-$HOSTNAME}
 				fi
 
-			elif [[ $nic_type == "aggr" ]]
-			then
-				S1="aggregate"
-			elif [[ $nic_type == "etherstub" ]]
-			then
-				S1="etherstub"
-			elif is_root && is_global && [[ -n $HAS_DL ]] \
-				&& dladm show-link $S0 >/dev/null 2>&1
-			then
-				# If the interface is "up" then we can assume it's doing
-				# something. If not, call it "uncabled" and give up
+				# Get the MAC address
 
-				if [[ $(eval dladm $DL_LINK_CMD) == "up" ]]
+				mac=$(ifconfig $nic 2>/dev/null | sed -n "/ether/s/^.*r //p")
+
+				# If the interface is down, we can quickly plumb it to get
+				# its MAC.  This is a "destructive" action, and is only done
+				# if the DO_PLUMB variable is defined. We skip aliased NICs
+
+				if [[ $type == phys ]] && [[ -n $DO_PLUMB && -z $mac ]]
+				then
+		
+					# ifconfig exits 0 even if it can't plumb an interface,
+					# though it does complain
+
+					tstr=$(ifconfig $nic plumb 2>&1)
+
+					if [[ -z $tstr ]]
+					then
+						mac=$(ifconfig $nic 2>/dev/null | \
+						sed -n "/ether/s/^.*r //p")
+						ifconfig $nic unplumb
+					fi
+
+					mac=${mac:-unknown}
+				fi
+
+				# Get the link speed. Use dladm if we can. If not, try
+				# kstat, then ndd
+
+				if [[ $type == "phys" ]] && is_root && is_global
+				then
+					KDEV=${nic%[0-9]*}
+
+					if [[ -n $HAS_DL ]] && eval dladm $DL_DEVLIST_CMD \
+					| $EGS "^$nic"
+					then
+						speed=$(eval dladm $DL_SPEED_CMD)
+					elif can_has kstat
+					then
+
+						if [[ -a /dev/$KDEV ]] && ! ifconfig $nic \
+						| $EGS FAILED
+						then
+							KI=${nic#$KDEV}
+							DUP=$(kstat -m $KDEV -i $KI \
+							| sed -n '/link_duplex/s/^.* //p' | sed 1q)
+
+							[[ $DUP == 2 ]] && SD=f || SD=h
+
+							speed="$(kstat -m $KDEV -i $KI \
+							| sed -n '/ifspeed/s/^.* //p')-$SD"
+						fi
+
+					else
+						nds=$(ndd -get /dev/$KDEV link_speed 2>/dev/null)
+						nds=$(ndd -get /dev/$KDEV link_mode 2>/dev/null)
+
+						[[ $nds == 0 ]] && speed=10M
+						[[ $nds == 1 ]] && speed=100M
+						[[ $nds == 1000 ]] && speed=1G
+		
+						[[ $nds == 0 ]] && speed="${speed}-h"
+						[[ $nds == 1 ]] && speed="${speed}-f"
+					fi
+
+					[[ $speed == 0-h ]] && unset speed
+
+				fi
+
+			else
+				# ifconfig couldn't get an address for this interface.
+				# Solaris 10 may be using it. Older Solarises aren't
+
+				if is_root && is_global && [[ -n $HAS_DL ]] \
+					&& dladm show-link $nic >/dev/null 2>&1
 				then
 
-					# Is the interface owned by a zone? If it is, it must be
-					# for an exclusive IP instance
+					# If the interface is "up" then we can assume it's doing
+					# something. If not, call it "uncabled" and give up
 
-					IPZONE=$(eval dladm $DL_ZONE_CMD)
-
-					if [[ -n $IPZONE ]]
+					if [[ $(eval dladm $DL_LINK_CMD) != "up" ]]
 					then
-						S1="exclusive IP"
-						S3=$IPZONE
+						addr="uncabled" # interface is down
 					else
-						# It's not a zone exclusive IP, and it's not an LDOM
-						# switch. Let's just call it "unconfigured".
-						# Either it's not in use, or it's been VLANned
+						# Is the interface owned by a zone? If it is, it
+						# must be for an exclusive IP instance
 
-						S1="unconfigured"
+						ipzone=$(eval dladm $DL_ZONE_CMD)
+
+						if [[ -n $ipzone ]]
+						then
+							addr="exclusive IP"
+							hname=$ipzone
+							out="$addr zone=$hname"
+						else # Not in use, or VLANned
+							addr="unconfigured"
+						fi
+
 					fi
 
 				else
-					S1="uncabled" # interface is down
+					addr="uncabled"
 				fi
+				
+				[[ -z $out ]] && out=$addr
 
-			else
-				S1="uncabled"
+			fi
+
+		fi
+
+		# The following tests only apply to interfaces that are plumbed.
+
+		if ifconfig -a | $EGS "^${nic}:"
+		then
+
+			# Is this NIC part of an IPMP group?
+
+			ipmp=$(ifconfig $nic | grep -w groupname)
+
+			if [[ -n $ipmp ]]
+			then
+				ipmp=${ipmp##* }
+				out="$out (IPMP group $ipmp)"
+			fi
+
+			# Is this NIC under the control of DHCP?
+
+			if ifconfig $nic | $EGS DHCP
+			then
+				xtra=DHCP
+				out="$out (DHCP assigned)"
 			fi
 
 		fi
 
 		# Did the interface have a vswitch on it?
 
-		[[ $VSW_IF_LIST == *" $S0 "* ]] && S6="+vsw"
+		[[ $VSW_IF_LIST == *" $nic "* ]] && xtra="+vsw"
 
-		# You can't get a speed for uncabled, or PCN interfaces.
-
-		if [[ $S0 == *"pcn"* && $S1 != "uncabled" ]]
-		then
-			S4="unknown"
-		elif [[ $nic_type == "aggr" ]]
-		then
-			# put the underlying NICs, policy and LACP policy in S5
-
-			S5="over $(dladm show-link $S0 -p -o over | tr \  ,) \
-			$(dladm show-aggr -po policy,addrpolicy)"
-		elif [[ $nic_type == "vnic" ]]
-		then
-			# Put the underlying NIC in S5, the speed in S6 and the MAC in
-			# $mac for later. I believe VNICs are full duplex
-
-			dladm show-vnic $S0 -po over,speed | tr : \  | read S5 S4
-
-			mac=$(dladm show-vnic $S0 -po macaddress)
-			S4="${S4}000000-f"
-			S5="over $S5"
-		
-		elif [[ $nic_type == "etherstub" ]]
-		then
-			# You can only get the MTU for etherstubs. Doesn't seem worth
-			# bothering
-			:
-		elif [[ $S1 != "uncabled" ]] && is_root && is_global
-		then
-
-			# Use dladm if we can. If not, try kstat, then ndd
-
-			if [[ -n $HAS_DL ]] && eval dladm $DL_DEVLIST_CMD | $EGS "^$S0"
-			then
-				S4=$(eval dladm $DL_SPEED_CMD)
-			elif can_has kstat
-			then
-				KDEV=${S0%[0-9]*}
-
-				if [[ -a /dev/$KDEV ]] && ! ifconfig $S0 | $EGS FAILED
-				then
-					KI=${S0#$KDEV}
-					DUP=$(kstat -m $KDEV -i $KI \
-						| sed -n '/link_duplex/s/^.* //p' | sed 1q)
-
-					[[ $DUP == 2 ]] && SD="full" || SD="half"
-
-					S4="$(kstat -m $KDEV -i $KI \
-					| sed -n '/ifspeed/s/^.* //p')-$SD"
-				fi
-
-			else
-				nds=$(ndd -get /dev/${S0%[0-9]*} link_speed 2>/dev/null)
-				nds=$(ndd -get /dev/${S0%[0-9]*} link_mode 2>/dev/null)
-
-				[[ $nds == 0 ]] && S4=10000000
-				[[ $nds == 1 ]] && S4=100000000
-				[[ $nds == 1000 ]] && S4=1000000000
-
-				[[ $nds == 0 ]] && S4="${S4}-half"
-				[[ $nds == 1 ]] && S4="${S4}-full"
-			fi
-
-			[[ $S4 == "0-half" ]] && unset S4
-		fi
-
-		# Turns out you can't (currently?) get the link speed from an LDOM,
-		# and the message makes it look a bit like there's no connection.
-		# So...
-
-		[[ $S4 == *"unknown"* ]] && S4="unknown"
-
-		# S2 going to be the MAC address, which we already have for VNICs
-
-		if is_root && [[ -z $mac ]]
-		then
-			mac=$(ifconfig $S0 2>/dev/null | sed -n "/ether/s/^.*r //p")
-
-			# If the interface is down, we can quickly plumb it to get its
-			# MAC.  This is a "destructive" action, and is only done if the
-			# DO_PLUMB variable is defined. We skip aliases NICs
-
-			if [[ $S0 != *:* ]] && [[ -n $DO_PLUMB && -z $mac ]]
-			then
-		
-				# ifconfig exits 0 even if it can't plumb an interface. But
-				# it does complain in that case
-
-				tstr=$(ifconfig $S0 plumb 2>&1)
-
-				if [[ -z $tstr ]]
-				then
-					mac=$(ifconfig $S0 2>/dev/null | \
-					sed -n "/ether/s/^.*r //p")
-					ifconfig $S0 unplumb
-				fi
-
-			fi
-
-		fi
-
-		S2=${mac:-unknown}
-
-		# Now, depending the kind of output we're producing, we either trim
-		# up the S variables, or pass a string to disp
+		# Process the data for output
 
 		if [[ -n $OUT_P ]]
 		then
-			disp NIC "$S0|$S1|$S2|$S3|$S4|$S5|$S6"
+			dispdat="$nic|$type|$addr|$mac|$hname|$speed|$over|$ipmp|$xtra"
 		else
-			[[ -n $S3 ]] && S3="($S3)"
-			[[ -n $S4 ]] && S4="[$S4]"
-
-			disp NIC $S0 $S1 $S2 $S3 $S4 $S5 $S6
+			[[ -n $over ]] && o_over=" over $over"
+			[[ -n $mac ]] && o_mac=" [${mac% *}]"
+			[[ -n $speed ]] && o_speed=" ($speed)"
+			dispdat="$nic ${type}${o_over} ${addr} ${hname}${o_speed}${o_mac}"
 		fi
-
+	
+		disp NIC "$dispdat" $xtra
 	done
 }
 
