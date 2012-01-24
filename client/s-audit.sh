@@ -183,7 +183,7 @@ G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
 	user_attr root_shell dtlogin cron"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
-G_FS_TESTS="zpools vx_dgs capacity root_fs fs exports"
+G_FS_TESTS="zpools vx_dgs metasets capacity root_fs fs exports"
 L_FS_TESTS="zpools root_fs fs exports"
 
 #-----------------------------------------------------------------------------
@@ -1515,6 +1515,7 @@ function get_net
 
 			# For aggregates, get the physical links, policy, and MAC
 
+			a=${nic#aggr}
 			over=$(eval dladm $DL_AO_CMD)
 			over=${over%,}
 			xtra=$(eval dladm $DL_AP_CMD)
@@ -1727,10 +1728,10 @@ function get_net
 			[[ -n $over ]] && o_over=" over $over"
 			[[ -n $mac ]] && o_mac=" [${mac% *}]"
 			[[ -n $speed ]] && o_speed=" ($speed)"
-			dispdat="$nic ${type}${o_over} ${addr} ${hname}${o_speed}${o_mac}"
+			dispdat="$nic ${type}${o_over} ${addr} ${hname}${o_speed}${o_mac} $xtra"
 		fi
 	
-		disp net "$dispdat" $xtra
+		disp net "$dispdat"
 	done
 }
 
@@ -3315,6 +3316,21 @@ function get_vx_dgs
 			vxprint -S -g$dg | sed '1d' | read v p s pf sf d rv rl stp vs c
 			disp "disk group" \
 			"$dg ($st) [${d} disk/${s}+$sf subdisk/$v vol/${p}+$pf plex]$errs"
+		done
+
+	fi
+}
+
+function get_metasets
+{
+	# Simply lists metasets
+
+	if can_has metaset
+	then
+		metaset | sed -n '/^Set/s/^.*name = \([^,]*\),.*$/\1/p' | \
+		while read set
+		do
+			disp metaset $set
 		done
 
 	fi
