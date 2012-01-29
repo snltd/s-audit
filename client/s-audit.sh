@@ -3217,7 +3217,7 @@ function get_capacity
 
 	# If there are zpools, get those
 	
-	if can_has zpool
+	if [[ -n $HAS_ZFS ]]
 	then
 		zpool list -H | grep -w ONLINE | while read nm sz usd av cap hlth altr
 		do
@@ -3248,7 +3248,7 @@ function get_zpools
 	# "zpool get" in early ZFS releases. Output:
 	# name status (last scrub:) [ver/max_ver]
 
-	if can_has zpool
+	if [[ -n $HAS_ZFS ]]
 	then
 		# First get the current highest supported zpool version, so we can
 		# flag pools running something different. Can't always get this.
@@ -3393,7 +3393,7 @@ function get_fs
 	# Get the current highest supported zfs version if possible, then a list
 	# of devices in vfstab and a list of zone roots.
 
-	if can_has zfs && [[ $(zfs list -H | wc -l) != 0 ]]
+	if [[ -n $HAS_ZFS ]]
 	then
 		ZPL="compression,quota"
 		testfs=$(zfs list -H -oname | sed 1q)
@@ -4075,6 +4075,10 @@ fi
 # zone. We can run the checks
 
 [[ -z $OUT_P && -n $TO_FILE ]] && of_h=1
+
+# If we're doing filesystem audits, do we have ZFS datasets?
+
+can_has zpool && (( $(zpool status | wc -l) > 1)) && HAS_ZFS=1
 
 if [[ -n $RUN_HERE ]]
 then
