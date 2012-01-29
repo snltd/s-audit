@@ -3393,13 +3393,15 @@ function get_fs
 	# Get the current highest supported zfs version if possible, then a list
 	# of devices in vfstab and a list of zone roots.
 
-	if can_has zfs
+	if can_has zfs && [[ $(zfs list -H | wc -l) != 0 ]]
 	then
 		ZPL="compression,quota"
+		testfs=$(zfs list -H -oname | sed 1q)
 
 		for xp in dedup zoned encryption
 		do
-			zfs get help 2>&1 | $EGS $xp && ZPL="${ZPL},$xp"
+			zfs get -H -o property all $(zfs list -H -oname | sed 1q) \
+			| $EGS $xp && ZPL="${ZPL},$xp"
 		done
 
 		if zfs help 2>&1 | $EGS upgrade
