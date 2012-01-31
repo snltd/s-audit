@@ -3473,13 +3473,15 @@ function get_fs
 
 	# List unmounted ZFS filesystems
 
-	if can_has zfs 
+	if [[ -n $HAS_ZFS ]]
 	then
+
 		zfs list -Ho mounted,name,referenced | grep -v ^yes | \
 		while read m n r
 		do
 			disp fs "unmounted zfs [$r] ($n)"
 		done
+
 	fi
 }
 
@@ -3487,34 +3489,83 @@ function get_exports
 {
 	# Get exported filesystems and disks
 	# Format is of the form
-	#   path/dataset (share type) [options] name
+	#   path/dataset (share type) [options] "description"
 
-	# NFS first. Only global zones can export filesystems
+	# NFS and ZFS shared SMB first. Only globals can share for now, but I
+	# hear this will change. share's output changed in Solaris 11
 
-	if is_global
+	if share -h 2>&1 | $EGS proto
 	then
-		share | while read a dir opts desc
+
+		share | grep -v "Remote IPC" | while read a dir fstyp opts desc
 		do
-			txt="$dir (nfs) [$opts]"
-			[[ $desc != '""' ]] && txt="$txt $desc"
-			disp "export" $txt
+			unset x
+
+			if [[ $fstyp == "nfs" ]]
+			then
+				x="[$opts]"
+				[[ -n $desc ]] && x="$x \"$desc\""
+			elif [[ $fstyp == "smb" ]]
+			then
+				fstyp="smb/ZFS"
+				x="[$a]"
+			fi
+
+			disp "export" "$dir ($fstyp) $x"
 		done
+	
+	else
+	
+		if is_global
+		then
+
+			share | while read a dir opts desc
+			do
+				txt="$dir (nfs) [$opts]"
+				[[ $desc != '""' ]] && txt="$txt $desc"
+				disp "export" $txt
+			done
+
+		fi
+
+		if [[ -n $HAS_ZFS ]]
+		then
+
+			zfs get -H -po name,value sharesmb | sed '/@/d;/off$/d' | \
+			while read fs st
+			do
+				disp export "$fs (iscsi) [$st]"
+			done
+
+		fi
+
 	fi
 
-	# Samba via sharemgr
+	# iSCSI. sdbadm if available, with [size]. If not, the ZFS shareiscsi
+	# property with [shareiscsi value].
 
-	if can_has sharemgr
+	if can_has sbdadm
 	then
-		sharemgr show -P smb -v | sed '1,/^zfs/d' | sed -n '/=/s/=/ /p' | \
-		while read name dir
+		
+		sbdadm list-lu | sed '1,/^-/d' | while read guid size src
 		do
-			disp "export" "$dir (smb/zfs) [$name]"
+			disp export "$src (iscsi) [${size}b]"
 		done
+
+	elif [[ -n $HAS_ZFS ]]  && zfs get all $(zfs list -Ho name | sed 1q) \
+		| $EGS shareiscsi
+	then
+
+		zfs get -H -po name,value shareiscsi | sed '/@/d;/off$/d' | \
+		while read fs st
+		do
+			disp export "$fs (iscsi) [$st]"
+		done
+
 	fi
 
 	# Samba via traditional smbd. Query the config file, because smbclient
-	# may not be available, or may need a password. Just shows share name
-	# and path for now
+	# may not be available, or may need a password
 
 	if can_has smbd
 	then
@@ -3529,20 +3580,6 @@ function get_exports
 				disp export "$dir (smb/daemon) [$name]"
 			done
 		fi
-
-	fi
-
-	# iSCSI. Just shows the ZFS dataset and the value of the shareiscsi
-	# property
-
-	if can_has zfs && zfs get 2>&1 | $EGS iscsi
-	then
-
-		zfs get -H -po name,value shareiscsi \
-		| sed '/@/d;/off$/d' | while read fs st
-		do
-			disp export "$fs (iscsi) [$st]"
-		done
 
 	fi
 	
