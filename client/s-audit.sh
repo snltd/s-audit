@@ -3278,7 +3278,8 @@ function get_zpools
 				sed 's/^.*s on //')
 
 				[[ -z $lscr || $lscr == *"none requested"* 
-				|| $lscr == *canceled* || $lscr = *resilver* ]] && lscr="none"
+				|| $lscr == *cancel* || $lscr = *resilver* || $lscr == \
+				*progress* ]] && lscr="none"
 
 				zpext="(last scrub: $lscr)"
 
