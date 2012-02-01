@@ -542,9 +542,13 @@ function get_disk_type
 	if [[ $s == *ide@* ]]
 	then
 		print "ATA" 
-	elif [[ $s == *scsi_vhci* ]]
+	elif [[ $s == *scsi_vhci* ]] # Can also be iSCSI on 5.11
 	then
-		print "SCSI VHCI"
+
+		iostat -En | sed -n "/$1/{n;p;}" | $EGS COMSTAR \
+			&& print "COMSTAR iSCSI" \
+			|| print "SCSI VHCI"
+
 	elif [[ $s == *scsi@* || $s == *esp@* ]]
 	then
 		print "SCSI"
@@ -3327,8 +3331,8 @@ function get_metasets
 
 	if can_has metaset
 	then
-		metaset | sed -n '/^Set/s/^.*name = \([^,]*\),.*$/\1/p' | \
-		while read set
+		metaset 2>/dev/null \
+		| sed -n '/^Set/s/^.*name = \([^,]*\),.*$/\1/p' | while read set
 		do
 			disp metaset $set
 		done
@@ -3531,10 +3535,10 @@ function get_exports
 		if [[ -n $HAS_ZFS ]]
 		then
 
-			zfs get -H -po name,value sharesmb | sed '/@/d;/off$/d' | \
+			zfs get -H -po name,value sharesmb | sed '/@/d;/off$/d;/-$/d' | \
 			while read fs st
 			do
-				disp export "$fs (iscsi) [$st]"
+				disp export "$fs (smb/ZFS) [$st]"
 			done
 
 		fi
@@ -3782,7 +3786,8 @@ function get_ports
 		ps $PSFLAGS -o pid,fname | sed 1d | while read pid fname
 		do
 
-			pfiles $pid 2>/dev/null | egrep "sockname.*port:" | while read p
+			timeout_job pfiles $pid 2>/dev/null | egrep "sockname.*port:" \
+			| while read p
 			do
 				PORT=${p##*: }
 				eval port_$PORT=$fname
