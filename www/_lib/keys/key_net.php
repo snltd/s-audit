@@ -43,11 +43,11 @@ if (defined("OMIT_PORT_THRESHOLD"))
 	$grid_key["port"][] = array("NOTE: open ports above " .
 	OMIT_PORT_THRESHOLD . " are not being displayed.", false, false);
 
-// Generate the NIC key automatically, if we have a nic_cols array
+// Generate the NIC key: Do we have a subnet_cols array?
 
-if (isset($this->cols->nic_cols)) {
+if (defined(SUBNET_COLS) && isset($this->cols->subnet_cols)) {
 
-	foreach($this->cols->get_col_list("nic_cols") as $net=>$col) {
+	foreach($this->cols->get_col_list("subnet_cols") as $net=>$col) {
 		$class = "net$net";
 
     	if ($net == "alom" || $net == "vlan")
@@ -63,8 +63,26 @@ if (isset($this->cols->nic_cols)) {
 		else
 			$txt = $net;
 	
-    	$grid_key["NIC"][] = array($txt, $class);
+    	$grid_key["net"][] = array($txt, $class);
 	}
+
+}
+else {
+
+	$grid_key["net"] = array(
+		
+		array("physical NIC", "boxnetphys", false),
+		array("virtual NIC", "boxnetvirtual", false),
+		array("VNIC", "boxnetvnic", false),
+		array("vswitch", "boxnetvswitch", false),
+		array("etherstub", "boxnetetherstub", false),
+		array("aggregate", "boxnetaggr", false),
+		array("Sun Cluster private", "boxnetclprivnet"),
+		array("VCS LLT link", "boxnetLLT"),
+		array("member of IPMP group", "solidgreen", false),
+		array("DHCP assigned address", "solidamber", false)
+	
+	);
 
 }
 

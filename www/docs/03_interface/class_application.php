@@ -62,6 +62,9 @@ around that installation, and appending &quot;not running&quot; to the
 version string. Of course, you may not <em>want</em> some software to be
 running, for instance an X server, or an MTA.</dd>
 
+<dd>As a general rule, the more &quot;deeply integrated&quot; an application
+is to Solaris, the nearer the left of the page it will appear.</dd>
+
 <dt>Exim and Sendmail</dt>
 <dd>If these programs are installed, but not running as daemons, their
 fields will be bordered with red. However, in many cases, not running them

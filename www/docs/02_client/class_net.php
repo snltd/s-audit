@@ -92,34 +92,74 @@ $pg = new docPage($menu_entry);
 	<dt>snmp</dt>
 	<dd>Says if <tt>snmpdx</tt> is running.</dd>
 
-	<dt>nic</dt>
-	<dd>This test queries network interfaces. It reports the name of the
-	interface, along with the IP address and the zone (if any) which uses
-	that interface. Uncabled and unconfigured interfaces are reported as
-	such.  The link speed and duplex setting is usually reported, but some
-	old cards on some old versions of Solaris do not support this, and
-	neither do virtual switches in LDOMs. VLANned ports are recognized, as
-	are etherstubs, virtual NICs, and IPMP teams. Interfaces with DHCP
-	assigned addresses are reported, as are exclusive IP instances for
-	zones. A full audit requires root privileges, though much useful
-	information can be obtained as a non-privileged user.</dd>
+	<dt>net</dt>
+	<dd>This test queries network devices. For Solaris versions earlier than
+	5.10, this means physical and virtual NICs, but for later versions,
+	<tt>s-audit.s</tt> reports on aggregates, etherstubs, virtual switched
+	and VNICs. On Solaris 10 and later, all physical NICs are reported,
+	while earlier versions can only find plumbed interfaces. The following
+	network device types are reported in the following way.</dd>
+
+	<dd>
+		<dt>phys</dt>
+		<dd>Physical NICs. Note that to an instance of Solaris running in a
+		VirtualBox or under VMWare, NICs presented by the host environment
+		appear to be physical devices.</dd>
+
+		<dt>virtual</dt>
+		<dd>Virtual NICs display their IP address, hostname or, if they
+		belong to a zone, the name of that zone. Exclusive IP instances are
+		reported as such.</dd>
+
+		<dd>The name of the interface is shown first, then the
+		&quot;phys&quot; type, the IPv4 IP address, the hostname, the link
+		speed and duplex (in parentheses), then the MAC address.</dd>
+
+		<dd>IPv6 interfaces are not currently supported.</dd>
+
+		<dt>etherstub</dt>
+		<dd>The name of the etherstub is shown, followed by the string
+		&quot;etherstub&quot;.
+
+		<dt>clprivnet</dt>
+		<dd>Sun Cluster private interconnects are shown as
+		&quot;clprivnet&quot; type. The device name is shown, followed by
+		the type, and the physical NICs which make up the aggregate.
+		Infiniband private interconnects have not been tested.</dd>
+
+		<dt>aggregate</dt>
+		<dd>Aggregates are displayed with the aggregate name, the
+		&quot;aggr&quot; keyword, then the devices which have been combined
+		to make the aggregate. The link policy, and MAC address are also
+		displayed.</dd>
+
+		<dt>vswitch</dt>
+		<dd>If you are using Logical Domains, <tt>s-audit.sh</tt> will find
+		any virtual switches. It reports the switch name, the
+		&quot;vswitch&quot; keyword, and the physical NIC to which the
+		switch is bound. The &quot;phys&quot; data for that NIC will be
+		tagged with &quot;+vsw&quot;.</dd>
+	
+		<dt>LLT</dt>
+		<dd>Veritas Cluster Server private interconnects do not have a
+		device name, so are shown as &quot;LLT link over&quot;, and the
+		device names of the NICs used to make the LLT link. Only ethernet
+		interfaces have been tested.</dd>
+
+		</dt>
+
+	</dd>
+
+	<dd>Note that some old cards on some old versions of Solaris are unable
+	to report their speed, as are virtual switches in LDOMs. VLANned ports
+	are recognized and reported as such. Interfaces with DHCP assigned
+	addresses are reported, as are IPMP groups.</dd>
 
 	<dd>Ordinarily the script will only get the MAC of plumbed interfaces.
 	However, if invoked with the <tt>-M</tt> option, <tt>s-audit.sh</tt>
 	will temporarily plumb each unplumbed interface to get the address. This
 	is the only test which is capable of changing, even temporarily, the
 	state of the machine being audited, and you may not wish to use it.</dd>
-
-	<dd>Output is not particularly human-readable, as it has to carry a
-	lot of information, but takes the form:</dd>
-
-	<dd>
-	<pre>device ip_addr mac_addr hostname speed-duplex ipmp_group vlan</pre>
-	</dd>
-
-	<dd>The <tt>ipmp_group</tt> field can also hold DHCP information, and
-	the <tt>vlan</tt> field can also contain information on virtual
-	switches.</dd>
 
 	<dd>Requires root privileges for a full audit, but will produce useful
 	data as a non-privileged user.</dd>

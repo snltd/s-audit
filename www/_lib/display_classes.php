@@ -35,22 +35,25 @@ class HostGrid {
 	private $t_end_grid;
 		// microtimings
 
+	protected $fields;
+		// We used to generate the list of fields completely dynamically,
+		// but scanning the audit files and building up an array. But as the
+		// range of fields grew, the field ordering became too
+		// unpredictable. So now, for each audit class we supply an array of
+		// expected defaults in $def_fields. We still scan the audits, and
+		// add any fields not in $def_fields after that list. We then look
+		// through the combined list of fields and knock out any that have
+		// no data. A bit long-winded, but it produces the right results.
+
+	protected $dyn_fields;
+
 	protected $servers;
 		// The big data structure we get from the reader class
-
-	protected $fields;
-		// A numbered list, starting at 0, of the fields we will print,
-		// pulled out of a global zone audit file
 
 	protected $hidden_fields = array("zone status", "_err_", "zone brand");
 		// These fields are never shown in its own column, but handled
 		// elsewhere
 
-	protected $adj_fields = array();
-		// hints for where to put fields. If you want one field to follow
-		// another, put the two of them in the $adj_fields[] array, in the
-		// order you wish them to appear.
-		
 	protected $key_filename = false;
 		// Can be used to override the default key filename
 
@@ -78,6 +81,7 @@ class HostGrid {
 	//------------------------------------------------------------------------
 	// METHODS
 
+
 	public function __construct($map, $servers, $class)
 	{
 		// A simple constructor which just populates a few arrays.
@@ -85,7 +89,6 @@ class HostGrid {
 		$this->t_start_grid = microtime(true);
 		$this->c = $class;
 		$this->servers = $servers;
-		$this->fields = $this->get_fields();
 		$this->map = $map;
 		$this->cols = new Colours;
 
@@ -94,6 +97,14 @@ class HostGrid {
 			: true;
 
 		$this->get_key();
+
+		// Sort out our fields
+
+		$this->get_fields();
+		$fields = array_merge(array("hostname"), $this->def_fields);
+
+		if ($this->dyn_fields)
+			$fields = array_merge($fields, $this->dyn_fields);
 
 		// We may have static data. This is in ini file format, to make life
 		// easier for me. If the file is there, read it and parse it. It
@@ -112,7 +123,7 @@ class HostGrid {
 
 				// If we already have this field, do nothing
 
-				if (in_array($xf, $this->fields))
+				if (in_array($xf, $fields))
 					continue;
 
 				// We have an AFTER
@@ -125,29 +136,29 @@ class HostGrid {
 					// end. There aren't many fields, so I don't feel too
 					// bad about the for() loop
 
-					if (in_array($to_follow, $this->fields)) {
+					if (in_array($to_follow, $fields)) {
 					
-						foreach($this->fields as $f) {
+						foreach($fields as $f) {
 							$newf[] = $f;
 							if ($f == $to_follow) $newf[] = $xf;
 						}
-						$this->fields = $newf;
+						$fields = $newf;
 					}
 					else
-						$this->fields[] = $xf;
+						$fields[] = $xf;
 
 				}
 				
 				// If there's no AFTER, just tag the field on the end
 
 				else
-					$this->fields[] = $xf;
+					$fields[] = $xf;
 			}
 
 			$this->audex_keys = array_keys($this->audex);
 		}
 
-		$this->fields = $this->sort_fields("audit completed");
+		$this->fields = array_merge($fields, array("audit completed"));
 	}
 
 	public function get_parent_prop($zone, $class, $prop)
@@ -198,93 +209,33 @@ class HostGrid {
 
 	}
 
-	protected function sort_fields($last = false)
-	{
-		// This function isn't that clever, and OTOH I can think of two ways
-		// to break it. USE WITH CARE! It sorts the fields according to the
-		// hints in the $adj_fields[] array
-
-		$ret_arr = array();
-		$tmp =& $this->fields;
-		$keys = array_keys($this->adj_fields);
-
-		foreach($tmp as $c) {
-			// Put this element in the output array
-
-			if ($c == $last)
-				$lastflag = true;
-			else
-				$ret_arr[] = $c;
-
-			// If the element we've just placed is half of a pair, see if we
-			// have the other half of the pair, and if so, put it next in
-			// the array, then remove it from the source array
-
-			for ($i = 0; $i < sizeof($keys); $i++) {
-
-				if (in_array($c, $keys) && in_array($this->adj_fields[$c],
-				$tmp)) {
-					$ret_arr[] = $try = $this->adj_fields[$c];
-					$old_key = array_search($this->adj_fields[$c], $tmp);
-					unset($tmp[$old_key]);
-					$c = $try;
-				}
-
-			}
-
-		}
-
-		if (isset($lastflag))
-			$ret_arr[] = $last;
-
-		return $ret_arr;
-	}
-
 	private function get_fields()
 	{
 
 		// We need to know how many fields to print, and what those fields
-		// are. This has to be worked out from the servers[] array
+		// are. We are given a (big) hint by the $fields[] array, but the
+		// user may have added new fields, which we need to find. We do this
+		// by examining the servers[] array. While we're at it, we can find
+		// any unused fields in the $def_fields array
 
-		// We simultaneously try two ways of doing it. The first is to find
-		// the audit file with the most unique keys. Secondly, we make a
-		// list of *all* keys. We then compare these two lists, and if the
-		// all keys list is bigger, we use that. It's preferable to use the
-		// file with the most keys, as that preserves the order of keys from
-		// the file. (For instance, it keeps "Apache" and "shared modules"
-		// together
+		$all = array();
 
-		// returns an array of fields, This is used for headers and to line
-		// up data in the table
-
-		$biggest = $all_keys = array();
-
-		foreach($this->servers as $zone) {
-			unset($temp_arr);
-
-			if (!is_array($zone))
-				continue;
-
-			foreach(array_keys($zone[$this->c]) as $col_name) {
-				$temp_arr[] = $col_name;
-
-                if (!in_array($col_name, $all_keys))
-                    $all_keys[] = $col_name;
-
-			}
-
-			if (sizeof($temp_arr) > sizeof($biggest))
-				$biggest = $temp_arr;
-
+		foreach($this->servers as $zone=>$data) {
+			$all = array_merge($all, array_keys($data[$this->type]));
 		}
 
-		$use = (sizeof($all_keys) > sizeof($biggest)) 
-			? $all_keys 
-			: $biggest;
+		$all = array_unique(array_diff($all, array("hostname",
+		"audit completed")));
 
-		return (isset($this->hidden_fields))
-			?  array_diff($use, $this->hidden_fields)
-			: $use;
+		// We now have an array of all fields used in the audit files,
+		// excepting hostname and audit completed.  We can do differences to
+		// find out what fields in $def_fields aren't used, and what fields
+		// to put into $dyn_fields
+
+		$this->dyn_fields = array_diff($all, $this->def_fields);
+
+		$this->def_fields = array_intersect($this->def_fields, $all);
+
 	}
 
 	protected function fold_line($str, $width = 25, $chars =
@@ -359,8 +310,14 @@ class HostGrid {
 
 		$ret_str = "\n<tr>";
 
-		foreach($this->fields as $field)
-			$ret_str .= "<th>$field</th>";
+		foreach($this->fields as $field) {
+
+			$txt = (in_array($field, $this->dyn_fields))
+				? "$field (+)"
+				: $field;
+
+			$ret_str .= "<th>$txt</th>";
+		}
 
 		return $ret_str . "</tr>";
 	}
@@ -881,9 +838,9 @@ class HostGrid {
 		// what is printed on the front, so we look up the name in the
 		// hw_names[] array
 
-		// Put 32-bit OSes on an amber field.  Outline SPARC.
+		// Put 32-bit OSes on an amber field.  Outline SPARC and XVM
 	
-		preg_match("/^(.*) \((.*)\)/", $data[0], $a);
+		preg_match("/^(.*) \((.*)\)(.*)$/", $data[0], $a);
 
 		$hw = (in_array($a[1], array_keys($this->hw_db)))
 			? $this->hw_db[$a[1]]
@@ -900,13 +857,20 @@ class HostGrid {
 		else
 			$frame = false;
 			
-		// Put a line break in if we're not in single server mode
+		// Put line breaks in if we're not in single server mode
 
-		$arch = (!defined("SINGLE_SERVER"))
-			? "<div>($a[2])</div>"
-			: " ($a[2])";
+		$arch = (defined("SINGLE_SERVER"))
+			? " ($a[2])"
+			: "<div>($a[2])</div>";
 
-		return new Cell("${hw}${arch}", $class, $frame);
+		$cluster = (!empty($a[3]))
+		 	? $a[3]
+			: false;
+
+		if (!defined("SINGLE_SERVER"))
+			$cluster = "<div>$cluster</div>";
+
+		return new Cell("${hw}${arch}${cluster}", $class, $frame);
 	}
 
 	protected function show_virtualization($data)
@@ -1656,7 +1620,11 @@ class HostGrid {
 
 				case "LDOM":
 					$class = "ldm";
-					$id["console port"] = $a[3];
+					$cons = ($a[3] == "port SP")
+						? "SP"
+						: $a[3];
+
+					$id["console"] = $cons;
 					break;
 
 				default:
@@ -1886,25 +1854,24 @@ class HostGrid {
 		return preg_replace("/:$/", "", $mac);
 	}
 
-	public function show_NIC($nic_arr)
+	public function show_net($nic_arr)
 	{
-		// $data is an array of NIC lines in parseable format. Each element
-		// is a NIC.
+		// $data is an array of NIC lines in machine-parseable format. Each
+		// element is a network object of some kind
 
-		// The NIC info is presented in machine parseable form as a "|"
-		// delemited string which, when exploded, gives the following
-		// elements
+		// The info is presented as a "|" delemited string which, when
+		// exploded, gives the following elements (s-audit.sh names in
+		// brackets)
 		//
-		//   [0] - device name 
-		//   [1] - IP address / uncabled / unconfigured in global /
-		//         vswitch on.. / exclusive IP on... / vlan / etherstub
-		//   [2] - MAC address (possibly "unknown")
-		//   [3] - hostname / zonename
-		//   [4] - speed-duplex / speed:duplex
-		//   [5] - IPMP group / DHCP / VNIC info / aggregate info
-		//   [6] - +vsw / VLAN
-		//
-		// These line-up with the Sn variables in the auditor script
+		//   [0] - device name ($nic)
+		//   [1] - device type ($type)
+		//   [2] - IP address ($addr)
+		//   [3] - MAC address ($mac)
+		//   [4] - host/zone name ($hname)
+		//   [5] - link speed as speed-duplex ($speed)
+		//   [6] - undelying NIC for aggregates/vsw etc ($over)
+		//   [7] - IPMP group ($ipmp)
+		//   [8] - extra info ($xtra) (+vsw/aggr policy/dhcp)
 
 		if (!is_array($nic_arr))
 			return new Cell("no information");
@@ -1912,111 +1879,121 @@ class HostGrid {
 		$c_arr = array();
 
 		foreach($nic_arr as $nic) {
+			$class = $col = false;
+			$id = array();
 			$na = explode("|", $nic);
-			unset($speed);
-
-			// aliased interfaces, uncabled ones and etherstubs lack
-			// information. Flag them up now
-
-			$anic = ($na[1] == "uncabled" || preg_match("/:/", $na[0]) 
-				|| $na[1] == "exclusive IP" || $na[1] == "etherstub")
-				? true
-				: false;
 
 			// First row has the NIC name in bold if it's cabled, light if
 			// not, then the IP address or state of the interface
 			
-			$txt = (!$anic || $na[1] == "etherstub")
-				? "<strong>" . $na[0] . ": <u>$na[1]</u></strong>"
-				: "$na[0]: $na[1]";
+			//$txt = (!$anic || $na[1] == "etherstub")
+				//? "<strong>" . $na[0] . ": <u>$na[1]</u></strong>"
+				//: "$na[0]: $na[1]";
 
-			// followed by the host/zone name if we have one
+			$txt = "<strong>" . $na[0] . ": <u>$na[2]</u></strong>";
 
-			if ($na[3]) $txt .= " ($na[3])";
+			if ($na[4]) $txt .= " ($na[4])";
 
-			// From here on in, data is in key-value pairs. A heading and
-			// the data.
+			// Type of object. Some need to made more human-readable
 
-			$id = array();
+			if ($na[1] == "phys")
+				$d["type"] = "NIC";
+			elseif ($na[1] == "aggr")
+				$id["type"] = "aggregate";
+			elseif ($na[1] == "clprivnet")
+				$id["type"] = "Sun Cluster private";
+			else
+				$id["type"] = $na[1];
 
-			if (!$anic) {
+			// MAC address, if we have one
 
-				$id["MAC"] = ($na[2] == "unknown")
-					? $na[2]
-					: "<tt>" . $this->format_mac_addr($na[2]) . "</tt>";
-			}
+			if (!empty($na[3]))
+				$id["MAC"] = "<tt>" . $this->format_mac_addr($na[3]) .
+				"</tt>";
 
-			// Speed now
+			// Speed-duplex
 
-			if ($na[4]) {
+			if ($na[5]) {
 
-				// in LDOMs speed is reported as "unknown"
+				// Split the speed/duplex into two parts
 
-				if ($na[4] == "unknown")
-					$speed = $na[4];
-
-				// cluster clprivnets don't report a speed. Ignore those
-
-				elseif ($na[4] == "-half")
-					unset($speed);
-				else {
-			
-					// Split the speed/duplex into two parts
-
-					$sa = preg_split("/:|-/", $na[4]);
+				$sa = preg_split("/:|-/", $na[5]);
 	
-					// Now $sa[0] is the speed, $sa[1] is the duplex. I
-					// don't want the "b" on the speed.
+				// Now $sa[0] is the speed, $sa[1] is the duplex. I don't
+				// want the "b" on the speed.
 	
-					$sa[0] = str_replace("b", "", $sa[0]);
+				$sa[0] = str_replace("b", "", $sa[0]);
 	
-					// Make the speed "1G" if it's 1000M. Also look out for
-					// long strings from kstat.
+				// Make the speed "1G" if it's 1000M. Also look out for long
+				// strings from kstat.
 	
-					if ($sa[0] == "1000M" || $sa[0] == "1000000000")
-						$sa[0] = "1G";
-					elseif ($sa[0] == "100000000")
-						$sa[0] = "100M";
-					elseif ($sa[0] == "10000000")
-						$sa[0] = "10M";
+				if ($sa[0] == "1000M" || $sa[0] == "1000000000")
+					$sa[0] = "1G";
+				elseif ($sa[0] == "100000000")
+					$sa[0] = "100M";
+				elseif ($sa[0] == "10000000")
+					$sa[0] = "10M";
 	
-					// Make the duplex part "full" if it's only "f", and
-					// "half" if it's only "h"
+				// Make the duplex part "full" if it's only "f", and "half"
+				// if it's only "h"
 		
-					if (sizeof($sa) > 1) {
+				if (sizeof($sa) > 1) {
 
-						if ($sa[1] == "f")
-							$sa[1] = "full";
-						elseif ($sa[1] == "h")
-							$sa[1] = "half";
+					if ($sa[1] == "f")
+						$sa[1] = "full";
+					elseif ($sa[1] == "h")
+						$sa[1] = "half";
 
-						$speed = "${sa[0]}bit/$sa[1] duplex";
-					}
-
-					if (isset($sf[1])) $speed .= " $sf[1]";
+					$speed = "${sa[0]}bit/$sa[1] duplex";
 				}
+
+				if (isset($sf[1])) $speed .= " $sf[1]";
 				
 				if (isset($speed)) $id["speed"] = $speed;
 			}
 
-			// na[5] can be DHCP or IPMP info. Possibly other things in the
-			// future
+			// IPMP? Put the IPMP group and colour it if we're not using
+			// subnet_cols
 
-			if ($na[5] == "DHCP")
-				$id["DHCP"] = "yes";
-			elseif ($na[5] && preg_match("/^IPMP/", $na[5]))
-				$id["IPMP"] = preg_replace("/^.*=/", "", $na[5]);
+			if ($na[7]) {
+				$id["IPMP"] = $na[7];
 
-			// Then +vswitch or VLAN info
-
-			if ($na[6]) {
-
-				if ($na[6] == "vlan")
-					$id["VLAN"] = "yes";
-				elseif(preg_match("/^VSW/", $na[6]))
-					$id["vSwitch"] = $na[6];
+				if (!defined(SUBNET_COLS))
+					$col = $this->cols->icol("solid", "green");
 
 			}
+
+			// Underlying NICs?
+
+			if ($na[6]) {
+				if ($na[6] != "?") $id["over"] = preg_replace("/,/", ", ",
+					$na[6]);
+			}
+
+			if ($na[8]) {
+
+				if ($na[8] == "DHCP") {
+					$id["DHCP"] = "yes";
+
+					if (!defined(SUBNET_COLS))
+						$col = $this->cols->icol("solid", "amber");
+				}
+				elseif($na[8] == "+vsw")
+					$id["has vswitch"] = "yes";
+				elseif($na[1] == "aggr")
+					$id["policy"] = $na[8];
+
+			}
+
+
+			// Colours. We can colour on device type, or on subnet
+
+			if (!defined(SUBNET_COLS)) {
+				$class = "boxnet" . $na[1];
+			}
+
+
+			/*
 
 			// That's all the info that goes in the cells. Now we need to
 			// work out how to colour them. We do that with inline colour
@@ -2098,8 +2075,9 @@ class HostGrid {
 			// If it's a virtual interface, use a box. Otherwise use solid
 
 			if (preg_match("/:/", $na[0])) $class = "box$class";
+			*/
 
-			$c_arr[] = array($txt . $this->indent_print($id), $class);
+			$c_arr[] = array($txt . $this->indent_print($id), $class, $col);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -3467,6 +3445,8 @@ class HostGrid {
 
 class PlatformGrid extends HostGrid
 {
+	protected $type = "platform";
+
 	protected $latest_obps = array();
 		// An array of "hardware" => "obp"
 
@@ -3478,6 +3458,10 @@ class PlatformGrid extends HostGrid
 
 	protected $card_db;	// Card definitions from misc.php
 	protected $hw_db;	// Card definitions from misc.php
+
+	protected $def_fields = array("hardware", "virtualization", "CPU",
+	"memory", "OBP", "ALOM f/w", "ALOM IP", "storage", "EEPROM", 
+	"serial number", "printer", "card");
 
 	public function __construct($map, $servers, $c)
 	{
@@ -3505,6 +3489,8 @@ class PlatformGrid extends HostGrid
 
 class OSGrid extends PlatformGrid
 {
+	protected $type = "os";
+
 	protected $latest_kerns;
 		// An array of OS ver => kernel version. OS ver is made up of
 		// distribution + SunOS version + architecture
@@ -3516,6 +3502,10 @@ class OSGrid extends PlatformGrid
 	protected $key_filename = false;
 
 	protected $sol_upds;	// Solaris update dates, from misc.php
+
+	protected $def_fields = array("distribution", "version", "release",
+	"kernel", "hostid", "packages", "patches", "publisher", "VM",
+	"scheduler", "SMF services", "boot env", "uptime");
 
     public function __construct($map, $servers, $c)
 	{
@@ -3594,6 +3584,11 @@ class OSGrid extends PlatformGrid
 // NET AUDIT
 
 class NetGrid extends HostGrid {
+
+	protected $type = "net";
+
+	protected $def_fields = array("name service", "DNS server", "NTP",
+	"SNMP", "name server", "route", "routing", "port", "net");
 }
 
 //==============================================================================
@@ -3601,10 +3596,7 @@ class NetGrid extends HostGrid {
 
 class FSGrid extends HostGrid {
 
-	protected $adj_fields = array(
-		"hostname" => "capacity",
-		"capacity" => "zpool",
-		"zpool" => "disk group");
+	protected $type = "fs";
 
 	protected $mntd_nfs = array();
 
@@ -3612,6 +3604,9 @@ class FSGrid extends HostGrid {
 		// is populated by show_fs(), and read by show_exports(). It's here
 		// because we only want it to be populated when we do a proper FS
 		// audit, not when we're comparing or showing a single server.
+
+	protected $def_fields = array("capacity", "zpool", "disk group",
+	"metaset", "fs", "root fs", "export");
 
 	public function __construct($map, $servers, $c)
 	{
@@ -3653,6 +3648,8 @@ class FSGrid extends HostGrid {
 
 class SecurityGrid extends HostGrid{
 
+	protected $type = "security";
+
 	// By default, the security audit page leaves out a lot of data, in an
 	// attempt to keep the interface clean.
 
@@ -3672,6 +3669,9 @@ class SecurityGrid extends HostGrid{
 		// show_server() puts the omit data for the current server in this
 		// so the correct data is always available to the methods that use
 		// it
+
+	protected $def_fields = array("user", "empty password", "authorized
+	key", "user_attr", "SSH root", "dtlogin", "cron job", "root shell");
 
 	public function show_server($server)
 	{
@@ -3730,18 +3730,6 @@ class SoftwareGrid extends HostGrid
 		// an array of the most up-to-date versions of each piece of
 		// software that's audited
 
-	protected $ignore_version = array("hostname", "apache_so", "audit
-	completed");
-		// Don't try to find the latest versions of these fields
-
-	protected $adj_fields = array(
-		"Apache" => "apache so",
-		"apache so" => "mod_php",
-		"mod_php" => "Sun Web Server"
-		);
-
-	protected $sun_cc_vers;	// Sun Studio versions from misc.php
-
 	public function __construct($map, $servers, $c)
 	{
 		// The constructor is the standard HostGrid one, but it also
@@ -3749,12 +3737,6 @@ class SoftwareGrid extends HostGrid
 
 		parent::__construct($map, $servers, $c);
 		$this->latest = $this->get_latest();
-
-		// We need the defs file for Sun Studio
-
-		require_once(DEF_DIR . "/misc.php");
-		$defs = new defs();
-		$this->sun_cc_vers = $defs->get_data("sun_cc_vers");
 	}
 
 	protected function ver_cols($data, $field, $subname = false)
@@ -4039,16 +4021,67 @@ class SoftwareGrid extends HostGrid
 
 }
 
+//----------------------------------------------------------------------------
+// APPGRID
+
+class AppGrid extends SoftwareGrid
+{
+	protected $type = "app";
+
+	protected $ignore_version = array("hostname", "apache_so", "AI server",
+	"audit completed");
+		// Don't try to find the latest versions of these fields
+
+	protected $def_fields = array("VxVm", "VxFS", "VCS", "Sun Cluster",
+	"SMC", "sshd", "BIND", "X server", "sendmail", "exim",
+	"Samba", "ldm", "AI server", "Apache", "apache so", "mod_php",
+	"iPlanet web", "Nginx", "Oracle", "MySQL server", "svn server" );
+}
+
+//----------------------------------------------------------------------------
+// TOOL GRID
+
+class ToolGrid extends SoftwareGrid
+{
+	protected $type = "tool";
+
+	protected $ignore_version = array("hostname", "audit completed");
+		// Don't try to find the latest versions of these fields
+
+	protected $sun_cc_vers;
+		// Sun Studio versions from misc.php
+
+	protected $def_fields = array("Explorer", "PCA", "OpenSSL", "Java",
+	"perl", "Python", "PHP cmdline", "ruby", "node.js", "Sun CC", "GCC",
+	"sqlplus", "MySQL client", "svn client", "rsync", "s-audit");
+	public function __construct($map, $servers, $c)
+	{
+
+		// We need the defs file for Sun Studio
+
+		require_once(DEF_DIR . "/misc.php");
+		$defs = new defs();
+		$this->sun_cc_vers = $defs->get_data("sun_cc_vers");
+
+		parent::__construct($map, $servers, $c);
+	}
+}
+
 //==============================================================================
 // HOSTED SERVICES GRID
 
 class HostedGrid extends HostGrid
 {
+	protected $type = "hosted";
+
 	// The resolved array keeps track of server names we've already
 	// resolved, so we don't waste time doing duplicates
 
 	protected $ip_list = array();
 	protected $nfs_dirs = array();
+
+	protected $def_fields = array("website", "database", "AI service",
+	"AI client");
 
 	public function __construct($map, $servers, $c)
 	{

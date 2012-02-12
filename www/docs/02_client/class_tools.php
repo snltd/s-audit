@@ -61,6 +61,9 @@ $pg = new docPage("software tool audits");
 	<dt>ruby</dt>
 	<dd>Report the version of <a href="http://ruby-lang.org">Ruby</a>.</dd>
 
+	<dt>node</dt>
+	<dd>Report the version of the node.js <tt>node</tt> executable.</dd>
+
 	<dt>cc</dt>
 	<dd>Report the version of what is now called <a
 	href="http://www.oracle.com/technetwork/server-storage/solarisstudio/overview/index.html">Oracle

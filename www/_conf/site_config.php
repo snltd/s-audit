@@ -27,6 +27,10 @@ define("ALOM_SFX", "-lom." . STRIP_DOMAIN);
 	// the hostname, then do a DNS lookup. If this isn't defined, then the
 	// "guessing" is not done
 
+define("SUBNET_COLS", false);
+	// Whether to colour NET cells depending on the NICs' subnet. If false,
+	// colours depending on device type
+
 define("SHOW_SERVER_INFO", true);
 	// Whether or not to expose server information in the footer
 

@@ -17,7 +17,7 @@ require_once(LIB . "/display_classes.php");
 
 $map = new ZoneMap();
 $s = new GetServers($map, false, "app");
-$grid = new SoftwareGrid($map, $s->get_array(), "app");
+$grid = new AppGrid($map, $s->get_array(), "app");
 
 $pg = new audPage("application software audit", $grid->server_count(),
 $grid->zone_toggle());

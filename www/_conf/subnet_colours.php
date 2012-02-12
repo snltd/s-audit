@@ -2,8 +2,8 @@
 
 //============================================================================
 //
-// nic_colours.php
-// ---------------
+// subnet_colours.php
+// ------------------
 //
 // This file lets you define colours for various subnets on the platform
 // audit page. So, if you use different coloured cables for different
@@ -26,7 +26,7 @@
 // This array tells us how to colour NICs. The subnets and colours are
 // site-specific, so you will most likely want to change them.
 
-$nic_cols = array(
+$subnet_cols = array(
 	"10.0.2" => "#62A189",			// aqua (Windows VirtualBox internal net)
 	"192.168.56" => "#59A6C2",		// VirtualBox
 	"172.16.0" => "#68BDDC",		// Sun Cluster private link

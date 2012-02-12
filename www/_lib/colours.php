@@ -134,18 +134,29 @@ class colours {
 		"deva" => "#c7a49c"
 	);
 
+	protected $net_cols = array(
+		"phys" => "#B60A4F",
+		"virtual" => "#888",
+		"vnic" => "#230997",
+		"etherstub" => "#9A5F0B",
+		"vswitch" => "#571C56",
+		"aggr" => "#DC8A82",
+		"clprivnet" => "#2A480E",
+		"LLT" => "#2B2E70"
+	);
+
 	public function __construct()
 	{
-		// Get the nic_colours[] array. We have to use a _SERVER path
+		// Get the subnet_cols[] array. We have to use a _SERVER path
 		// because we might be calling this from dynamic_css.php, which
 		// doesn't include the site config file
 
-		if (file_exists(ROOT . "/_conf/nic_colours.php")) {
-			require_once(ROOT . "/_conf/nic_colours.php");
+		if (file_exists(ROOT . "/_conf/subnet_colours.php")) {
+			require_once(ROOT . "/_conf/subnet_colours.php");
 
-			if (isset($nic_cols)) {
-				$this->nic_cols = $nic_cols;
-				unset($nic_cols);
+			if (isset($subnet_cols)) {
+				$this->subnet_cols = $subnet_cols;
+				unset($subnet_cols);
 			}
 
 		}

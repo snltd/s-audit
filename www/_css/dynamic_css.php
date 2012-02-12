@@ -122,7 +122,11 @@ if ($qs == "fs.php" || defined("ALL")) {
 if ($qs == "net.php" || $qs == "index.php" || defined("ALL")) {
 	echo "\n/* begin nic_cols */\n";
 
-	foreach($cols->get_col_list("nic_cols") as $name=>$hex) {
+	$getlist = (defined(SUBNET_COLS))
+		? "subnet_cols"
+		: "net_cols";
+
+	foreach($cols->get_col_list($getlist) as $name=>$hex) {
 		$nn = "net" . preg_replace("/\./", "", $name);
 		echo "\n.$nn { background: $hex }";
 		echo "\n.box$nn { border: 2px solid $hex }";

@@ -159,26 +159,25 @@ $ vim site_config.php
 
 </dl>
 
-<h4><tt>nic_cols.php</tt></h4>
+<h4><tt>subnet_cols.php</tt></h4>
 
 <p>If you use colour-coding on your network cables (i.e. different colours
 for different subnets), s-audit's interface can tie in with that and make <a
 href="../03_interface/class_net.php">network audits</a> clearer.</p>
 
 <p>Even if you don't use colour-coded cables, it's recommend that you
-install the default <tt>nic_cols.php</tt>.</p>
+install the default <tt>subnet_cols.php</tt>.</p>
 
 <p>As with the config file, copy the default file and edit it.</p>
 
 <pre class="cmd">
 $ cd _conf
-$ mv nic_cols.php.def nic_cols.php
-$ vim nic_cols.php
+$ mv subnet_cols.php.def subnet_cols.php
+$ vim subnet_cols.php
 </pre>
 
 <p>The file should be self-explanatory. It simply pairs subnet addresses
 with HTML hex colours. Some default values are provided.</p>
-
 
 <h4>Creating Audit Groups</h4>
 

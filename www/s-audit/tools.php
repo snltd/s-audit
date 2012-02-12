@@ -17,7 +17,7 @@ require_once(LIB . "/display_classes.php");
 
 $map = new ZoneMap();
 $s = new GetServers($map, false, "tool");
-$grid = new SoftwareGrid($map, $s->get_array(), "tool");
+$grid = new ToolGrid($map, $s->get_array(), "tool");
 
 $pg = new audPage("software tool audit", $grid->server_count(),
 $grid->zone_toggle());

@@ -36,6 +36,10 @@ $pg = new docPage($menu_entry);
 	number of disks and the number of volumes which belong to the
 	group.</dd>
 
+	<dt>metaset</dt>
+	<dd>Lists DiskSuite/SVM metaset names. No other information is currently
+	retrieved.</dd>
+
 	<dt>capacity</dt>
 	<dd>Adds up the available and used space on all local filesystems and
 	reports it as numbers and a percentage used. Omitted in local

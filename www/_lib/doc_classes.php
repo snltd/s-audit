@@ -162,6 +162,10 @@ fields listed on this page.</p>
 coloured fields can be combined to draw the user's attention to more than
 one thing.</p>
 
+<p>Fields with &quot;(+)&qout; in their header were unexpected, and
+dynamically added into the audit. If you see a lot of these fields, you may
+need to update your interface software.</p>
+
 <dl>
 	<dt>hostname</dt>
 	<dd>The hostname of the server or zone. Global zones, which may be
