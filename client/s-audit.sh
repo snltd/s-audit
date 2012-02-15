@@ -180,7 +180,7 @@ G_PATCH_TESTS="patch_list package_list"
 L_PATCH_TESTS=$G_PATCH_TESTS
 
 G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
-	user_attr root_shell dtlogin cron"
+	RBAC root_shell dtlogin cron"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
 G_FS_TESTS="zpools vx_dgs metasets capacity root_fs fs exports"
@@ -1797,7 +1797,7 @@ function get_routes
 function get_rt_fwd
 {
 	# Get IP routing and forwarding info. Use routeadm if we have it, fall
-	# back to ndd
+	# back to ndd (which doesn't work in branded zones)
 
 	if can_has routeadm
 	then
@@ -1811,7 +1811,7 @@ function get_rt_fwd
 	elif is_root
 	then
 
-		[[ $(ndd -get /dev/ip ip_forwarding) == 1 ]] \
+		[[ $(ndd -get /dev/ip ip_forwarding 2>/dev/null ) == 1 ]] \
 			&& disp routing "IPv4 forwarding enabled"
 
 		# IPv6 if it's there
@@ -2567,8 +2567,9 @@ function get_smc
 
 		fi
 
-	elif [[ -f /usr/sadm/lib/smc/bin/smcboot ]]
+	elif can_has smc
 	then
+		V=$(smc --version)
 		is_running smcboot && msg=running || msg="not running"
 	fi
 
@@ -3651,10 +3652,10 @@ function get_users
 	done
 }
 
-function get_user_attr
+function get_RBAC
 {
 	# Get non-standard user-attr entries. Not all versions of Solaris have
-	# this
+	# this. This will grow.
 
 	ATTR_FILE=/etc/user_attr
 
@@ -3663,7 +3664,7 @@ function get_user_attr
 
 		egrep -v "^[$WSP]*#|^$" $ATTR_FILE | while read -r line
 		do
-			disp user_attr "$line"
+			disp RBAC "attr:$line"
 		done
 
 	fi
@@ -3787,7 +3788,7 @@ function get_ports
 		ps $PSFLAGS -o pid,fname | sed 1d | while read pid fname
 		do
 
-			timeout_job pfiles $pid 2>/dev/null | egrep "sockname.*port:" \
+			pfiles $pid 2>/dev/null | egrep "sockname.*port:" \
 			| while read p
 			do
 				PORT=${p##*: }
