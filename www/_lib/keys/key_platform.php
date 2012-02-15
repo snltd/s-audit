@@ -71,6 +71,7 @@ $grid_key = array(
 		array("tape drive", "tp", false),
 		array("fibre array", "fc", false),
 		array("RAID volume", "rvol", false),
+		array("iSCSI volume", "iscsi", false),
 		array("loaded CD/DVD", "cd", $this->cols->icol("solid", "amber")),
 		array("mounted CD/DVD", "cd", $this->cols->icol("solid", "green"))
 	),

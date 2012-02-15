@@ -1066,7 +1066,11 @@ class HostGrid {
 
 				case "disk":
 
-					$class = "disk";
+					// Special case for iSCSI
+
+					$class = (preg_match("/iSCSI/", $datum))
+						? "iscsi"
+						: "disk";
 
 					if (!preg_match("/unknown/", $datum)) {
 						$parts = explode(" ", $datum, 5);
@@ -2692,18 +2696,24 @@ class HostGrid {
 				}
 
 			}
-			elseif ($a[2] == "xVM disk" || $a[2] == "vdisk") {
+			elseif ($a[2] == "xVM disk") {
 				$id["binding"] = str_replace("on ", "", $a[3]);
-
-				if (preg_match("/bound to unassigned$/", $a[3])) {
-
-					if ($bt == "unassigned") {
-						$bt = "UNASSIGNED";
-						$col = $this->cols->icol("solid", "amber");
-					}
-
-				}
 				$class = "xvm";
+			}
+			elseif ($a[2] == "vdisk") {
+				$class = "vdisk";
+
+				preg_match("/(\S+) bound to (.*)$/", $a[3], $x);
+
+				$id["device"] = $x[1];
+
+				if (preg_match("/unassigned$/", $a[1])) {
+					$id["bound to"] = $x[2];
+					$col = $this->cols->icol("solid", "amber");
+				}
+				else
+					$id["bound to"] = $x[2];
+
 
 			}
 			elseif (preg_match("/^smb/", $a[2])) {
@@ -4034,7 +4044,7 @@ class AppGrid extends SoftwareGrid
 
 	protected $def_fields = array("VxVm", "VxFS", "VCS", "Sun Cluster",
 	"SMC", "sshd", "BIND", "X server", "sendmail", "exim",
-	"Samba", "ldm", "AI server", "Apache", "apache so", "mod_php",
+	"Samba", "ldm", "AI server", "Apache", "apache so", "mod_php", "Tomcat",
 	"iPlanet web", "Nginx", "Oracle", "MySQL server", "svn server" );
 }
 

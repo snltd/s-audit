@@ -3664,7 +3664,7 @@ function get_RBAC
 
 		egrep -v "^[$WSP]*#|^$" $ATTR_FILE | while read -r line
 		do
-			disp RBAC "attr:$line"
+			disp user_attr "$line"
 		done
 
 	fi

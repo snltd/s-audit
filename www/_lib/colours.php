@@ -113,6 +113,7 @@ class colours {
 		"cd" => "#ccc",			// optical drives
 		"fc" => "#7b7a94", 		// fibre arrays
 		"tp" => "#c7a49c",		// tape drives
+		"iscsi" => "#DF1711",	// iSCSI volume
 		"rvol" => "#167318"		// h/w RAID volume
 	);
 
