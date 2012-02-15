@@ -73,7 +73,7 @@ define("MAX_AF_VER", 3.0);
 define("MIN_AF_VER", 3.0);
 	// Maximum and minimum audit file versions we support
 
-define("C_YEAR", "2011");
+define("C_YEAR", "2012");
 	// Year for (c) messages
 
 $usual_ports = array(
