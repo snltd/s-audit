@@ -26,7 +26,7 @@
 PATH=/usr/bin
 	# Always set your PATH
 
-BASE_DIR="/var/snltd/s-audit/default"
+BASE_DIR="/var/snltd/s-audit"
 	# s-audit's /var directory
 
 GROUP="default"
@@ -55,7 +55,7 @@ usage()
 
 	where:
 	  -g :     audit group
-	             [Default is '${DEF_GROUP}'.]
+	             [Default is '${GROUP}'.]
 	  -o :     path to output file.
 	             [Default is '${OUTFILE}'.]
 	  -D :     path to dig binary
@@ -71,7 +71,7 @@ usage()
 #-----------------------------------------------------------------------------
 # SCIRPT STARTS HERE
 
-while getopts "D:g:s:o:" option 2>/dev/null
+while getopts "d:D:g:s:o:" option 2>/dev/null
 do
 
 	case $option in

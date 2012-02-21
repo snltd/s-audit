@@ -49,6 +49,9 @@ DIG="/usr/local/bin/dig"
 DNS_SRV="dns-server"
 	# DNS server to use for lookups
 
+BASE_DIR="/var/snltd/s-audit"
+    # s-audit's /var directory
+
 PARL_PINGS=25
 	# How many pings to do in parallel. Shouldn't cause any kind of load on
 	# the system, just depends on how badly you want to flood your process
@@ -114,9 +117,10 @@ usage()
 {
 	cat<<-EOUSAGE
 	usage:
-	  ${0##*/} [-R user@host:/path] [-s dns_server] [-D path] [-o file] subnet...
+	  ${0##*/} [-R user@host:/path] [-g group] [-s dns_server] [-D path] [-o file] subnet...
 
 	where:
+	  -g :     audit group
 	  -o :     path to output file. Default is standard out.
 	  -D :     path to dig binary
 	             [Default is '${DIG}'.]
@@ -132,10 +136,13 @@ usage()
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
-while getopts "D:o:R:s:" option 2>/dev/null
+while getopts "D:g:o:R:s:" option 2>/dev/null
 do
 
     case $option in
+
+		"g")	GROUP=$OPTARG
+				;;
 
         "D")    DIG=$OPTARG
                 ;;
@@ -162,6 +169,14 @@ shift $(($OPTIND - 1))
 
 [[ $# == 0 ]] && usage
 
+if [[ -n $GROUP ]]
+then
+	[[ -n $REMOTE_STR ]] && die "-g and -R options are mutually exclusive."
+	[[ -n $OUTFILE ]] && die "-g and -o options are mutually exclusive."
+
+	OUTFILE="${BASE_DIR}/${GROUP}/network/ip_list.txt"
+fi
+
 if [[ -n $REMOTE_STR ]]
 then
 	[[ -n $OUTFILE ]] && die "-o and -R options are mutally exclusive."
@@ -170,6 +185,8 @@ fi
 
 if [[ -n $OUTFILE ]]
 then
+	print -u2 "writing to $OUTFILE"
+
 	exec 3>$OUTFILE
 
 	[[ $OUTFILE == */* ]] \
