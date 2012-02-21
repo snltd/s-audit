@@ -158,6 +158,10 @@ class HostGrid {
 			$this->audex_keys = array_keys($this->audex);
 		}
 
+		// Remove hidden fields
+
+		$fields = array_diff($fields, $this->hidden_fields);
+
 		$this->fields = array_merge($fields, array("audit completed"));
 	}
 
@@ -1364,7 +1368,7 @@ class HostGrid {
 				// [3] => miniroot path
 
 			else 
-				preg_match("/^(\w+): (.*) \((.*)\) \[(\w*)\]$/", $row, $a);
+				preg_match("/^(\S+): (.*) \((.*)\) \[(\S*)\]$/", $row, $a);
 
 				// [1] => BE type
 				// [2] => BE name
@@ -1473,14 +1477,16 @@ class HostGrid {
 		// in amber if any of them are only partially installed. Break the
 		// cluster out on to a separate line, if it's there
 
-		$class = preg_match("/partial/", $data[0])
+		$data = preg_replace("/^(\d+)/", "<strong>$1</strong>", $data[0]);
+
+		$class = preg_match("/partial/", $data)
 			? "solidamber"
 			: false;
 
-		if (preg_match("/\/SUNW/", $data[0]))
-			$data[0] = preg_replace("/\/(\w*)\]/", "]<div>$1</div>", $data[0]);
+		if (preg_match("/\/SUNW/", $data))
+			$data = preg_replace("/\/(\w*)\]/", "]<div>$1</div>", $data);
 
-		return new Cell($data[0], $class);
+		return new Cell($data, $class);
 	}
 
 	protected function show_publisher($data)
@@ -3639,7 +3645,7 @@ class FSGrid extends HostGrid {
 			if (isset($this->servers[$srvr]["fs"]["fs"]))
 				$fslist = $this->servers[$srvr]["fs"]["fs"];
 
-			if (!is_array($fslist)) continue;
+			if (! isset($fslist) || !is_array($fslist)) continue;
 
 			foreach(preg_grep("/^\S+ nfs /", $fslist) as $fs) {
 				preg_match("/^.*\(([^;]*).*$/", $fs, $a);
@@ -3680,8 +3686,9 @@ class SecurityGrid extends HostGrid{
 		// so the correct data is always available to the methods that use
 		// it
 
-	protected $def_fields = array("user", "empty password", "authorized
-	key", "user_attr", "SSH root", "dtlogin", "cron job", "root shell");
+	protected $def_fields = array("user", "empty password",
+	"authorized key", "user_attr", "SSH root", "dtlogin", "cron job",
+	"root shell");
 
 	public function show_server($server)
 	{

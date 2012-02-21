@@ -1379,9 +1379,14 @@ function get_virtualization
 			# See if we're a brand other than native. If we don't have
 			# zoneadm, go with the OS revision
 
-			can_has zoneadm \
-				&& VIRT="zone (${ZI}/$(zoneadm list -cp | cut -d: -f6))" \
-				|| VIRT="zone (${ZI}/$OSVER)"
+			if can_has zoneadm
+			then
+				br=$(zoneadm list -cp | cut -d: -f6)
+				VIRT="zone (${ZI}/${br:-native})"
+			else
+				VIRT="zone (${ZI}/$OSVER)"
+			fi
+
 		fi
 
 	fi
@@ -1671,7 +1676,8 @@ function get_net
 						# Is the interface owned by a zone? If it is, it
 						# must be for an exclusive IP instance
 
-						ipzone=$(eval dladm $DL_ZONE_CMD)
+						dladm -h 2>&1 | $EGS show-linkprop \
+							&& ipzone=$(eval dladm $DL_ZONE_CMD)
 
 						if [[ -n $ipzone ]]
 						then
@@ -1901,11 +1907,25 @@ function get_be
 
 	if (($OSVERCMP > 510 )) && can_has beadm
 	then
-		# show the name, root, active flags and mountpoint
+		# show the name, root, active flags and mountpoint. There are
+		# different beadms, but give them both the same output here
 
-		beadm list -H | cut -d\; -f1,3,4 | tr \; ' ' | while read nm fl r
+		beadm list | sed 1q | $EGS Policy && newbea=1
+
+		beadm list | sed '1,/^-/d' | while read be f2 f3 f4 junk
 		do
-			disp "boot env" "beadm: $nm ($r) [$fl]"
+			
+			if [[ -n $newbea ]]
+			then
+				fl=$f2
+				r=$f3
+			else
+				[[ $f2 == "yes" ]] && fl=N
+				[[ $f3 == "yes" ]] && fl=${fl}R
+				r=$f4
+			fi
+
+			disp "boot env" "beadm: $be ($r) [$fl]"
 		done
 
 	elif is_root && can_has lustatus
@@ -1922,7 +1942,6 @@ function get_be
 			disp "boot env" "LU: $nm (${x}complete) [$fl]"
 		done
 	fi
-
 
 	if (($OSVERCMP > 59))
 	then
@@ -2055,15 +2074,21 @@ function get_local_zone
 		zoneadm list -cp | cut -d: -f2,3,4,6 | sed '1d;s/:/ /g' | sort | \
 		while read zn zstat zpth zbrand
 		do
+
 			sed="s/\[//;s/\]//;/^[^a-z]/s/^[$WSP]*\([^:]*\): \(.*\)$/\1=\2/p"
 
-			zmem=$(zonecfg -z $zn info capped-memory | sed -n "$sed")
-			zcpu=$(zonecfg -z $zn info capped-cpu | sed -n "$sed")
-			zdcpu=$(zonecfg -z $zn info dedicated-cpu | sed -n "$sed")
-			rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" , | tr -s ,)
-			rc=${rc#,}
+			# Not all versions support resource capping, or brands
 
-			disp VM "local zone: $zn (${zbrand}:${zstat}) [${rc%,}] $zpth"
+			if zonecfg help | $EGS "capped-memory"
+			then
+				zmem=$(zonecfg -z $zn info capped-memory | sed -n "$sed")
+				zcpu=$(zonecfg -z $zn info capped-cpu | sed -n "$sed")
+				zdcpu=$(zonecfg -z $zn info dedicated-cpu | sed -n "$sed")
+				rc=$(print "${zcpu},${zdcpu},${zmem}" | tr "\n" , | tr -s ,)
+				rc=${rc#,}
+			fi
+
+			disp VM "local zone: $zn (${zbrand:-native}:${zstat}) [${rc%,}] $zpth"
 		done
 
 	fi
@@ -2092,13 +2117,14 @@ function get_xvmdoms
 	if is_root && can_has virsh
 	then
 		
-		virsh list | sed '1,2d;/^$/d' | while read id nm st
+		virsh list 2>/dev/null | sed '1,2d;/^$/d' | while read id nm st
 		do
 			print $(virsh dominfo $nm | egrep "^CPU\(|^Max|^OS" | \
 			sed 's/^.*: *//') | read o c m
 
 			disp VM "xVM: $nm (${o}:$st) [$c CPU/$m]"
 		done
+
 	fi
 
 }
@@ -3534,7 +3560,8 @@ function get_exports
 
 		fi
 
-		if [[ -n $HAS_ZFS ]]
+		if [[ -n $HAS_ZFS ]] && zfs get all $(zfs list -Ho name | sed 1q) \
+			| $EGS sharesmb
 		then
 
 			zfs get -H -po name,value sharesmb | sed '/@/d;/off$/d;/-$/d' | \
@@ -3558,7 +3585,7 @@ function get_exports
 			disp export "$src (iscsi) [${size}b]"
 		done
 
-	elif [[ -n $HAS_ZFS ]]  && zfs get all $(zfs list -Ho name | sed 1q) \
+	elif [[ -n $HAS_ZFS ]] && zfs get all $(zfs list -Ho name | sed 1q) \
 		| $EGS shareiscsi
 	then
 
@@ -3631,7 +3658,7 @@ function get_exports
 	if can_has virsh && is_root
 	then
 
-		virsh list | sed '1,3d;/^$/d' | while read n dom s
+		virsh list 2>/dev/null | sed '1,3d;/^$/d' | while read n dom s
 		do
 			disp export $(virsh dumpxml $dom | sed -n \
 			"/source dev/s/^.*dev='\([^']*\)'.*$/\1/p") "(xVM disk) [on $dom]"

@@ -59,8 +59,7 @@ class GetIpList {
 
 		if (file_exists($this->paths["ip_res_file"])) {
 			$this->get_ip_res_file($this->paths["ip_res_file"]);
-			$this->timestamp["IP_RES"] =
-			filemtime($this->paths["ip_res_file"]);
+			$this->timestamp["IP_RES"] = filemtime($this->paths["ip_res_file"]);
 		}
 		else
 			$this->addrs["IP_RES"] = array();
@@ -122,14 +121,14 @@ class GetIpList {
 		// Pull out lines which look roughly correct, then validate properly
 		// and put valid addresses into an array
 
-		$virf = preg_grep("/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\S+$/",
-		$irf);
+		$virf = preg_grep("/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+/", $irf);
 
 		foreach($virf as $line) {
 			$a = preg_split("/\s+/", $line);
 
 			if ($a[0] == long2ip(ip2long($a[0])))
 				$this->addrs["IP_RES"][$a[0]] = $a[1];
+
 		}
 
 	}
@@ -156,24 +155,34 @@ class GetIpList {
 
 		foreach($servers as $h=>$s) {
 		
+			// h is the hostname
+
+			// Get ALOM IPs from the platform audit
+
 			if (isset($s["platform"]["ALOM IP"])) {
 				$aip = $s["platform"]["ALOM IP"][0];
 				$ret[$aip] = "$h LOM";
 			}
 
-			if (isset($s["net"]["NIC"])) {
-				$nic = preg_grep("/^\w+[:\d]+\|\d/", $s["net"]["NIC"]);
+			// Get addresses assigned to physical and virtual NICs,
+			// vswitches, aggregates etc etc etc
 
-				foreach($nic as $n) {
-					$a = explode("|", $n);
+			if (isset($s["net"]["net"])) {
+
+				foreach($s["net"]["net"] as $nic) {
+					$a = explode("|", $nic);
 					
-					// Put in the names of non-aliased interfaces
+					if (preg_match("/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/",
+						$a[2])) {
+
+						// Put in the names of non-aliased interfaces
 					
-					$if = (!preg_match("/:/", $a[0]))
-						?  " $a[0]"
-						: "";
-					
-					$ret[$a[1]] = "${h}$if";
+						$if = (!preg_match("/:/", $a[0]))
+							?  " $a[0]"
+							: "";
+
+						$ret[$a[2]] = "${h}$if";
+					}
 				}
 
 			}
