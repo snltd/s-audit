@@ -707,6 +707,9 @@ function get_disk_type
 			&& print "COMSTAR iSCSI" \
 			|| print "SCSI VHCI"
 
+	elif [[ $s == "lpfc" ]]
+	then
+		print "FC"
 	elif [[ $s == *scsi@* || $s == *esp@* ]]
 	then
 		print "SCSI"
@@ -921,8 +924,16 @@ function get_memory
 
 	swap=$(swap -l 2>/dev/null | sed '1d' | tr -s " " | cut -d\  -f4)
 
+	# Can have multiple swap devices
+
+	ss=0
+	for s in $swap
+	do
+		ss=$(print "$ss + $s" | bc)
+	done
+
 	[[ -n $swap ]] \
-		&& disp "memory" "$(num_suff $(($swap * 512)))b swap" \
+		&& disp "memory" "$(num_suff $(print "$ss * 512" | bc))b swap" \
 		|| disp "memory" "no swap space"
 }
 
@@ -934,13 +945,18 @@ function get_cpus
 
 	if (($OSVERCMP >= 510))
 	then
+		C0=$(psrinfo | sed 1q | cut -f1)
 		CPUN=$(psrinfo -p)
-		CPUL=$(psrinfo -vp 0 | sed 1q)
+		CPUL=$(psrinfo -vp $C0 | sed 1q)
 
-		if [[ $CL == *cores* ]]
+		if [[ $CPUL == *cores* ]]
 		then
 			print $CPUL | cut -d\  -f 5,8 | read c v
 			CPUX="x $c cores ($v virtual)"
+		elif [[ $CPUL == *virtual* ]]
+		then
+			print $CPUL | cut -d\  -f 5,8 | read c v
+			CPUX="x $c cores"
 		else
 			CPUC=$(print $CPUL | sed '/physical/!d;s/^.*has \([0-9]*\).*$/\1/')
 			(($CPUC > 1)) && CPUX="x $CPUC virtual"
@@ -950,7 +966,7 @@ function get_cpus
 		CPUN=$(psrinfo | wc -l)
 	fi
 
-	disp "CPU" $CPUN $CPUX @ $(psrinfo -v 0 \
+	disp "CPU" $CPUN $CPUX @ $(psrinfo -v $C0 \
 	| sed -n '/MHz/s/^.*at \([0-9]*\) .*$/\1/p')MHz
 }
 
@@ -1254,6 +1270,8 @@ function get_virtualization
 				VIRT="guest LDOM"
 			fi
 
+		else
+			modinfo | $EGS drmach && VIRT="F15k/25k domain"
 		fi
 
 		can_has zonename && VIRT="$VIRT (global zone)"
@@ -2068,7 +2086,7 @@ function get_rt_fwd
 	# Get IP routing and forwarding info. Use routeadm if we have it, fall
 	# back to ndd (which doesn't work in branded zones)
 
-	if can_has routeadm && is_route
+	if can_has routeadm && is_root
 	then
 
 		routeadm | grep "IPv.*abled" | while read a b c d
