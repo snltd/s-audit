@@ -225,7 +225,9 @@ class HostGrid {
 		$all = array();
 
 		foreach($this->servers as $zone=>$data) {
-			$all = array_merge($all, array_keys($data[$this->type]));
+
+			if (isset($data[$this->type]))
+				$all = array_merge($all, array_keys($data[$this->type]));
 		}
 
 		$all = array_unique(array_diff($all, array("hostname",
@@ -401,7 +403,9 @@ class HostGrid {
 		if (is_array($zl)) {
 
 			foreach($this->map->list_server_zones($server) as $zone) {
-				$ret .= $this->show_zone($this->servers[$zone][$this->c]);
+
+				if (isset($this->servers[$zone][$this->c]))
+					$ret .= $this->show_zone($this->servers[$zone][$this->c]);
 			}
 
 		}
@@ -2139,6 +2143,8 @@ class HostGrid {
 		// only one Apache on this box, strip that extraneous information
 		// out
 
+		sort($data);
+
 		if (sizeof($this->cz["Apache"]) == 1)
 			$data = preg_replace("/ .*$/", "", $data);
 
@@ -2151,7 +2157,7 @@ class HostGrid {
 
 		$data = preg_replace("/\.so/", "", $data);
 
-		return new listCell($data);
+		return new listCell($data, "smallaudit");
 	}
 
 	protected function show_mod_php($data)
@@ -3856,7 +3862,7 @@ class SoftwareGrid extends HostGrid
 
 		foreach($this->servers as $hostname=>$cd) {
 
-			if (is_array($cd[$this->c]))
+			if (isset($cd[$this->c]))
 				$all_sw = array_merge_recursive($cd[$this->c], $all_sw);
 		}
 

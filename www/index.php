@@ -30,18 +30,38 @@ class auditGroupDesc {
 		if (file_exists($info))
 			$ret .= "\n  <dd><em>" . file_get_contents($info) . "</em></dd>";
 
-		$hdmt = filemtime($hd);
+		// Most recent update?
+
+		$latest = 0;
+
+		foreach($hosts as $host_dir) {
+
+			foreach($fs->get_files($host_dir, "f") as $hf) {
+				$upd_t = filemtime($hf);
+				if ($upd_t > $latest) $latest = $upd_t;
+			}
+
+		}
 
 		$ret .= "\n  <dd><strong>$nd</strong> host";
 
-		if ($nd != 1)
-			$ret .= "s";
+		if ($nd != 1) $ret .= "s";
 		
 		$ret .= ".";
 		
-		if ($nd > 0)
-			$ret .= " Most recent audit added " .  date("jS M Y", $hdmt) .
-			". (" . round((mktime() - $hdmt) / 86400) .  " days ago.)</dd>";
+		if ($nd > 0) {
+			$last_upd = round((mktime() - $latest) / 86400);
+
+			if ($last_upd == 0)
+				$last_txt = "today.";
+			elseif ($last_upd == 1)
+				$last_txt = "yesterday.";
+			else
+				$last_txt = date("jS M Y", $latest)
+				. ". ($last_upd days ago.)";
+
+			$ret .= " Most recent audit added $last_txt</dd>";
+		}
 
 		// Use a sub-list to report on other files
 
