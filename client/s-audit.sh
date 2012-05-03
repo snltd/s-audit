@@ -166,7 +166,7 @@ L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	postgres_s mongodb_s svnserve sendmail exim cronolog mailman splunk sshd
 	named ssp symon samba x vbox smc ai_srv"
-G_APP_TESTS="vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c nb_s"
+G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c nb_s"
 
 L_TOOL_TESTS="openssl rsync mysql_c postgres_c sqlplus svn_c java perl php_cmd
 	python ruby node cc gcc pca nettracker saudit scat explorer jass jet"
@@ -182,7 +182,7 @@ G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
 	RBAC root_shell dtlogin cron jass_appl"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
-G_FS_TESTS="zpools vx_dgs metasets capacity root_fs fs exports"
+G_FS_TESTS="zpools vx_dgs metasets zfs_ver capacity root_fs fs exports"
 L_FS_TESTS="zpools root_fs fs exports"
 
 #-----------------------------------------------------------------------------
@@ -695,6 +695,8 @@ function get_disk_type
 	# Try to work out what type of disk (IDE, SCSI, USB etc.) a given cxtx
 	# device is
 
+	[[ -a /dev/dsk/${1}s2 ]] || return
+
 	s=$(ls -l /dev/dsk/${1}s2)
 
 	if [[ $s == *ide@* ]]
@@ -746,7 +748,7 @@ function usage
 
 	usage:
 
-	    s-audit.sh [-f dir] [-z all|zone] [-qpPM] [-D secs] [-L facility]
+	    s-audit.sh [-f [dir]] [-z all|zone] [-qpPM] [-D secs] [-L facility]
 		[-T secs ] [-o test,test,...,test] [-R user@host:dir ] [-e file]
 		[-u file] $(print $CL_LS | tr " " "|")|all|machine
 
@@ -754,18 +756,12 @@ function usage
 
 	where
 	  -f :     write files to an (optionally) supplied local directory.
-	           Files are named in the format "audit.hostname.type" where
-	           type is either "os" or "software". Without this option
-	           output goes to standard out
 	  -z :     audit a zone. A single zone name may be supplied, or "-z all"
-	           may be used to audit all running zones. The output from "-z
-	           all" can be confusing, and it is intended to be run with the
-	           -f flag
+	           may be used to audit all running zones
 	  -M :     in network audits, plumb and unplumb uncabled NICs to obtain
-	           their MAC address
-	  -o :     omit these tests, comma separated
-	  -p :     write machine-parseable output. By default output is
-	           "prettyfied"
+	           their MAC address (potentially destructive!)
+	  -o :     omit these a comma-separated list of tests
+	  -p :     write machine-parseable output
 	  -P :     print paths to tools and applications. (Implied by -f.)
 	  -q :     be quiet
 	  -R :     information for scp to copy audit files to remote host. Of
@@ -943,9 +939,10 @@ function get_cpus
 	# concept of physical and virtual processors. 11 can distinguish cores
 	# and threads on T-series
 
+	C0=$(psrinfo | sed 1q | cut -f1)
+
 	if (($OSVERCMP >= 510))
 	then
-		C0=$(psrinfo | sed 1q | cut -f1)
 		CPUN=$(psrinfo -p)
 		CPUL=$(psrinfo -vp $C0 | sed 1q)
 
@@ -1512,7 +1509,7 @@ function get_be
 	then
 
 		[[ -f /boot/grub/menu.lst ]] && GM=/boot/
-		[[ -f /rpool/boot/grub/menu.lst ]] && GM=/
+		[[ -f /rpool/boot/grub/menu.lst ]] && GM="/rpool/boot"
 
 		find /boot -name \*miniroot\* | while read f
 		do
@@ -2047,9 +2044,9 @@ function get_name_service
 	done
 }
 
-function get_nis_domain
+function get_domainname
 {
-	can_has domainname && disp "NIS domain" $(domainname)
+	can_has domainname && disp "domainname" $(domainname)
 }
 
 function get_routes
@@ -2587,6 +2584,20 @@ function get_exports
 
 	fi
 }
+
+function get_zfs_ver
+{
+	# Get supported versions of zpool and zfs
+	ZFV=$(zfs upgrade | sed -n '1s/^.*version \([0-9]*\).*$/\1/p')
+
+	disp "ZFS version" "$(zpool upgrade | \
+	sed -n '1s/^.*version \([0-9]*\).*$/\1/p') (zpool)"
+
+	disp "ZFS version" "$(zfs upgrade | \
+	sed -n '1s/^.*version \([0-9]*\).*$/\1/p') (zfs)"
+
+}
+
 function get_metasets
 {
 	# Simply lists metasets
@@ -2692,10 +2703,10 @@ function get_php_mod
 		# IIRC, late version 3. If that fails, do a dodgy pattern match that
 		# appears to work for everything
 
-		pv=$(strings $pl | sed -n '/^X-Powered/s/.*\///p')
+		pv=$(strings $pl 2>/dev/null | sed -n '/^X-Powered/s/.*\///p')
 
 		[[ -z $pv ]] \
-			&& pv=$(strings $pl | egrep "^[3-5]\.[0-9]\.[0-9]*$" | head -1)
+			&& pv=$(strings $pl 2>/dev/null | egrep "^[3-5]\.[0-9]\.[0-9]*$" | head -1)
 
 		[[ -z $pv ]] && pv="unknown"
 
@@ -2867,11 +2878,11 @@ function get_ora_s
 	if [[ -f /var/opt/oracle/oratab ]]
 	then
 
-		egrep -v "^#|^[${IFS}]*$" /var/opt/oracle/oratab | cut -d: -f2 | \
-		while read oh
+		egrep -v "^#|^[${IFS}]*$" /var/opt/oracle/oratab | cut -d: -f2 \
+		| sort -u | while read oh
 		do
 			[[ -f ${oh}/bin/tnslsnr ]] \
-				&& is_run_ver "Oracle" tnslsnr $(ORACLE_HOME=$oh \
+				&& is_run_ver "Oracle@$oh" tnslsnr $(ORACLE_HOME=$oh \
 				${oh}/bin/tnsping -\? \
 				| sed -n '/^TNS/s/^.*Version \([^ ]*\).*$/\1/p')
 		done
@@ -3076,8 +3087,14 @@ function get_samba
 		is_run_ver "Samba@/$BIN" $BIN ${SMB_VER##* }
 	done
 }
-## Solaris specific functions. The software we look for here either doesn't
-## exist on other platforms, or has to be found in a different way
+
+function get_powermt
+{
+	# Get the version of EMC powermt
+
+	is_root && can_has powermt && \
+	disp "powermt" powermt version | sed 's/^.*sion //'
+}
 
 function get_vxvm
 {
