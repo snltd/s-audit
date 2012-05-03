@@ -58,7 +58,7 @@ function usage
 
 	  ${0##*/} remove -r group_name
 
-	  ${0##*/} lists
+	  ${0##*/} list
 
 	EOUSAGE
 
@@ -157,9 +157,14 @@ elif [[ $CMD == "list" || $CMD == "ls" ]]
 then
 	[[ -d $AUDIT_DIR ]] || die "no audit directory. [${AUDIT_DIR}]"
 
-	print "The following audit groups exist:"
+	if ls -l $AUDIT_DIR | egrep -s "^d"
+	then
+		print "The following audit groups exist:"
+		find ${AUDIT_DIR}/* -type d -prune | sed 's|^.*/|  |'
+	else
+		print "No audit groups exist."
+	fi
 
-	find ${AUDIT_DIR}/* -type d -prune | sed 's|^.*/|  |'
 else
 	usage
 fi
