@@ -151,7 +151,7 @@ CL_LS=" platform os net fs app tool hosted security patch "
 # lists are always bookended by "hostname" and "time".
 
 G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
-	optical lux_enclosures tape_drives cards printers eeprom"
+	optical lux_enclosures tape_drives mpath cards printers eeprom"
 L_PLATFORM_TESTS="virtualization printers"
 
 G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
@@ -1105,7 +1105,7 @@ function get_lux_enclosures
 	# Get unique node WWNs, which should identify each attached device.
 
 	luxadm probe 2>/dev/null \
-		| sed -n '/Node /s/^.*WWN:\([^ ]*\).*$/\1/p' | sort -u \
+		| sed -n '/Node /s/^.*WWN:\([^ ]*\).*$/\1/p' \
 		| while read node
 	do
 
@@ -1156,6 +1156,33 @@ function get_tape_drives
 	done
 }
 
+function get_mpath
+{
+	# Are we multipathing? Currently we can only do native Solaris and EMC
+	# PowerPath
+
+	if can_has mpathadm
+	then
+		num=$(mpathadm list lu | grep -c "Total Path")
+		
+		[[ $num != 0 ]] && disp "multipath" "mpxio ($num devices)"
+	fi
+
+	if can_has powermt
+	then
+
+		powermt display hba_mode | sed -n \
+		'/=[0-9]\{1,\}$/s/^\([^=]*\)=\([0-9]*\)$/\2 \1/;s/ log.*$//p' | \
+		while read num typ
+		do
+
+			[[ $num != 0 ]] \
+				&& disp "multipath" "powerpath ($num $typ devices)"
+
+		done
+	
+	fi
+}
 
 function get_cards
 {
@@ -1192,11 +1219,19 @@ function get_cards
 			done
 
 		else
-			$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
+			$PRTDIAG | grep "PCI[0-9]" | sort -u | \
 			while read pci hz slot name desc extra
 			do
-				desc=${desc#\(}
-				desc=${desc%\)}
+				
+				if [[ -z $extra ]]
+				then
+					extra=$desc	
+					desc=${name%-pci*}
+					name=pci${name#*pci}
+				else
+					desc=${desc#\(}
+					desc=${desc%\)}
+				fi
 
 				disp "card" "$desc ($name $slot@${hz}MHz) $extra"
 			done
