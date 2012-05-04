@@ -154,9 +154,9 @@ G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
 	optical lux_enclosures tape_drives mpath cards printers eeprom"
 L_PLATFORM_TESTS="virtualization printers"
 
-G_NET_TESTS="ntp name_service dns_serv nis_domain name_server nfs_domain
+G_NET_TESTS="ntp name_service dns_serv domainname name_server nfs_domain
 	snmp ports routes rt_fwd net"
-L_NET_TESTS="name_service dns_serv nis_domain name_server snmp ports routes
+L_NET_TESTS="name_service dns_serv domainname name_server snmp ports routes
 	rt_fwd net"
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
@@ -166,8 +166,8 @@ L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 
 L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
 	postgres_s mongodb_s svnserve sendmail exim cronolog mailman splunk sshd
-	named ssp symon samba x vbox smc ai_srv"
-G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c nb_s"
+	named ssp symon samba x vbox smc ai_srv networker_c"
+G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s nb_s"
 
 L_TOOL_TESTS="openssl rsync mysql_c postgres_c sqlplus svn_c java perl php_cmd
 	python ruby node cc gcc pca nettracker saudit scat explorer jass jet"
@@ -866,26 +866,17 @@ function get_hardware
 {
 	# Get a string which identifies the hardware, and pretty it up a bit.
 	# This gives the name of the hardware platform, which doesn't always
-	# exactly tally with what's printed on the front of the box.  It'll have
-	# to be good enough. uname -i works for most things, but not v100s, so
-	# there's a special case for those. 25Ks identify themselves as 15Ks
+	# exactly tally with what's printed on the front of the box.  
 
-	if [[ $HW_PLAT == "SUNW,UltraAX-i2" ]]
+
+	if [[ $HW_CHIP == "sparc" ]]
 	then
-		HW_OUT=$($PRTDIAG 2>/dev/null \
-		| sed -n "/Configuration/s/^.*$HW_HW \([^\(]*\).*$/\1/p")
-	elif [[ $HW_HW == "SUNW,Sun-Fire-15000" ]]
-	then
-		$PRTDIAG | sed 1q | $EGS E25K && HW_OUT="Sun Fire E25K"
-	elif [[ $HW_HW == "sun4v" ]]
-	then
-		 HW_OUT=$($PRTDIAG | sed '1s/^.* //;q')
+		HW_OUT=$($PRTDIAG | sed "1s/^.*$HW_PLAT //;q")
+		CH="SPARC"
+		can_has isainfo && BITS=$(isainfo -b)
 	else
-		HW_OUT=$(print $HW_HW | sed 's/SUNW,//;s/-/ /g')
+		HW_OUT=$HW_CHIP
 	fi
-
-	[[ $HW_CHIP == "sparc" ]] && CH="SPARC"
-	can_has isainfo && BITS=$(isainfo -b)
 
 	# Is this part of a cluster?
 
@@ -1206,8 +1197,7 @@ function get_cards
 		# on SPARC Solaris 9 and 10, but it's a dead loss on 8, and doesn't
 		# work at all on x86.
 
-
-		if [[ $HW_HW == "SUNW,Sun-Fire-15000" ]]
+		if [[ $HW_HW == "SUNW,Sun-Fire-15000" ]] # E25K
 		then
 
 			$PRTDIAG | grep PCI | sort -u | \
@@ -1219,6 +1209,22 @@ function get_cards
 			done | sort -u | while read l
 			do
 				disp "card" $l
+			done
+
+		elif [[ $HW_HW == "sun4v" ]] # T3-2
+		then
+			$PRTDIAG | grep "/SYS/MB/PCI" | grep -v "/USB" | sort -u | \
+			while read slot pcie desc name
+			do
+				disp "card" "${desc%-pci*} (pci${desc#*pci} $slot) $name"
+			done
+
+		elif [[ $HW_HW == SUNW,SPARC-Enterprise ]] # M5000
+		then
+			$PRTDIAG | sed -n '/IO Card/,/^=/p' | grep "^ *[0-9]" \
+			| grep -v N/A | sort -u | while read slot type name
+			do
+				disp "card" "$type (PCIx/$slot) $name"
 			done
 
 		else
@@ -1339,7 +1345,7 @@ function get_virtualization
 			fi
 
 		else
-			modinfo | $EGS drmach && VIRT="F15k/25k domain"
+			modinfo | $EGS drmach && VIRT="hardware domain"
 		fi
 
 		can_has zonename && VIRT="$VIRT (global zone)"
@@ -2116,9 +2122,9 @@ function get_name_service
 	done
 }
 
-function get_nis_domain
+function get_domainname
 {
-	can_has domainname && disp "NIS domain" $(domainname)
+	can_has domainname && disp "domainname" $(domainname)
 }
 
 function get_routes
@@ -3067,6 +3073,30 @@ function get_nb_c
 
 		disp "NB client@$BPC" "$NBV $NBX"
 	done
+}
+
+function get_networker_s
+{
+	# Get Networker server version. I can't find any way to do this other
+	# than from the package.
+
+	if can_has pkginfo && pkginfo LGTOserv >/dev/null 2>&1
+	then
+		is_run_ver "Networker srvr " nsrindexd \
+		$(pkginfo -l LGTOserv | sed -n '/VERSION:/s/^.*:  //p')
+	fi
+}
+
+function get_networker_c
+{
+	# Get Networker client version. I can't find any way to do this other
+	# than from the package.
+
+	if can_has pkginfo && pkginfo LGTOclnt >/dev/null 2>&1
+	then
+		is_run_ver "Networker clnt" nsrexecd \
+		$(pkginfo -l LGTOclnt | sed -n '/VERSION:/s/^.*:  //p')
+	fi
 }
 
 function get_named
