@@ -877,6 +877,9 @@ function get_hardware
 	elif [[ $HW_HW == "SUNW,Sun-Fire-15000" ]]
 	then
 		$PRTDIAG | sed 1q | $EGS E25K && HW_OUT="Sun Fire E25K"
+	elif [[ $HW_HW == "sun4v" ]]
+	then
+		 HW_OUT=$($PRTDIAG | sed '1s/^.* //;q')
 	else
 		HW_OUT=$(print $HW_HW | sed 's/SUNW,//;s/-/ /g')
 	fi
@@ -996,7 +999,7 @@ function get_optical
 	typeset -i cdc=0
 
 	iostat -En | sed -e'/^c[0-9]/{N;s/\n/ /;}' -e '/Vend/{N;s/\n/ /;}' \
-	| egrep "^c" | egrep "DV|CD|COMBO" | while read dev junk
+	| egrep "^c" | egrep "DV|CDR|CD-R|COMBO" | while read dev junk
 	do
 		line=$(get_disk_type $dev)
 
@@ -1163,12 +1166,12 @@ function get_mpath
 
 	if can_has mpathadm
 	then
-		num=$(mpathadm list lu | grep -c "Total Path")
+		num=$(mpathadm list lu | grep Total | grep -cv ": 1$")
 		
 		[[ $num != 0 ]] && disp "multipath" "mpxio ($num devices)"
 	fi
 
-	if can_has powermt
+	if is_root && can_has powermt
 	then
 
 		powermt display hba_mode | sed -n \
