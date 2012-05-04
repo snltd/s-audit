@@ -860,7 +860,6 @@ function get_printers
 	fi
 
 }
-
 #-- PLATFORM AUDITING FUNCTIONS ----------------------------------------------
 
 function get_hardware
@@ -1182,12 +1181,11 @@ function get_cards
 		then
 
 			$PRTDIAG | grep PCI | sort -u | \
-			while read slot type pid bs hz bhz func state desc name 
+			while read slot type pid bside hz bhz func state desc name 
 			do
 				[[ -z $name ]] && name="unknown"
 				[[ $name == "("* ]] && continue
-				print \
-				"${desc%-pci*} ($name ${pid}/${bs}:${slot}@${hz}MHz) $extra"
+				print "${desc%-pci*} ($name ${pid}/${bside}:${slot}@${hz}MHz) $extra"
 			done | sort -u | while read l
 			do
 				disp "card" $l
@@ -1344,7 +1342,6 @@ function get_virtualization
 
 	disp "virtualization" $VIRT
 }
-
 #-- O/S AUDITING FUNCTIONS ---------------------------------------------------
 
 function get_kernel
@@ -1708,7 +1705,6 @@ function get_ldoms
 
 	fi
 }
-
 #-- NETWORK AUDITING FUNCTIONS -----------------------------------------------
 
 function mk_nic_devlist
@@ -2207,7 +2203,6 @@ function get_nfs_domain
 		disp "NFS domain" \
 		$(sed -n "/^[$WSP]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p" /etc/default/nfs)
 }
-
 #-- FILESYSTEM AUDIT FUNCTIONS -----------------------------------------------
 
 function get_capacity
@@ -2651,7 +2646,6 @@ function get_metasets
 
 	fi
 }
-
 #-- APPLICATION AUDITING FUNCTIONS -------------------------------------------
 
 function get_apache
@@ -3274,7 +3268,6 @@ function get_x
 
 	[[ -n $XBIN ]] && is_run_ver "X server" $XBIN "$XVER"
 }
-
 #-- TOOL TESTS --------------------------------------------------------------
 
 function get_openssl
@@ -3572,7 +3565,6 @@ function get_sneep
 		disp "Sneep@$BIN" ${SNEEP_VER##* }
 	done
 }
-
 #-- SECURITY AUDIT FUNCTIONS -------------------------------------------------
 
 function get_users
@@ -4004,7 +3996,6 @@ function get_ai
 	fi
 
 }
-
 #-- PATCH AND PACKAGE FUNCTIONS ----------------------------------------------
 
 function get_package_list
