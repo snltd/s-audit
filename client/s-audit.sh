@@ -57,7 +57,7 @@ RUN_HERE=1
 # Set a big PATH. This should try to include everywhere we expect to find
 # software. SPATH is for quicker searching later.
 
-SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin \
+SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin /etc \
 	$(find /usr/*/*bin /usr/local/*/*bin /opt/*/*bin /usr/*/libexec \
 	/usr/local/*/libexec /opt/*/libexec /usr/postgres/*/bin \
 	/opt/local/*/bin /*/bin -prune \
@@ -72,13 +72,14 @@ PATH=$(print "$SPATH" | tr " " : | tr "\n" ":")
 uname -pnrvim | read HOSTNAME OSVER KERNVER HW_PLAT HW_CHIP HW_HW
 OSVERCMP=$(print $OSVER | tr -d .)
 
+[[ $OSVERCMP == "251" ]] && OSVERCMP="25"
+
 IPL_DIRS="/opt/SUNWwbsvr /opt/oracle/webserver7 /usr/netscape/suitespot \
 	/sun/webserver7"
 	# Directories where we look for iPlanet software
 
 EXTRAS="/etc/s-audit_extras"
 	# default path for extras file
-[[ $OSVERCMP == "251" ]] && OSVERCMP="25"
 
 # Paths to special tools
 
@@ -693,9 +694,13 @@ function is_global
 function get_disk_type
 {
 	# Try to work out what type of disk (IDE, SCSI, USB etc.) a given cxtx
-	# device is
+	# device is. PowerPath disks aren't in /dev/dsk
 
-	[[ -a /dev/dsk/${1}s2 ]] || return
+	if [[ -n $PPDSKS ]] && [[ $PPDSKS == *" ${1}s"* ]]
+	then
+		print "PowerPath"
+		return
+	fi
 
 	s=$(ls -l /dev/dsk/${1}s2)
 
@@ -740,6 +745,7 @@ function get_disk_type
 		print "unknown"
 	fi
 }
+
 function usage
 {
 	# How to use the script
@@ -854,6 +860,7 @@ function get_printers
 	fi
 
 }
+
 #-- PLATFORM AUDITING FUNCTIONS ----------------------------------------------
 
 function get_hardware
@@ -862,12 +869,15 @@ function get_hardware
 	# This gives the name of the hardware platform, which doesn't always
 	# exactly tally with what's printed on the front of the box.  It'll have
 	# to be good enough. uname -i works for most things, but not v100s, so
-	# there's a special case for those.
+	# there's a special case for those. 25Ks identify themselves as 15Ks
 
 	if [[ $HW_PLAT == "SUNW,UltraAX-i2" ]]
 	then
 		HW_OUT=$($PRTDIAG 2>/dev/null \
 		| sed -n "/Configuration/s/^.*$HW_HW \([^\(]*\).*$/\1/p")
+	elif [[ $HW_HW == "SUNW,Sun-Fire-15000" ]]
+	then
+		$PRTDIAG | sed 1q | $EGS E25K && HW_OUT="Sun Fire E25K"
 	else
 		HW_OUT=$(print $HW_HW | sed 's/SUNW,//;s/-/ /g')
 	fi
@@ -1013,6 +1023,12 @@ function get_disks
 {
 	# Get the sizes of the disks on the system, ignoring optical drives.
 
+	# If we're running PowerPath, get a list of all the disks it controls for the use of get_disk_type()
+
+	can_has powermt \
+		&& PPDSKS=" $(powermt display dev=all | grep "c[0-9]*t[0-9]" \
+		| cut -d\  -f3 | tr "\n" " ") "
+	
 	# If we have a vendor line, tag the following "size" line on to it. This
 	# makes the lines look similar on SPARC and x86, with or without a
 	# Vendor: string.
@@ -1161,14 +1177,33 @@ function get_cards
 		# on SPARC Solaris 9 and 10, but it's a dead loss on 8, and doesn't
 		# work at all on x86.
 
-		$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
-		while read pci hz slot name desc extra
-		do
-			desc=${desc#\(}
-			desc=${desc%\)}
 
-			disp "card" "$desc ($name $slot@${hz}MHz) $extra"
-		done
+		if [[ $HW_HW == "SUNW,Sun-Fire-15000" ]]
+		then
+
+			$PRTDIAG | grep PCI | sort -u | \
+			while read slot type pid bs hz bhz func state desc name 
+			do
+				[[ -z $name ]] && name="unknown"
+				[[ $name == "("* ]] && continue
+				print \
+				"${desc%-pci*} ($name ${pid}/${bs}:${slot}@${hz}MHz) $extra"
+			done | sort -u | while read l
+			do
+				disp "card" $l
+			done
+
+		else
+			$PRTDIAG | grep "PCI[0-9] *.*(" | sort -u | \
+			while read pci hz slot name desc extra
+			do
+				desc=${desc#\(}
+				desc=${desc%\)}
+
+				disp "card" "$desc ($name $slot@${hz}MHz) $extra"
+			done
+		fi
+
 
 	fi
 
@@ -1309,6 +1344,7 @@ function get_virtualization
 
 	disp "virtualization" $VIRT
 }
+
 #-- O/S AUDITING FUNCTIONS ---------------------------------------------------
 
 function get_kernel
@@ -1672,6 +1708,7 @@ function get_ldoms
 
 	fi
 }
+
 #-- NETWORK AUDITING FUNCTIONS -----------------------------------------------
 
 function mk_nic_devlist
@@ -1710,7 +1747,7 @@ function get_llt_net
 	# if we're a VCS node, get LLT interfaces. Same format as get_net, and
 	# called by it
 
-	LLT_LS=$(hasys -display $(uname -n) -attribute LinkHbStatus \
+	LLT_LS=$(hasys -display $HOSTNAME -attribute LinkHbStatus \
 	| sed '1d;s/^.*Status *//;s/ [A-Z]*/ /g')
 
 	[[ -z $LLT_LS ]] && return
@@ -1836,7 +1873,8 @@ function get_net
 
 		fi
 
-		if [[ $type == "phys" || $type == "vnic" || $type == "virtual" ]]
+		if [[ $type == "phys" || $type == "vnic" || $type == "virtual" \
+		|| $type == "legacy" ]]
 		then
 
 			# Ask ifconfig for the IP address
@@ -2044,9 +2082,9 @@ function get_name_service
 	done
 }
 
-function get_domainname
+function get_nis_domain
 {
-	can_has domainname && disp "domainname" $(domainname)
+	can_has domainname && disp "NIS domain" $(domainname)
 }
 
 function get_routes
@@ -2169,6 +2207,7 @@ function get_nfs_domain
 		disp "NFS domain" \
 		$(sed -n "/^[$WSP]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p" /etc/default/nfs)
 }
+
 #-- FILESYSTEM AUDIT FUNCTIONS -----------------------------------------------
 
 function get_capacity
@@ -2612,6 +2651,7 @@ function get_metasets
 
 	fi
 }
+
 #-- APPLICATION AUDITING FUNCTIONS -------------------------------------------
 
 function get_apache
@@ -3093,7 +3133,7 @@ function get_powermt
 	# Get the version of EMC powermt
 
 	is_root && can_has powermt && \
-	disp "powermt" powermt version | sed 's/^.*sion //'
+	disp "powermt" $(powermt version | sed 's/^.*sion //')
 }
 
 function get_vxvm
@@ -3234,6 +3274,7 @@ function get_x
 
 	[[ -n $XBIN ]] && is_run_ver "X server" $XBIN "$XVER"
 }
+
 #-- TOOL TESTS --------------------------------------------------------------
 
 function get_openssl
@@ -3531,6 +3572,7 @@ function get_sneep
 		disp "Sneep@$BIN" ${SNEEP_VER##* }
 	done
 }
+
 #-- SECURITY AUDIT FUNCTIONS -------------------------------------------------
 
 function get_users
@@ -3962,6 +4004,7 @@ function get_ai
 	fi
 
 }
+
 #-- PATCH AND PACKAGE FUNCTIONS ----------------------------------------------
 
 function get_package_list
