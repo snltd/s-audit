@@ -1155,7 +1155,7 @@ function get_mpath
 	# Are we multipathing? Currently we can only do native Solaris and EMC
 	# PowerPath
 
-	if can_has mpathadm
+	if is_root && can_has mpathadm
 	then
 		num=$(mpathadm list lu | grep Total | grep -cv ": 1$")
 		
@@ -1209,6 +1209,14 @@ function get_cards
 			done | sort -u | while read l
 			do
 				disp "card" $l
+			done
+
+		elif [[ $HW_HW == "SUNW,Sun-Fire-T200" ]] # T2000
+		then
+			$PRTDIAG | grep PCI | grep -v " IOBD " | \
+			while read loc type slot pth nm mdl
+			do
+				disp "card" "${nm%-pci*} ($type $loc) $mdl"
 			done
 
 		elif [[ $HW_HW == "sun4v" ]] # T3-2
