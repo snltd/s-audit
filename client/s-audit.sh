@@ -2634,7 +2634,7 @@ function get_exports
 
 			for ldm in $LDMS
 			do
-				ldm ls-bindings -p $ldm | $EGS "^VDISK.*vol=vstupr2w@" \
+				ldm ls-constraints -p $ldm | $EGS "^VDISK.*vol=${vol}@" \
 					&& own=$ldm
 			done
 
