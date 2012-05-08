@@ -2124,7 +2124,7 @@ function get_name_service
 {
 	# What are we using to look up users and hosts?
 
-	egrep "^hosts|^passwd|attr" /etc/nsswitch.conf | while read a
+	egrep "^hosts|^passwd|^[ap]*attr" /etc/nsswitch.conf | while read a
 	do
 		disp "name service" $(print $a | sed 's/\[NOTFOUND=return\]//')
 	done
