@@ -19,7 +19,7 @@ $map = new ZoneMap();
 $s = new GetServers($map, false, "os");
 $grid = new OSGrid($map, $s->get_array(), "os");
 
-$pg = new audPage("O/S audit", $grid->server_count(), $grid->zone_toggle());
+$pg = new audPage("O/S audit", $grid->server_count(), $grid->prt_toggle());
 
 echo $grid->show_grid(), $pg->close_page();
 

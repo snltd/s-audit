@@ -20,7 +20,7 @@ $s = new GetServers($map, false, "fs");
 $grid = new FSGrid($map, $s->get_array(), "fs");
 
 $pg = new audPage("filesystem audit", $grid->server_count(),
-$grid->zone_toggle());
+$grid->prt_toggle());
 
 echo $grid->show_grid();
 

@@ -78,9 +78,11 @@ class HostGrid {
 	private $row_sfx;
 		// helps get cells the right colour. "a" or "b"
 
+	protected $toggle_str = "local zones";
+		// "show/hide" string
+
 	//------------------------------------------------------------------------
 	// METHODS
-
 
 	public function __construct($map, $servers, $class)
 	{
@@ -1152,6 +1154,7 @@ class HostGrid {
 		// Input is of one of the following forms:
 		// "card" "$type (SBUS slot $slot)"
 		// "$desc ($extra $slot@${hz}MHz)"
+		// "$desc ($extra port_id/bus_side slot@hzMHz) E25K
 
 		$c_arr = array();
 
@@ -1170,16 +1173,33 @@ class HostGrid {
 				$txt = "$cname<br/>$a[2]";
 			}
 			else {
-				preg_match("/^(\S+) \((\S+) (.*)\)(.*)$/", $datum, $a);
+
+				preg_match("/^(\S+) \((\S+)(.*)\)(.*)$/", $datum, $a);
+
+				// Lines like this
+				// (netw+ pci-bridge (pci-pci8086,b154.0/network 61/B
+				// /IO01@66MHz)
+				// are discarded. For now I don't care, because I don't
+				// think I want them
 
 				if (count($a) < 2)
-					break;
+					continue;
 
-				$cname = (in_array(trim($a[4]),
-				array_keys($this->card_db["pci"])))
-					? "<strong>" .  $this->card_db["pci"][trim($a[4])] .
-					"</strong> ($a[2] $a[1])"
-					: "<strong>$a[2] $a[1]</strong>";
+				// To identify a card, try the card model name first, which
+				// will be in $a[4] if set. If not, try the more generic
+				// name in $a[2]
+
+				$ckey = ($a[4])
+					? trim($a[4])
+					: trim($a[2]);
+
+				if (in_array($ckey, array_keys($this->card_db["pci"])))
+					$cname = "<strong>" .  $this->card_db["pci"][$ckey] .
+					"</strong> ($a[2] $a[1])";
+				elseif ($a[4])
+					$cname = "<strong>$a[4]</strong> ($a[2] $a[1])";
+				else
+					$cname = "<strong>$a[2] $a[1]</strong>";
 
 				$class = "pci";
 				$txt = "$cname<br/>$a[3]";
@@ -1189,6 +1209,16 @@ class HostGrid {
 		}
 
 		return new listCell($c_arr, "smallaudit", false, 1);
+	}
+
+	protected function show_multipath($data)
+	{
+		// Display multipathing info. Bold the first word, which is the type
+		// of multipathing
+
+		$data = preg_replace("/^(\w+)/", "<strong>$1</strong>", $data);
+
+		return $this->show_generic($data);
 	}
 
 	protected function show_eeprom($data)
@@ -1883,7 +1913,7 @@ class HostGrid {
 		//   [3] - MAC address ($mac)
 		//   [4] - host/zone name ($hname)
 		//   [5] - link speed as speed-duplex ($speed)
-		//   [6] - undelying NIC for aggregates/vsw etc ($over)
+		//   [6] - underlying NIC for aggregates/vsw etc ($over)
 		//   [7] - IPMP group ($ipmp)
 		//   [8] - extra info ($xtra) (+vsw/aggr policy/dhcp)
 
@@ -3017,6 +3047,11 @@ class HostGrid {
 
 		foreach($data as $row) {
 			$a = explode(" ", $row);
+
+			// omit massive "error" names
+
+			if (strlen($a[0]) > 40) continue;
+
 			$user = preg_replace("/[\(\)]/", "", $a[1]);
 			
 			$class = ($user == "root")
@@ -3338,11 +3373,11 @@ class HostGrid {
 		return $ret_str;
 	}
 
-	public function zone_toggle()
+	public function prt_toggle()
 	{
-		// Print a link which lets the user show or hide zones, whichever is
-		// appropriate. Also gives you the "next page" and "previous page"
-		// links, if they are required.
+		// Print a link which lets the user show or hide zones, or common
+		// data, whichever is appropriate. Also gives you the "next page"
+		// and "previous page" links, if they are required.
 
 		// Will we need previous/next links? Only if there are more known
 		// servers than the current PER_PAGE limit
@@ -3377,7 +3412,7 @@ class HostGrid {
 			: "hide";
 
 		return "${prev_str}<a href=\"" . $_SERVER["PHP_SELF"]
-		. "${qs}\">$txt local zones</a>${next_str}";
+		. "${qs}\">$txt $this->toggle_str</a>${next_str}";
 	}
 
 	//------------------------------------------------------------------------
@@ -3482,8 +3517,8 @@ class PlatformGrid extends HostGrid
 	protected $hw_db;	// Card definitions from misc.php
 
 	protected $def_fields = array("hardware", "virtualization", "CPU",
-	"memory", "OBP", "ALOM f/w", "ALOM IP", "storage", "EEPROM", 
-	"serial number", "printer", "card");
+	"memory", "OBP", "ALOM f/w", "ALOM IP", "storage", "multipath",
+	"EEPROM", "serial number", "printer", "card");
 
 	public function __construct($map, $servers, $c)
 	{
@@ -3627,8 +3662,8 @@ class FSGrid extends HostGrid {
 		// because we only want it to be populated when we do a proper FS
 		// audit, not when we're comparing or showing a single server.
 
-	protected $def_fields = array("capacity", "zpool", "disk group",
-	"metaset", "fs", "root fs", "export");
+	protected $def_fields = array("capacity", "ZFS version", "zpool",
+	"disk group", "metaset", "fs", "root fs", "export");
 
 	public function __construct($map, $servers, $c)
 	{
@@ -3693,8 +3728,8 @@ class SecurityGrid extends HostGrid{
 		// it
 
 	protected $def_fields = array("user", "empty password",
-	"authorized key", "user_attr", "SSH root", "dtlogin", "cron job",
-	"root shell");
+	"authorized key", "user_attr", "SSH root", "dtlogin", "JASS applied",
+	"cron job", "root shell");
 
 	public function show_server($server)
 	{
@@ -4055,10 +4090,10 @@ class AppGrid extends SoftwareGrid
 	"audit completed");
 		// Don't try to find the latest versions of these fields
 
-	protected $def_fields = array("VxVm", "VxFS", "VCS", "Sun Cluster",
-	"SMC", "sshd", "BIND", "X server", "sendmail", "exim",
+	protected $def_fields = array("powermt", "VxVm", "VxFS", "VCS",
+	"Sun Cluster", "SMC", "sshd", "BIND", "X server", "sendmail", "exim",
 	"Samba", "ldm", "AI server", "Apache", "apache so", "mod_php", "Tomcat",
-	"iPlanet web", "Nginx", "Oracle", "MySQL server", "svn server" );
+	"iPlanet web", "Nginx", "Oracle", "MySQL server", "Postgres", "svn server" );
 }
 
 //----------------------------------------------------------------------------
@@ -4074,9 +4109,10 @@ class ToolGrid extends SoftwareGrid
 	protected $sun_cc_vers;
 		// Sun Studio versions from misc.php
 
-	protected $def_fields = array("Explorer", "PCA", "OpenSSL", "Java",
+	protected $def_fields = array("PCA", "OpenSSL", "Java",
 	"perl", "Python", "PHP cmdline", "ruby", "node.js", "Sun CC", "GCC",
-	"sqlplus", "MySQL client", "svn client", "rsync", "s-audit");
+	"sqlplus", "MySQL client", "Postgres client", "svn client", "rsync",
+	"Explorer", "VTS", "JASS", "Sneep", "SunCAT", "s-audit");
 	public function __construct($map, $servers, $c)
 	{
 
@@ -4253,15 +4289,7 @@ class Page {
 		$this->title = SITE_NAME . " s-audit $this->mystring :: $title";
 		$this->verstr = "interface version " . MY_VER;
 		$this->styles[] = "dynamic_css.php?" . basename($_SERVER["PHP_SELF"]);
-		echo $this->open_page();
-	}
 
-	protected function open_page()
-	{
-		// Generate all the HTML for a valid page, up to the start of the
-		// content. The closing HTML is done by the main page file calling
-		// the close_page() method. I have put the <head> tags in to make it
-		// clear what functions make what part of the page.
 
 		// Set a global variable to say the page has been properly opened.
 		// This is checked by f_error() so it can print a valid HTML page if
@@ -4269,18 +4297,20 @@ class Page {
 
 		$GLOBALS["pg_open"] = true;
 
-		return $this->start_page() . "\n<head>" . $this->add_styles()
-		. $this->add_metas() . "\n  <title>$this->title</title>\n</head>\n"
-		. "\n<body>" . $this->add_header();
-	}
-
-	private function start_page()
-	{
-		// Print the XHTML DOCTYPE and whatnot
-
-		return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional'
+		echo '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional'
 		. '//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
-		. "\n\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n";
+		. "\n\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+		. "\n<head>"
+			. $this->add_styles()
+			. $this->add_metas()
+			. "\n  <title>$this->title</title>\n";
+
+		// If there's Javascript for this page, include it
+
+			if (isset($this->my_js))
+				require_once(LIB . "/js/" . $this->my_js);
+
+		echo "\n</head>\n" . "\n<body>" . $this->add_header();
 	}
 
 	private function add_styles()
@@ -4433,7 +4463,7 @@ class audPage extends Page {
 	protected $s_count = false;
 		// the "displaying..." text in the header
 
-	protected $z_tog = false;
+	protected $toggle = false;
 		// the "show zones" string in the header
 
 	protected $h_links = array(
@@ -4451,9 +4481,9 @@ class audPage extends Page {
 	);
 		// static links
 
-	public function __construct($title, $s_count, $z_tog = false) {
+	public function __construct($title, $s_count, $toggle = false) {
 		$this->s_count = $s_count;
-		$this->z_tog = $z_tog;
+		$this->toggle = $toggle;
 		$this->link_root = dirname($_SERVER["PHP_SELF"]);
 		parent::__construct($title);
 	}
@@ -4475,17 +4505,17 @@ class audPage extends Page {
 		if (!$this->no_class_link)
 			$ret .= "/ <a href=\"${dl}/02_client/${class_link}\">this class</a>";
 		
-		if (method_exists($this, "add_zt_link"))
-			$ret .= $this->add_zt_link();
+		if (method_exists($this, "add_toggle_link"))
+			$ret .= $this->add_toggle_link();
 		
 		$ret .= "</div>";
 
 		return $ret;
 	}
 
-	protected function add_zt_link()
+	protected function add_toggle_link()
 	{
-		return "<br/>$this->z_tog";
+		return "<br/>$this->toggle";
 	}
 
 }
@@ -4784,7 +4814,7 @@ class queryString {
 	public function __construct($tz = false)
 	{
 		// Generate a query string, carrying through any of these values:
-		// h = hide zones (1 == hide them)
+		// h = hide zones/common data (1 == hide them)
 		// o = offset of first server (i.e. don't show first x)
 		// g = name of server group
 
@@ -4810,6 +4840,7 @@ class queryString {
 
 			$qs .= "g=$_POST[g]";
 		}
+
 		// h may be carried through, or toggled if $tz is set
 
 		if ($tz) {

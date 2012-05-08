@@ -20,7 +20,7 @@ $s = new GetServers($map, false, "tool");
 $grid = new ToolGrid($map, $s->get_array(), "tool");
 
 $pg = new audPage("software tool audit", $grid->server_count(),
-$grid->zone_toggle());
+$grid->prt_toggle());
 
 echo $grid->show_grid(), $pg->close_page();
 

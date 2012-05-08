@@ -60,3 +60,9 @@ td.blank { /* left of hostname row */
 input, select { /* cycle gadgets used to select servers on compare page */
 	font: 11px normal helvetica, sans-serif;
 }
+
+#togglehidden { /* "show/hide common data". Floats and doesn't move */
+		right: 10px;
+		top: 5em;
+		position: fixed;
+}

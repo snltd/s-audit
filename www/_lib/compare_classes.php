@@ -35,7 +35,7 @@ class compareListPage extends audPage {
 	// We need the "compare" stylesheet
 
 	protected $styles = array("basic.css", "audit.css", "compare.css");
-	
+
 	public function __construct($title, $map)
 	{
 		if (!isset($_GET["g"]))
@@ -55,7 +55,13 @@ class compareListPage extends audPage {
 			file($file))), 1);
 		}
 
+
 		parent::__construct($title, false);
+	}
+
+    protected function add_toggle_link()
+	{
+		echo "here";
 	}
 
 	public function ff_list()
@@ -148,6 +154,7 @@ class compareCyc {
 //============================================================================
 // COMPARISON PAGE
 
+
 class comparePage extends audPage {
 
 	// The basic HTML template for the page used for the actual comparison.
@@ -157,6 +164,10 @@ class comparePage extends audPage {
 
 	protected $styles = array("basic.css", "audit.css", "compare.css");
 
+	// We want some Javascript to show and hide common data
+
+	protected $my_js = "compare.js";
+	
 }
 
 //----------------------------------------------------------------------------
@@ -166,9 +177,6 @@ class compareView {
 	// This class groups together functions needed to compare two servers,
 	// and display the results of that comparison. It works like the
 	// serverView class does for single server pages.
-	
-	// We have to extend the HostGrid because we use its methods to display
-	// data
 
     private $a;
     private $b;
@@ -406,17 +414,19 @@ class compareGeneric {
 			if (method_exists($this, $post_method))
 				$rowdat = $this->$post_method($rowdat);
 
-			// We colour the left-hand column red or green, depending on
-			// whether we found a difference or not. First, though, we work
-			// out all the host rows 
+			// Work through each line of data for this row. The left-most
+			// column will be green if all the rows are identical, red if
+			// they're not. We build up table rows in the $d variable.
 
-			$d = "";
-			$keycol = "solidgreen";
+			$diffs = 0;
+				// Count how many differences there are in this row's data
+		
+			$rr = array(); // an array of rows of HTML
 
 			foreach($rowdat as $line) {
 
-				if ($d != "")
-					$d .= "\n<tr>";
+				// the "all" element will be set for common data. The "call"
+				// element will be set if we're colouring the row
 
 				if (isset($line["all"])) {
 
@@ -424,33 +434,67 @@ class compareGeneric {
 						? $line["call"]
 						: false;
 
-					$d .= new Cell($line["all"], $cl, false, false,
+					$rr[] =  new Cell($line["all"], $cl, false, false,
 					$this->cols);
+
 				}
 				else {
+					$diffs++;
 
 					if (!isset($line["ca"])) $line["ca"] = false;
 					if (!isset($line["cb"])) $line["cb"] = false;
 
-					$d .= new Cell($line["a"], $line["ca"], false,
+					$rr[] = new Cell($line["a"], $line["ca"], false,
 					$this->colwidth) . new Cell($line["b"], $line["cb"], false,
 					$this->colwidth);
-					$keycol = "solidred";
 				}
 
-				$d .= "</tr>";
 			}
 
 			if ($row == "hostname") {
-				$ret .= "\n\n<tr><td class=\"blank\"></td>$d";
+				$ret .= "\n\n<tr><td class=\"blank\"></td>$rr[0]";
 			}
 			else {
-				$ret .= "\n<tr><th class=\"$keycol\" ";
+
+				// If the "difference" variable is set, we found a
+				// difference in this row. If not, make the whole row
+				// "disappearable" by Javascript. Colour the cell red or
+				// green too.
+
+				if ($diffs > 0) {
+					$kcl = "solidred";
+					$ret .= "\n<tr>";
+				}
+				else {
+					$ret .=
+					"\n<tr class=\"hide\" style=\"display: table-row\">";
+					$kcl = "solidgreen";
+				}
+
+				$ret .= "<th class=\"$kcl\" ";
 			
 				if (count($rowdat) > 1)
 					$ret .= "rowspan=\"" . count($rowdat) . "\"";
 
-				$ret .= ">$row</th>$d";
+				$ret .= ">$row</th>";
+
+				for ($i = 0; $i < count($rr); $i++) {
+
+					if ($i > 0) {
+
+						if ($diffs == 0 && preg_match("/colspan=/",
+							$rr[$i]))
+							$ret .=
+					"\n<tr class=\"hide\" style=\"display: table-row\">";
+						else
+							$ret .= "\n  <tr>";
+					}
+					//else
+
+					
+					$ret .= $rr[$i] . "</tr>";
+				}
+
 			}
 			
 		}
@@ -591,7 +635,6 @@ class compareGeneric {
 		}
 
 		return $ret;
-
 	}
 
 	protected function compare_hostname($data)
@@ -792,7 +835,14 @@ class compareNet extends compareGeneric {
 
 	protected function preproc_route($data)
 	{
-		return $this->preproc_bold_first_word($data, "\s");
+		// Bold the network and remove the local IP address part (ignoring
+		// default routes)
+
+		$defs = preg_grep("/default/", $data);
+		$other = preg_replace("/\s\S+\s/", " ", array_diff($data, $defs));
+
+		return $this->preproc_bold_first_word(array_merge($other, $defs), "\s");
+
 	}
 
 	protected function preproc_port($data)
@@ -818,10 +868,16 @@ class compareNet extends compareGeneric {
 		return $ret;
 	}
 
-	protected function preproc_nic($data)
+	protected function preproc_net($data)
 	{
+		// For network interfaces print the NIC name, the speed, and the
+		// subnet it's on (simply by changing the last octet of the IP
+		// address to a zero)
 
 		$ret = array();
+
+		// nxge1|phys|10.2.132.170|0:21:28:b8:7:e5 |wave2-wati|1000Mb:full|||1
+		//  0   | 1  |      2     |        3       |     4    |      5
 
 		foreach($data as $datum) {
 			$a = explode("|", $datum);
@@ -829,7 +885,7 @@ class compareNet extends compareGeneric {
 
 			// Split the speed/duplex into two parts
 
-			$sa = preg_split("/:|-/", $a[4]);
+			$sa = preg_split("/:|-/", $a[5]);
 			
 			// Now $sa[0] is the speed, $sa[1] is the duplex. I don't want
 			// the "b" on the speed.
@@ -858,8 +914,22 @@ class compareNet extends compareGeneric {
 			
 				$speed = "${sa[0]}bit/$sa[1] duplex";
 			}
+
+			// network
+
+			$snet = preg_replace("/\d+$/", "0", $a[2]);
+
+			$sspeed = ($snet != "uncabled" && $snet != "unconfigured")
+				? " ($speed)"
+				: false;
+
+			// IPMP group
+
+			$sipmp = ($a[7])
+				? " '$a[7]' IPMP group"
+				: false;
 			
-			$ret[] = "<strong>$a[0]:</strong> $a[1] ($speed) $a[5]";
+			$ret[] = "<strong>$a[0]:</strong> ${snet}${sipmp}$sspeed";
 		
 		}
 

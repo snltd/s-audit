@@ -20,7 +20,7 @@ $s = new GetServers($map, false, "platform");
 $grid = new PlatformGrid($map, $s->get_array(), "platform");
 
 $pg = new audPage("platform audit", $grid->server_count(),
-$grid->zone_toggle());
+$grid->prt_toggle());
 
 echo $grid->show_grid(), $pg->close_page();
 

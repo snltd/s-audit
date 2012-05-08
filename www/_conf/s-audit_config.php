@@ -69,7 +69,7 @@ define("DEF_DIR", LIB . "/defs");
 define("SEC_DEF_DIR", LIB . "/defs/security");
 	// Where to find username/cron job/user_attr definition files
 
-define("MAX_AF_VER", 3.0);
+define("MAX_AF_VER", 3.1);
 define("MIN_AF_VER", 3.0);
 	// Maximum and minimum audit file versions we support
 

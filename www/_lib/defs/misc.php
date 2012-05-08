@@ -110,12 +110,16 @@ class defs {
 			),
 
 			"pci" => array(
-				"FCX2-6562" => "JNI dual-port HBA",
-				"FCX2-6562-L" => "JNI dual-port HBA",
+				"FCX2-6562" => "JNI FXC2-6552 dual-port HBA",
+				"FCX2-6562-L" => "JNI FXC2-6552-L dual-port HBA",
+				"LP11002-E" => "Emulex LP11002 HBA",
+				"LPe12002-S" => "Emulex LPe12002-S HBA",
 				"LSI,1030" => "LSI diffrential SCSI",
-				"QLA2342" => "QLogic FCAL HBA",
-				"SUNW,pci-ce" => "Sun Gigaswift Ethernet (fc)",
-				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet"
+				"QLA2342" => "QLogic 2342 FCAL HBA",
+				"SUNW,pci-ce" => "Sun Gigaswift FC Ethernet",
+				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet",
+				"SUNW,pci-qge" => "Sun Quad Gigaswift Ethernet",
+				"SUNW,pci-eri" => "Sun ERI Ethernet"
 			)
 		);
 

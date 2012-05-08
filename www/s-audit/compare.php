@@ -43,6 +43,9 @@ else {
 
 $pg = new comparePage("Comparing $in[z1] and $in[z2]", false);
 
+echo "\n\n<div id=\"togglehidden\"><p><a id=\"displayText\" 
+href=\"javascript:toggleCommon();\">hide common data</a></p></div>";
+
 if (isset($in["z1"]) && isset($in["z2"])) {
 	$z1 = $in["z1"];
 	$z2 = $in["z2"];

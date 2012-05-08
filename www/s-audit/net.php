@@ -20,7 +20,7 @@ $s = new GetServers($map, false, "net");
 $grid = new NetGrid($map, $s->get_array(), "net");
 
 $pg = new audPage("networking audit", $grid->server_count(),
-$grid->zone_toggle());
+$grid->prt_toggle());
 
 echo $grid->show_grid(), $pg->close_page();
 

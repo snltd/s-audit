@@ -20,7 +20,7 @@ $s = new GetServers($map, false, "app");
 $grid = new AppGrid($map, $s->get_array(), "app");
 
 $pg = new audPage("application software audit", $grid->server_count(),
-$grid->zone_toggle());
+$grid->prt_toggle());
 
 echo $grid->show_grid(), $pg->close_page();
 

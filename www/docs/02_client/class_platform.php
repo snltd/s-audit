@@ -117,6 +117,14 @@ $pg = new docPage($menu_entry);
 
 	<dd>Storage checks are omitted in local zones.</dd>
 
+	<dt>multipath</dt>
+	<dd>Currently s-audit is able to understand two kinds of multipathing.
+	First, the Solaris 10 native <tt>mpxio</tt> variety, managed via the
+	<tt>mpathadm</tt> tool. If this is running, the number of multipathed
+	devices (that is, devices with a number of paths greater than 1) is
+	reported. EMC PowerPath is also understood, and the number of
+	multipathed devices will be reported.</dd>
+
 	<dt>card</dt>
 	<dd>This reports information on PCI  and SBUS cards. It only really
 	works on SPARC Solaris 9 and 10.  Consider it a bonus on those platforms
