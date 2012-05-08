@@ -714,9 +714,9 @@ function get_disk_type
 			&& print "COMSTAR iSCSI" \
 			|| print "SCSI VHCI"
 
-	elif [[ $s == "lpfc" ]]
+	elif [[ $s == *"lpfc"* ]]
 	then
-		print "FC"
+		print "Emulex SAN"
 	elif [[ $s == *scsi@* || $s == *esp@* ]]
 	then
 		print "SCSI"
@@ -2124,7 +2124,7 @@ function get_name_service
 {
 	# What are we using to look up users and hosts?
 
-	egrep "^hosts|^passwd|^[ap]*attr" /etc/nsswitch.conf | while read a
+	egrep "^hosts|^passwd|^[ap].*attr" /etc/nsswitch.conf | while read a
 	do
 		disp "name service" $(print $a | sed 's/\[NOTFOUND=return\]//')
 	done
@@ -2338,7 +2338,15 @@ function get_zpools
 					zpext="$zpext [${zv}/${zpsup}]"
 				fi
 
-				disp "zpool" "$zp $st $zpext"
+				# Get the pool layout - this is hard
+
+				zpool iostat -v $zp | sed -e '1,/^--/d' -e '/^--/,$d' \
+				-e 's/ *//' | egrep -v "^c[0-9]+[td][0-9]+|^$zp " \
+				| read ztyp junk
+
+				ndev=$(zpool iostat -v $zp | egrep -c "c[0-9]+[dt][0-9]+")
+
+				disp "zpool" "$zp $st $zpext (${ztyp:-concat}: $ndev devices)"
 			fi
 
 		done
@@ -2634,7 +2642,7 @@ function get_exports
 
 			for ldm in $LDMS
 			do
-				ldm ls-constraints -p $ldm | $EGS "^VDISK.*vol=${vol}@" \
+				ldm ls-constraints -p $ldm | $EGS "^VDISK\|name=${vol}\|" \
 					&& own=$ldm
 			done
 
