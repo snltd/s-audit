@@ -1105,18 +1105,27 @@ function get_lux_enclosures
 
 		if luxadm display $node | $EGS Vendor:
 		then
-			luxadm display $node | sed -n -e "/Vendor/s/^.*:[$WSP]*//p" \
-				-e "/Product/s/^.*:[$WSP]*//p" \
-				-e "/Revision/{s/^.*:[$WSP]*\(.*\)/(fw \1)/p;q;}" \
-				| tr '\n' ' ' | tr -s ' '
-			print
+
+			# Get the vendor, moedl ID and evice type. Take the first match
+			# of each. Sloooow
+
+			luxadm display $node | grep Vendor: | sed 1q | read a vnd
+			luxadm display $node | grep Type: | sed 1q | read a b typ
+			luxadm display $node | grep ID: | sed 1q | read a b id
+
+			#luxadm display $node | sed -n -e "/Vendor/s/^.*:[$WSP]*//p" \
+				#-e "/Product/s/^.*:[$WSP]*//p" \
+				#-e "/Revision/{s/^.*:[$WSP]*\(.*\)/(fw \1)/p;q;}" \
+				#| tr '\n' ' ' | tr -s ' '
+			#print
+			print "$vnd $id ($typ)"
 		else
 			print "unidentified (WWN ${node})"
 		fi
 
 	done | sort | uniq -c | while read COUNT LUX
 	do
-		disp "storage" "FC array: $COUNT x $LUX"
+		disp "storage" "FC device : $COUNT x $LUX"
 	done
 
 }
