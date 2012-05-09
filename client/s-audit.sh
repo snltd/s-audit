@@ -612,6 +612,7 @@ function run_class
 
 	for get in $RUN_TESTS
 	do
+		[[ -n $VERBOSE ]] && print -u2 "  running '$get'"
 		[[ $OMIT_TESTS == *" $get "* ]] || get_$get
 	done
 }
@@ -702,6 +703,12 @@ function get_disk_type
 		return
 	fi
 
+	if [[ ! -a /dev/dsk/${1}s2 ]]
+	then
+		print "untraceable"
+		return
+	fi
+	
 	s=$(ls -l /dev/dsk/${1}s2)
 
 	if [[ $s == *ide@* ]]
@@ -1016,7 +1023,8 @@ function get_disks
 {
 	# Get the sizes of the disks on the system, ignoring optical drives.
 
-	# If we're running PowerPath, get a list of all the disks it controls for the use of get_disk_type()
+	# If we're running PowerPath, get a list of all the disks it controls
+	# for the use of get_disk_type()
 
 	can_has powermt \
 		&& PPDSKS=" $(powermt display dev=all | grep "c[0-9]*t[0-9]" \
@@ -1227,7 +1235,7 @@ function get_cards
 				disp "card" "${c%-pci*} (${b}/$a) $d"
 			done
 
-		elif [| $HW_HW == "SUNW,Sun-Fire-T200" ]] 
+		elif [[ $HW_HW == "SUNW,Sun-Fire-T200" ]] 
 		then
 			$PRTDIAG | grep PCI | grep -v " IOBD " | \
 			while read loc type slot pth nm mdl
@@ -2695,6 +2703,9 @@ function get_exports
 function get_zfs_ver
 {
 	# Get supported versions of zpool and zfs
+
+	can_has zfs || return
+
 	ZFV=$(zfs upgrade | sed -n '1s/^.*version \([0-9]*\).*$/\1/p')
 
 	disp "ZFS version" "$(zpool upgrade | \
@@ -3292,8 +3303,9 @@ function get_smc
 
 	if can_has smcwebserver
 	then
-		V=$(wcadmin --version)
-		V=${V##* }
+		V=$(wcadmin --version 2>/dev/null)
+
+		[[ -z $V ]] && V="unknown" || V=${V##* }
 
 		if (( $OSVERCMP < 510 ))
 		then
@@ -3792,6 +3804,8 @@ function get_ports
 		ps $PSFLAGS -o pid,fname | sed 1d | while read pid fname
 		do
 
+			[[ $fname == "logadm" ]] && continue
+
 			pfiles $pid 2>/dev/null | egrep "sockname.*port:" \
 			| while read p
 			do
@@ -4149,7 +4163,7 @@ log "${0##*/} invoked"
 trap 'die "user hit CTRL-C"' 2
 # Get options
 
-while getopts "D:e:f:lL:Mo:pPqR:T:uVz:" option 2>/dev/null
+while getopts "D:e:f:lL:Mo:pPqR:T:uvVz:" option 2>/dev/null
 do
 	case $option in
 
@@ -4215,6 +4229,10 @@ do
 		"u")	# User check file
 			UCHK=$OPTARG
 			Z_OPTS="$Z_OPTS -u $OPTARG"
+			;;
+
+		"v")	# Be verbose
+			VERBOSE=1
 			;;
 
 		"V")	# Print version and exit
@@ -4380,7 +4398,11 @@ then
 
 	for myc in $CL
 	do
+
 		[[ -n $of_h ]] && exec 3>"${OD}/${HOSTNAME}.${myc}.saud"
+
+		[[ -n $VERBOSE && -n $TO_FILE ]] \
+			&& print -u2 "Running '$myc' audit on '$HOSTNAME'"
 
 		WARN=$(nr_warn $myc)
 
@@ -4450,7 +4472,7 @@ then
 
 				if [[ -n $zlive ]]
 				then
-					zlogin -S $z /${zf##*/} $Z_OPTS $c1 \
+					zlogin -S $z /var/tmp/${zf##*/} $Z_OPTS $c1 \
 						|| disp "error" "incomplete audit"
 				else
 					class_head $z $c1
@@ -4464,7 +4486,7 @@ then
 			done
 
 		else
-			zlogin -S $z /${zf##*/} $Z_OPTS $CL >&3 \
+			zlogin -S $z /var/tmp/${zf##*/} $Z_OPTS $CL >&3 \
 				|| disp "error" "incomplete audit"
 		fi
 
