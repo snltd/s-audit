@@ -1220,7 +1220,14 @@ function get_cards
 				disp "card" $l
 			done
 
-		elif [[ $HW_HW == "SUNW,Sun-Fire-T200" ]] # T2000
+		elif [[ $HW_HW == "SUNW,T5240" ]]
+		then
+			$PRTDIAG | grep PCI | egrep -v "usb|MB/" | sort -u | while read a b c d
+			do
+				disp "card" "${c%-pci*} (${b}/$a) $d"
+			done
+
+		elif [| $HW_HW == "SUNW,Sun-Fire-T200" ]] 
 		then
 			$PRTDIAG | grep PCI | grep -v " IOBD " | \
 			while read loc type slot pth nm mdl
@@ -1342,12 +1349,8 @@ function get_virtualization
 			# this if we're on sun4v hardware. If we have the ldm binary,
 			# and that can list the primary, then we must be in the primary
 			# domain. If we can't run ldm (must be root), look to see if
-			# ldmd is running. Finally, ask prtpicl what it can see. In a
-			# guest domain it should be able to see the OBP, but not an LED.
-			# I do this +ve/-ve test because prtpicl can hang on T2000s.
-			# That's why it's run through timeout_job(). If the prtpicl job
-			# times out, we play safe and guess that we're in a normal
-			# domain. We need a [=] test here.
+			# ldmd is running. Finally, see if we can see power supply. If
+			# not, assume we're a guest LDOM
 
 			if can_has ldm
 			then
@@ -1355,9 +1358,10 @@ function get_virtualization
 			elif my_pgrep ldmd >/dev/null
 			then
 				VIRT="primary LDOM"
-			elif my_pgrep picld >/dev/null && [ $(timeout_job prtpicl \
-			| egrep -c "led \(|obp \(" ) = 1 ]
+			elif $PRTDIAG -v | $EGS "PS0"
 			then
+				VIRT="primary LDOM"
+			else
 				VIRT="guest LDOM"
 			fi
 
@@ -4406,8 +4410,9 @@ then
 	done
 
 fi
-# To audit zones we copy ourselves into the zone root, then run that copy
-# via zlogin, capturing the output
+
+# To audit zones we copy ourselves into the zone's /var/tmp , then run that
+# copy via zlogin, capturing the output
 
 if can_has zoneadm
 then
@@ -4426,7 +4431,7 @@ then
 
 		if [[ -n $zlive ]]
 		then
-			zf=${zr}/root/$$${0##*/}$RANDOM
+			zf=${zr}/root/var/tmp/$$${0##*/}$RANDOM
 			cp $0 $zf
 			chmod 0700 $zf
 		fi
