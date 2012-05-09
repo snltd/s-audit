@@ -396,7 +396,11 @@ class HostGrid {
 		// Display the HTML for a single server and all its zones, if
 		// necessary
 
-		$ret = $this->show_zone($this->servers[$server][$this->c]);
+		if (isset($this->servers[$server][$this->c]))
+			$ret = $this->show_zone($this->servers[$server][$this->c]);
+		else 
+			return $this->erred_zone_print(array("hostname"=> array($server),
+			"_err_"=> array("missing data")));
 
 		$zl = (defined("NO_ZONES"))
 			? false
@@ -3608,6 +3612,9 @@ class OSGrid extends PlatformGrid
 
 		foreach ($this->servers as $server) {
 
+			if (!isset($server["os"]))
+				continue;
+
 			$d = $server["os"];
 
 			if (!isset($d["distribution"][0]) || !isset($d["version"][0]))
@@ -3746,26 +3753,30 @@ class SecurityGrid extends HostGrid{
 
 		$this->curr_omit = array();
 
-		$dist = preg_replace("/ /", "_",
-		$this->servers[$server]["os"]["distribution"][0]);
-		preg_match("/.*(5\.\d+).*/",
-		$this->servers[$server]["os"]["version"][0], $a);
+		if (isset($this->server[$server]["os"])) {
+			$dist = preg_replace("/ /", "_",
+			$this->servers[$server]["os"]["distribution"][0]);
 
-		$myos = "${dist}-$a[1]";
+			preg_match("/.*(5\.\d+).*/",
+			$this->servers[$server]["os"]["version"][0], $a);
 
-		if (isset($this->defs[$myos]))
-			$this->curr_omit = $this->defs[$myos];
-		else {
+			$myos = "${dist}-$a[1]";
 
-			$sd_file = DEF_DIR . "/security/sec_defs-${myos}.php";
+			if (isset($this->defs[$myos]))
+				$this->curr_omit = $this->defs[$myos];
+			else {
+	
+				$sd_file = DEF_DIR . "/security/sec_defs-${myos}.php";
 				
-			if (file_exists($sd_file)) {
-				require_once($sd_file);
-				$this->curr_omit = $this->defs[$myos] = $sec_data;
+				if (file_exists($sd_file)) {
+					require_once($sd_file);
+					$this->curr_omit = $this->defs[$myos] = $sec_data;
+				}
+				else
+					page::warn("No security definition file for
+					&quot;$sd_file&quot;.");
+
 			}
-			else
-				page::warn("No security definition file for
-				&quot;$sd_file&quot;.");
 
 		}
 		

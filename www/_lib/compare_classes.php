@@ -334,17 +334,28 @@ class compareGeneric {
 			$rows[] = "audit completed";
 		}
 
+		if (count($data) != 2) {
+
+			$data["unknown host"] = array(
+				"hostname" => array("unknown host"),
+				"audit completed" => array("no audit")
+			);
+
+			$this->hosts[] = "unknown host";
+		}
+
 		$this->data = $data;
 		$this->rows = $rows;
 		$this->colwidth = round(100 / $this->cols) . "%";
 		$this->html .= $this->compare_class();
 
-
 		if (method_exists($this, "cmp_key")) {
 			$this->html .= "\n\n<table align=\"center\" style=\""
-			. $this->width . "\">\n<tr><td class=\"nocol\"><p class=\"center\">"
+			. $this->width
+			. "\">\n<tr><td class=\"nocol\"><p class=\"center\">"
 			. $this->cmp_key() .  "</p></td></tr></table>";
 		}
+
 	}
 
 	protected function compare_class()
@@ -530,6 +541,9 @@ class compareGeneric {
 		// [ca] = class for LH column
 		// [cb] = class for RH column
 
+		if (!isset($data[0])) $data[0] = array();
+		if (!isset($data[1])) $data[1] = array();
+
 		// First find things that are the same
 
 		$ret = array();
@@ -668,7 +682,11 @@ class compareGeneric {
 
 		foreach($data as $datum) {
 			$d = preg_split("/[:\s\/]+/", $datum[0]);
-			$d_arr[] = mktime($d[0], $d[1], $d[2], $d[3], $d[4], $d[5]);
+
+			if (isset($d[5]))
+				$d_arr[] = mktime($d[0], $d[1], $d[2], $d[3], $d[4], $d[5]);
+			else
+				$broken = true;
 		}
 		
 		sort($d_arr);
@@ -686,7 +704,11 @@ class compareGeneric {
 
 		$diff_col = "green";
 
-		if ($diff == 0) {
+		if (isset($broken)) {
+			$txt = "no times to compare";
+			$diff_col = "red";
+		}
+		elseif ($diff == 0) {
 			$txt = "identical times";
 		}
 		elseif ($diff < 60) {
@@ -754,7 +776,7 @@ class comparePlatform extends compareGeneric {
 
 	protected $no_colour = array("hostname", "audit completed", "hardware",
 	"virtualization", "serial number", "ALOM IP", "card", "memory",
-	"storage", "EEPROM");
+	"storage", "EEPROM", "multipath");
 
 	protected function preproc_storage($data)
 	{
@@ -824,7 +846,8 @@ class compareOS extends compareGeneric {
 class compareNet extends compareGeneric {
 
 	protected $no_colour = array("hostname", "audit completed", "NTP",
-	"name service", "DNS server", "port", "route", "NIC", "routing");
+	"NFS domain", "name service", "DNS server", "port", "route", "net",
+	"routing", "SNMP");
 
 	protected $sparse_list = array("port");
 
@@ -882,6 +905,9 @@ class compareNet extends compareGeneric {
 		foreach($data as $datum) {
 			$a = explode("|", $datum);
 			$speed = "unknown speed";
+
+			if (count($a) < 7)
+				continue;
 
 			// Split the speed/duplex into two parts
 
@@ -953,7 +979,7 @@ class compareNet extends compareGeneric {
 class compareFS extends compareGeneric {
 
 	protected $no_colour = array("hostname", "audit completed", "zpool",
-	"root fs", "fs", "export", "capacity", "disk group");
+	"metaset", "root fs", "fs", "export", "capacity", "disk group");
 
 	protected $disp_name = "Filesystem";
 
