@@ -35,7 +35,7 @@ class Filesystem {
 
 			if ($pattern) {
 
-				if (!pret_match("/$pattern/", basename($candidate)))
+				if (!preg_match("/$pattern/", basename($candidate)))
 					continue;
 
 			}

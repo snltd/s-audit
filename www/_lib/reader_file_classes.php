@@ -66,9 +66,12 @@ class ZoneMap extends ZoneMapBase {
 			page::f_error("no audit data. [${audit_dir}]");
 
 		// Throw away server_dirs we aren't interested in, but not if we're
-		// on the single server view page
+		// on the single server view page. Oh, and record how many there
+		// originally were
 
-		if (!defined("HOST_COLS"))
+		$this->all = count($server_dirs);
+
+		if (!defined("SINGLE_SERVER"))
 			$server_dirs = array_slice($server_dirs, $this->offset,
 			PER_PAGE);
 

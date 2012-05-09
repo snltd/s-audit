@@ -34,6 +34,10 @@ class ZoneMapBase {
 	private $t_start_map;
 		// microtime at which we begin creating the map
 
+	public $all;
+		// How many server_dirs there are - the total amount of "machines"
+		// before we start slicing up in to "PER_PAGE" chunks
+
 	public $offset;
 		// The starting server to display, as a number
 

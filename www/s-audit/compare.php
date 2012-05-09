@@ -19,6 +19,10 @@ require_once(LIB . "/reader_file_classes.php");
 require_once(LIB . "/display_classes.php");
 require_once(LIB . "/compare_classes.php");
 
+define("SINGLE_SERVER", 1);
+	// needs to be here so reader_classes doesn't "forget" to offer us
+	// friends outside the first PER_PAGE
+
 //-----------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 

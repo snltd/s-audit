@@ -78,15 +78,24 @@ class compareListPage extends audPage {
 
 			$friends = file($this->ff);
 
-			// Read in the friends file and make a key=>value array of the
-			// pairs inside it
+			// Read in the friends file and make an array of the pairs, and
+			// possibly descriptions, inside it. 
 
 			foreach($friends as $row) {
 
 				if (preg_match("/^\w/", $row)) {
-					$a = preg_split("/\s+/", $row);
+					$a = preg_split("/\s+/", $row, 3);
 
-					if (count($a) == 3) $pairs[$a[0]] = $a[1];
+					// Discard friendless loners
+
+					if (count($a) >= 3)
+							$arr = array(0 => $a[0], 1 => $a[1]);
+
+					// friends can have optional descriptions
+
+					if (isset($a[2])) $arr["desc"] = $a[2];
+
+					$pairs[] = $arr;
 				}
 
 			}
@@ -96,18 +105,45 @@ class compareListPage extends audPage {
 
 			$ret .= "\n\n<ul>";
 
-			foreach($pairs as $key=>$val) {
+			foreach($pairs as $pair) {
 
 				// Only display pairs which both exist in the map
 
-				if ($this->map->has_data($key) &&
-					$this->map->has_data($val))
+				if ($this->map->has_data($pair[0]) &&
+					$this->map->has_data($pair[1])) {
 						$ret .= "\n  <li><a href=\"$_SERVER[PHP_SELF]?g="
-						.  $this->group . "&amp;z1=$key&amp;z2=$val\">"
-						."$key and $val</a></li>";
+						.  $this->group . "&amp;z1=$pair[0]&amp;z2=$pair[1]\">"
+						."$pair[0] and $pair[1]</a>";
+					
+						if (isset($pair["desc"])) $ret .= $pair["desc"];
+
+						$ret .= "</li>";
+				}
+				else
+					$missing_friends[] = $pair;
 			}
 
 			$ret .= "\n</ul>";
+
+			if (isset($missing_friends)) {
+
+				$ret .= "<p class=\"center\">The following friends are
+				defined, but we do not have sufficient data to compare
+				them.</p>";
+
+				$ret .= "\n\n<ul>";
+
+				foreach($missing_friends as $friends) {
+					$ret .= "<li>$friends[0] and $friends[1]";
+					
+					if (isset($friends["desc"])) $ret .= $friends["desc"];
+
+					$ret .= "</li>";
+				}
+
+				$ret .= "\n</ul>";
+			}
+
 		}
 		else
 			$ret .= "You do not have a $ff_link for this audit group.</p>";
@@ -834,8 +870,22 @@ class compareOS extends compareGeneric {
 		// For now I'm just going to bold the VM type and strip out any [].
 		// Might do more with this in future
 
-		return $this->preproc_bold_first_word(preg_replace("/\[\]/", "",
+		$data =  $this->preproc_bold_first_word(preg_replace("/\[\]/", "",
 		$data));
+
+		// Remove the state from zones. This is helpful if you have
+		// clustered zones
+
+		foreach($data as $vm) {
+
+			if (preg_match("/local zone:/", $vm))
+				$vm = preg_replace("/\s\(.*\)/", "", $vm);
+
+			$ret[] = $vm;
+		}
+
+		return $ret;
+
 	}
 
 }

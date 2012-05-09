@@ -3271,7 +3271,7 @@ class HostGrid {
 		$vm = sizeof($this->map->list_vmws());
 		$xvm = sizeof($this->map->list_domus());
 		$unk = sizeof($this->map->list_unknowns());
-		$others = (count($this->map) - PER_PAGE);
+		$others = $this->map->all - PER_PAGE;
 		$parts = 0;
 
 		// Logical domains, virtualboxes VMWware instances, XEN domains and
@@ -3370,9 +3370,10 @@ class HostGrid {
 		$ret_str .= ".";
 
 		if ($others > 0)
-			$ret_str .= "<p class=\"center\"><strong>$others</strong> other"
-			. " machines known to system. (Total of " . $this->map->count
-			. " physical and virtual machines, not counting local zones.)";
+			$ret_str .= "<div class=\"banner\"><strong>$others</strong> "
+			. " machines not shown. (Total of " . $this->map->all
+			. " physical and virtual machines, not counting local
+			zones.)</div>";
 
 		return $ret_str;
 	}
@@ -3391,25 +3392,25 @@ class HostGrid {
 		$no = $os + PER_PAGE;
 		$po = $os - PER_PAGE;
 
-		if (count($this->map) > PER_PAGE) {
+		$qs = new queryString(1);
+
+		if ($this->map->all > PER_PAGE) {
 
 			if ($os != 0) {
 
 				if ($po < 0)
 					$po = 0;
 
-				$prev_str = "<a href=\"$_SERVER[PHP_SELF]?o=${po}\">&lt;"
+				$prev_str = "<a href=\"$_SERVER[PHP_SELF]$qs&amp;o=${po}\">&lt;"
 				. "previous</a> :: ";
 			}
 
-			if ($no < $this->map->count)
-				$next_str = " :: <a href=\"$_SERVER[PHP_SELF]?o=${no}\">next"
+			if ($no < $this->map->all)
+				$next_str = " :: <a href=\"$_SERVER[PHP_SELF]$qs&amp;o=${no}\">next"
 				. "&gt;</a>";
 		}
 
 		// Are zones currently shown or hidden? Offer the alternative.
-
-		$qs = new queryString(1);
 
 		$txt = (defined("NO_ZONES"))
 			? "show"
