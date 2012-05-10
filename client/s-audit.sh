@@ -19,7 +19,7 @@
 #
 #   http://snltd.co.uk/s-audit
 #
-# v3.1. (c) 2011 SNLTD.
+# v3.2 (c) 2011-2012 SNLTD.
 #
 #=============================================================================
 
@@ -31,7 +31,7 @@ PATH=/bin:/usr/bin
 WSP="	 "
 	# A space and a literal tab. ksh88 won't accept \t
 
-MY_VER="3.1"
+MY_VER="3.2"
 	# The version of the script
 
 typeset -R15 RKEY
@@ -1197,90 +1197,37 @@ function get_mpath
 
 function get_cards
 {
-	# Have a go at finding cards, on SPARCs.
+	# Have a go at finding cards
 
-	if [[ -x $PRTDIAG && $HW_HW != "i86"* ]]
+	if [[ -x $PRTDIAG ]] 
 	then
 		# SBUS first. Works on the Ultra 2, YMMV.  I'm not very confident
 		# about only checking below slot 14
 
-		$PRTDIAG | awk '{ if ($2 == "SBus" && $4 < 14) print $4,$5 }' | \
-		sort -u | while read slot type
+		if [[ $HW_HW != "i86"* ]]
+		then
+
+			$PRTDIAG | awk '{ if ($2 == "SBus" && $4 < 14) print $4,$5 }' | \
+			sort -u | while read slot type
+			do
+				disp "card" "$type (SBUS slot $slot)"
+			done
+
+		fi
+	
+		# Get PCI information from prtdiag. We don't process it any more -
+		# it was getting out of hand as every machine presents the info
+		# differently. The PHP interface knows lots of machines though.
+		# Compress whitespace if we're not machine parseable
+
+		[[ -n $OUT_P ]] && x_sed='' || x_sed="s/[${WSP}]\{1,\}/ /g"
+
+		$PRTDIAG -v | grep PCI | sed "$x_sed" | while read line
 		do
-			disp "card" "$type (SBUS slot $slot)"
+			disp "card" "PCI ($line)"
 		done
 
-		# Now PCI. This is not very reliable. It seems to work well enough
-		# on SPARC Solaris 9 and 10, but it's a dead loss on 8, and doesn't
-		# work at all on x86.
-
-		if [[ $HW_HW == "SUNW,Sun-Fire-15000" ]] # E25K
-		then
-
-			$PRTDIAG | grep PCI | sort -u | \
-			while read slot type pid bside hz bhz func state desc name 
-			do
-				[[ -z $name ]] && name="unknown"
-				[[ $name == "("* ]] && continue
-				print "${desc%-pci*} ($name ${pid}/${bside}:${slot}@${hz}MHz) $extra"
-			done | sort -u | while read l
-			do
-				disp "card" $l
-			done
-
-		elif [[ $HW_HW == "SUNW,T5240" ]]
-		then
-			$PRTDIAG | grep PCI | egrep -v "usb|MB/" | sort -u | while read a b c d
-			do
-				disp "card" "${c%-pci*} (${b}/$a) $d"
-			done
-
-		elif [[ $HW_HW == "SUNW,Sun-Fire-T200" ]] 
-		then
-			$PRTDIAG | grep PCI | grep -v " IOBD " | \
-			while read loc type slot pth nm mdl
-			do
-				disp "card" "${nm%-pci*} ($type $loc) $mdl"
-			done
-
-		elif [[ $HW_HW == "sun4v" ]] # T3-2
-		then
-			$PRTDIAG | grep "/SYS/MB/PCI" | grep -v "/USB" | sort -u | \
-			while read slot pcie desc name
-			do
-				disp "card" "${desc%-pci*} (pci${desc#*pci} $slot) $name"
-			done
-
-		elif [[ $HW_HW == SUNW,SPARC-Enterprise ]] # M5000
-		then
-			$PRTDIAG | sed -n '/IO Card/,/^=/p' | grep "^ *[0-9]" \
-			| grep -v N/A | sort -u | while read slot type name
-			do
-				disp "card" "$type (PCIx/$slot) $name"
-			done
-
-		else
-			$PRTDIAG | grep "PCI[0-9]" | sort -u | \
-			while read pci hz slot name desc extra
-			do
-				
-				if [[ -z $extra ]]
-				then
-					extra=$desc	
-					desc=${name%-pci*}
-					name=pci${name#*pci}
-				else
-					desc=${desc#\(}
-					desc=${desc%\)}
-				fi
-
-				disp "card" "$desc ($name $slot@${hz}MHz) $extra"
-			done
-		fi
-
-
 	fi
-
 }
 
 function get_virtualization
