@@ -2665,14 +2665,16 @@ function get_zfs_ver
 
 function get_metasets
 {
-	# Simply lists metasets
+	# Simply lists metasets and owners
 
 	if can_has metaset
 	then
 		metaset 2>/dev/null \
 		| sed -n '/^Set/s/^.*name = \([^,]*\),.*$/\1/p' | while read set
 		do
-			disp metaset $set
+
+			metaset -s $set | $EGS "$HOSTNAME .*Yes" && x=" (owner)" || x=""
+			disp metaset "${set}$x"
 		done
 
 	fi
