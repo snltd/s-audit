@@ -14,6 +14,7 @@
 //============================================================================
 
 require_once(LIB . "/filesystem_classes.php");
+
 //----------------------------------------------------------------------------
 // ZONE MAP
 
@@ -91,7 +92,6 @@ class ZoneMap extends ZoneMapBase {
 		}
 
 		$this->paths = $this->set_extra_paths(AUDIT_DIR . "/" . $group);
-
 	}
 	
 	public function get_fname($server)
@@ -134,6 +134,7 @@ class GetServers extends GetServersBase {
 		$cl[] = "platform";
 
 		$this->globals = $map->list_globals();
+		$this->map = $map;
 
 		if (!$s_list)
 			$s_list = $this->globals;
@@ -270,6 +271,11 @@ class GetServers extends GetServersBase {
 		unset($fa[0], $fa[$last_row]);
 		$ret = array();
 		$skip = 0;
+
+		// Write the audit file version into the map. The key is the
+		// filename, the value is the version number
+
+		$this->map->af_vers[$file] = $ca[2];
 
 		foreach($fa as $l) {
 

@@ -77,6 +77,9 @@ class ZoneMapBase {
 	public $map = array();
 		// Map of zone name to zone filename
 
+	public $af_vers = array();
+		// Versions of audit files
+
 	public function set_extra_paths($dir)
 	{
 		return array(
@@ -177,6 +180,19 @@ class ZoneMapBase {
 
 		if (is_array($ret))
 			sort($ret);
+
+		return $ret;
+	}
+
+	public function get_af_ver($server)
+	{
+		// Return the version of the audit file for the given server
+
+		$ret = false;
+
+		if ($file = $this->map[$server]) {
+			$ret = $this->af_vers[$file];
+		}
 
 		return $ret;
 	}

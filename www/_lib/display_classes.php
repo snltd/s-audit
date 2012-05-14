@@ -81,6 +81,10 @@ class HostGrid {
 	protected $toggle_str = "local zones";
 		// "show/hide" string
 
+	protected $af_ver;
+		// The version of the audit file currently being processed. Set each
+		// time show_server() is called
+
 	//------------------------------------------------------------------------
 	// METHODS
 
@@ -395,6 +399,10 @@ class HostGrid {
 	{
 		// Display the HTML for a single server and all its zones, if
 		// necessary
+
+		// Set the audit file version - we may need it
+
+		$this->af_ver = $this->map->get_af_ver($server);
 
 		if (isset($this->servers[$server][$this->c]))
 			$ret = $this->show_zone($this->servers[$server][$this->c]);
@@ -1154,65 +1162,203 @@ class HostGrid {
 
 	protected function show_card($data)
 	{
-		// Display card information in a nice, easy to read way
-		// Input is of one of the following forms:
-		// "card" "$type (SBUS slot $slot)"
-		// "$desc ($extra $slot@${hz}MHz)"
-		// "$desc ($extra port_id/bus_side slot@hzMHz) E25K
+		// A system can only have PCI or SBUS. It can't have both. PCI
+		// format changed in 3.2.
 
-		$c_arr = array();
+		$data = array_unique($data);
+		$unique = array();
 
-		foreach($data as $datum) {
+		if (preg_match("/SBUS/", $data[0]))
+			$processed = $this->parse_cards_sbus($data);
+		elseif($this->af_ver < 3.2) 
+			$processed = $this->parse_cards_pci_legacy($data);
+		else
+			$processed = $this->parse_cards_pci($data);
+		
+		if (count($processed) == 0 && count($data) > 0) {
+			return new Cell("cannot process data");
+		}
 
-			if (preg_match("/\(SBUS/", $datum)) { 
-				preg_match("/^(\S+) \((.*)\)$/", $datum, $a);
+		foreach($processed as $card) {
+		
+			// each card is an array which looks like this:
+			//
+			// [bus]      the bus type - sbus/pci/pcie/pci-x
+			// [c_type]   the card type. Normally this is something generic
+			//            like "network", but with legacy data, can also be
+			//            the model name.
+			// [c_model]  the model name of the card. Often not available
+			// [c_loc]    the slot the card is in Sometimes has the
+			//            backplane or side 
+			// [c_name]   the name prtdiag gives the card. e.g. SUNW,pci-ce
+			// [c_hz]     the speed the card is running at, in MHz
+
+			// We may have too much information. For instance, network cards
+			// with multiple ports show up once for each port, which is
+			// confusing. We can't do array_unique() on an associative
+			// array, so we have to do it ourselves
+			
+			$str = implode($card);
+
+			if (in_array($str, $unique)) continue;
+
+			$unique[] = $str;
+
+			// Look up the card model name in card_db to see if we have a
+			// better description of it. If we do, print that in bold face
+			// with the card model in brackets after it. If not, put the card
+			// name in bold with no brackets. Failing that, promote the card
+			// name
+
+			$bold = $c_model = $light = "";
+
+			$bus = strtolower($card["bus"]);
+
+			$c_model = isset($card["c_model"])
+				? $card["c_model"]
+				: false;
+
+			// For the card db, it's either SBUS or PCI
+
+			$db_bus = ($bus == "sbus")
+				? $bus
+				: "pci";
+
+			if (empty($c_model)) {
+				$bold = $card["c_name"];
+				$name_used = true;
+			}
+			elseif (in_array($c_model, array_keys($this->card_db[$db_bus]))) {
+				$bold = $this->card_db[$db_bus][$c_model];
+				$light = "($c_model)";
+			}
+			else
+				$bold = $c_model;
+			
+			$txt = "<strong>$bold</strong>";
+
+			if (isset($light)) $txt .= " $light";
+
+			$txt .= "<br/>";
+
+			if (!isset($name_used) && isset($card["c_name"]))
+				$txt .= $card["c_name"];
+
+			if (isset($card["c_type"]))
+				$txt .= " " . $card["c_type"];
+		
+			if (isset($card["c_loc"]))
+				$txt .= " " . $card["c_loc"];
+
+			if (!empty($card["c_hz"])) {
+				$txt .= "@" . $card["c_hz"];
 				
-				$cname = (in_array($a[1],
-				array_keys($this->card_db["sbus"])))
-					? "<strong>" . $this->card_db["sbus"][$a[1]] .
-					"</strong> ($a[1])"
-					: "<strong>$a[1]</strong>";
-
-				$class = "sbus";
-				$txt = "$cname<br/>$a[2]";
+				if (!preg_match("/mhz|lane/i", $card["c_hz"])) $txt .= "MHz";
 			}
-			else {
-
-				preg_match("/^(\S+) \((\S+)(.*)\)(.*)$/", $datum, $a);
-
-				// Lines like this
-				// (netw+ pci-bridge (pci-pci8086,b154.0/network 61/B
-				// /IO01@66MHz)
-				// are discarded. For now I don't care, because I don't
-				// think I want them
-
-				if (count($a) < 2)
-					continue;
-
-				// To identify a card, try the card model name first, which
-				// will be in $a[4] if set. If not, try the more generic
-				// name in $a[2]
-
-				$ckey = ($a[4])
-					? trim($a[4])
-					: trim($a[2]);
-
-				if (in_array($ckey, array_keys($this->card_db["pci"])))
-					$cname = "<strong>" .  $this->card_db["pci"][$ckey] .
-					"</strong> ($a[2] $a[1])";
-				elseif ($a[4])
-					$cname = "<strong>$a[4]</strong> ($a[2] $a[1])";
-				else
-					$cname = "<strong>$a[2] $a[1]</strong>";
-
-				$class = "pci";
-				$txt = "$cname<br/>$a[3]";
-			}
-
-			$c_arr[] = array($txt, $class);
+			
+			$c_arr[] = array($txt, strtolower($card["bus"]));
 		}
 
 		return new listCell($c_arr, "smallaudit", false, 1);
+	}
+
+	protected function parse_cards_sbus($data)
+	{
+		// Make an array of SBUS card information that can be formatted in a
+		// nice, easy to read way. Input of the following form:
+		// "card" "$bus (SBUS slot $slot)"
+		
+		$ret_arr = array();
+
+		foreach($data as $card) {
+
+			preg_match("/^(\S+) \((.*)\)$/", $card, $a);
+
+			$ret_arr[] = array(
+				"bus" => "sbus",
+				"c_model" => $a[1],
+				"c_loc" => $a[2]);
+		}
+
+		return $ret_arr;
+	}
+
+	protected function parse_cards_pci_legacy($data)
+	{
+		// Try to parse pre 3.2 PCI card information. This isn't perfect,
+		// but neither is the data that it's given. It'll do. Returns an
+		// associative array of info about the card
+
+		$ret_arr = array();
+
+		foreach($data as $card) {
+
+			preg_match("/^(\S+) \((\S+)(.*)\)(.*)$/", $card, $a);
+
+			// Lines like this
+			// (netw+ pci-bridge (pci-pci8086,b154.0/network 61/B /IO01@66MHz)
+			// are discarded. For now I don't care, because I don't think I
+			// want them
+
+			if (count($a) < 2) continue;
+
+			$arr = array(
+				"bus" => "pci",				// pci - pre 3.2 couldn't
+											// distinguish between PCI, PCIE
+											// and PCI-X
+				"c_type" => trim($a[1]),	// e.g. "network"
+				"c_model" => trim($a[4]),	// e.g. "
+				"c_loc" => trim($a[3]),		// the card's location. Can be
+											// side/slot, or just slot
+				"c_name" => trim($a[2])		// e.g. SUNW,emlxs
+				);
+
+			if (preg_match("/@/", $a[3])) {
+				$b = explode("@", $a[3]);
+				$arr["c_loc"] = $b[0];
+				$arr["c_hz"] = $b[1];
+			}
+
+			$ret_arr[] = $arr;
+		}
+
+		return $ret_arr;
+	}
+
+	protected function parse_cards_pci($data)
+	{
+		require_once(LIB . "/pci_classes.php");
+
+		// Parse raw PCI info from prtdiag. Varies from machine to machine.
+		// Got to catch 'em all.
+
+		// return an array of slot "bus" (PCI/PCIE/PCI-X) and slot "text"
+		// which tries to be of the form
+
+		// card_type (card_name card location@card_speed) card_model
+		// e.g.
+		// network (SUNW,qfe B/4@33MHz) Sun Quad fast ethernet
+
+		$ret_arr = array();
+
+		foreach($data as $card) {
+
+			$mach = preg_replace("/ \(.*$/", "", $this->cz["hardware"][0]);
+			$mach = strtolower(preg_replace("/\W+/", "", $mach));
+	
+			$pci_class = "pci_$mach";
+
+			if (class_exists($pci_class)) {
+				$x = new $pci_class($card);
+				$info = $x->get_info();
+				if ($info) $ret_arr[] = $info;
+			}
+			else
+				page::warn("No PCI definition for &quot;${mach}&quot;.");
+
+		}
+
+		return $ret_arr;
 	}
 
 	protected function show_multipath($data)

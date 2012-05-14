@@ -127,6 +127,8 @@ class colours {
 
 	protected $card_cols = array(
 		"pci" => "#7b7a94",
+		"pcie" => "#3b7a34",
+		"pcix" => "#9b4a94",
 		"sbus" => "#c7a49c"
 	);
 

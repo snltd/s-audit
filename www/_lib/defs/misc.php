@@ -112,15 +112,25 @@ class defs {
 			"pci" => array(
 				"FCX2-6562" => "JNI FXC2-6552 dual-port HBA",
 				"FCX2-6562-L" => "JNI FXC2-6552-L dual-port HBA",
-				"LP11002-E" => "Emulex LP11002 HBA",
-				"LPe12002-S" => "Emulex LPe12002-S HBA",
+				"LPe11000-S" => "Emulex LPe11000 4Gb/s HBA",
+				"LPe11000S+" => "Emulex LPe11002 4Gb/s HBA",
+				"LPe12002-S" => "Emulex LPe12002-S 8Gb/s HBA",
+				"LP11002-E" => "Emulex LP11002 4Gb/s HBA",
+				"LPe12002-S" => "Emulex LPe12002-S 8Gb/s HBA",
 				"LSI,1030" => "LSI diffrential SCSI",
+				"LSI,1064" => "LSI SAS1064 4-port SAS",
+				"LSI,1068E" => "LSI 1068E SAS",
+				"LSI,2008" => "LSI SAS2008 8-port SAS",
 				"QLA2342" => "QLogic 2342 FCAL HBA",
+				"SUNW,pcie-2xgf" => "Sun Dual Gigabit Ethernet",
 				"SUNW,pci-ce" => "Sun Gigaswift FC Ethernet",
 				"SUNW,pci-qfe" => "Sun Quad Fast Ethernet",
 				"SUNW,pci-qge" => "Sun Quad Gigaswift Ethernet",
-				"SUNW,pci-eri" => "Sun ERI Ethernet"
+				"SUNW,pci-eri" => "Sun ERI Ethernet",
+				"SUNW,pci-x-qge/pci-bri+" => "Sun Quad Gigaswift Ethernet",
+				"SUNW,pcie-qgc" => "Sun Quad Gigabit Ethernet",
 			)
+
 		);
 
 	public function get_data($type)

@@ -53,6 +53,8 @@ $grid_key = array(
 
 	"card" => array(
 		array("PCI card", "pci", false),
+		array("PCIE card", "pcie", false),
+		array("PCI-X card", "pcix", false),
 		array("SBUS card", "sbus", false)
 	),
 
