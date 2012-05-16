@@ -101,8 +101,11 @@ abstract class pci_parser {
 
 	protected function get_c_name()
 	{
+		// Remove the hex from the end of the name
+
 		return (isset($this->a[$this->c_name_field]))
-			? $this->a[$this->c_name_field]
+			? preg_replace("/,[abcdef\d]+$/", "",
+				$this->a[$this->c_name_field])
 			: false;
 	}
 
@@ -125,24 +128,39 @@ abstract class pci_parser {
 
 class pci_sunfirev490 extends pci_parser {
 
-// io_typ port_id bus_side slot bus_freq max_freq dev,func state name model
-//   0   |  1    |    2   | 3  |  4     |   5    |   6    |  7  | 8  |  9
+// io_typ | port ID | side | slot | freq | max freq |dev,func | state |
+//  0     | 1       | 2    | 3    | 4    | 5        | 6       |  7 
+
+// name | model
+// 8    | 9
 	
 	protected $c_hz_field = 4;
 	protected $c_type_field = 8;
 	protected $c_name_field = 9;
+	protected $c_slot_field = 3;
+	protected $c_side_field = 2;
+	protected $c_model_field1 = 9;
+	protected $c_model_field2 = 10;
 
 	protected function get_c_model()
 	{
 		// Sometimes the model name is 9, sometimes 10, because field 8 can
 		// have whitespace
 
-		return (isset($this->a[10])) ? $this->a[10] : $this->a[9];
+		if (isset($this->a[$this->c_model_field2]))
+			$ret = $this->a[$this->c_model_field2];
+		elseif (isset($this->a[$this->c_model_field1]))
+			$ret = $this->a[$this->c_model_field1];
+		else
+			$ret = false;
+
+		return $ret;
 	}
 
 	protected function get_c_loc()
 	{
-		return "side " . $this->a[2] . "/slot " . $this->a[3];
+		return "side " . $this->a[$this->c_slot_field] . "/slot " .
+		$this->a[$this->c_side_field];
 	}
 
 	protected function filter($data)
@@ -152,6 +170,35 @@ class pci_sunfirev490 extends pci_parser {
 			: false;
 	}
 }
+
+class pci_sunfire880 extends pci_sunfirev490 {
+
+// Almost the same as the v490
+
+// brd | IOtyp | Port| Side | Slot | Freq | max Freq | dev,func | state 
+// 0   | 1     | 2   | 3    | 4    | 5    | 6        | 7        | 8
+
+// name | model
+// 9    | 10
+
+	protected $bus_field = 1;
+	protected $c_type_field = 9;
+	protected $c_hz_field = 5;
+	protected $c_model_field1 = 10;
+	protected $c_model_field2 = 11;
+
+	protected $c_slot_field = 4;
+	protected $c_side_field = 3;
+
+	protected function filter($data)
+	{
+		return preg_match("/PCI-BRIDGE/", $data)
+			? true
+			: false;
+	}
+	
+}
+
 
 class pci_sunfiret200 extends pci_parser {
 
@@ -200,6 +247,12 @@ class pci_sparcenterpriset5120 extends pci_sparct32 {
 }
 
 class pci_t5140 extends pci_sparct32 {
+
+	// Same as the T3-2
+
+}
+
+class pci_t5240 extends pci_sparct32 {
 
 	// Same as the T3-2
 

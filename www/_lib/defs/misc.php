@@ -117,6 +117,7 @@ class defs {
 				"LPe12002-S" => "Emulex LPe12002-S 8Gb/s HBA",
 				"LP11002-E" => "Emulex LP11002 4Gb/s HBA",
 				"LPe12002-S" => "Emulex LPe12002-S 8Gb/s HBA",
+				"LP9002" => "Emulex LP9002-E HBA",
 				"LSI,1030" => "LSI diffrential SCSI",
 				"LSI,1064" => "LSI SAS1064 4-port SAS",
 				"LSI,1068E" => "LSI 1068E SAS",
@@ -128,6 +129,7 @@ class defs {
 				"SUNW,pci-qge" => "Sun Quad Gigaswift Ethernet",
 				"SUNW,pci-eri" => "Sun ERI Ethernet",
 				"SUNW,pci-x-qge/pci-bri+" => "Sun Quad Gigaswift Ethernet",
+				"SUNW,pci-ce/pci-bridge" => "Sun Gigaswift FC Ethernet",
 				"SUNW,pcie-qgc" => "Sun Quad Gigabit Ethernet",
 			)
 
