@@ -150,7 +150,7 @@ CL_LS=" platform os net fs app tool hosted security patch "
 # Here we define the lists of tests which make up the various audits. These
 # lists are always bookended by "hostname" and "time".
 
-G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp alom disks
+G_PLATFORM_TESTS="hardware virtualization cpus memory sn obp lom disks
 	optical lux_enclosures tape_drives mpath cards printers eeprom"
 L_PLATFORM_TESTS="virtualization printers"
 
@@ -632,7 +632,7 @@ function nr_warn
 
 	if [[ $1 == "platform" ]]
 	then
-		print "Many tests, including ALOM, FC enclosure, virtualization \
+		print "Many tests, including LOM, FC enclosure, virtualization \
 		will not be run"
 	elif [[ $1 == "net" ]]
 	then
@@ -977,16 +977,31 @@ function get_cpus
 	| sed -n '/MHz/s/^.*at \([0-9]*\) .*$/\1/p')MHz
 }
 
-function get_alom
+function get_lom
 {
-	# Can we get the ALOM version? We need to be root to even try, and some
-	# machines, like T2000s, can't provide it anyway.
+	# Can we get the RSC/ALOM/ILOM/XSCF version? We need to be root to even
+	# try, and some machines, like T-series, can't provide it anyway.
 
-	if is_root && [[ -x $SCADM ]]
+	is_root || return
+
+	RSC="/usr/platform/${HW_HW}/rsc/rscadm"
+	DSCP="/usr/platform/${HW_HW}/prtdscp"
+
+	if [[ -x $SCADM ]]
 	then
-		disp "ALOM f/w" $($SCADM version | sed -n '/Firmware/s/^.* //p')
-		disp "ALOM IP" $($SCADM show netsc_ipaddr | cut -d'"' -f2)
+		lfw="$($SCADM version | sed -n '/Firmware/s/^.* //p') (ALOM)"
+		lip=$($SCADM show netsc_ipaddr | cut -d'"' -f2)
+	elif [[ -x $DSCP ]]
+	then
+		lip="$($DSCP -s) (XSCF DSCP SP)"
+	elif [[ -x $RSC ]]
+	then
+		lfw="$($RSC version | sed -n '/^RSC Ver/s/^.* //p') (RSC)"
+		lip=$($RSC shownetwork | sed -n '/^IP/s/^.* //p')
 	fi
+
+	[[ -n $lfw ]] && disp "LOM f/w" $lfw
+	[[ -n $lip ]] && disp "LOM IP" $lip
 }
 
 function get_optical
@@ -1174,9 +1189,12 @@ function get_mpath
 
 	if is_root && can_has mpathadm
 	then
-		num=$(mpathadm list lu | grep Total | grep -cv ": 1$")
-		
-		[[ $num != 0 ]] && disp "multipath" "mpxio ($num devices)"
+
+		mpathadm list LU | grep Total | uniq -c | while read num pths
+		do
+			disp "multipath" "$num mpxio devices (${pths##* } paths)"
+		done
+
 	fi
 
 	if is_root && can_has powermt
@@ -1303,20 +1321,14 @@ function get_virtualization
 			# Now we look at logical domains. There's only any point doing
 			# this if we're on sun4v hardware. If we have the ldm binary,
 			# and that can list the primary, then we must be in the primary
-			# domain. If we can't run ldm (must be root), look to see if
-			# ldmd is running. Finally, see if we can see power supply. If
-			# not, assume we're a guest LDOM
+			# domain. If we can't see the power supply, assume we're a guest
+			# LDOM
 
-			if can_has ldm
+			if can_has ldm && is_root
 			then
 				ldm ls primary >/dev/null && VIRT="primary LDOM"
-			elif my_pgrep ldmd >/dev/null
+			elif ! $PRTDIAG -v | $EGS "PS0"
 			then
-				VIRT="primary LDOM"
-			elif $PRTDIAG -v | $EGS "PS0"
-			then
-				VIRT="primary LDOM"
-			else
 				VIRT="guest LDOM"
 			fi
 
