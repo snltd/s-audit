@@ -2280,12 +2280,21 @@ function get_zpools
 
 	if [[ -n $HAS_ZFS ]]
 	then
+
 		# First get the current highest supported zpool version, so we can
 		# flag pools running something different. Can't always get this.
 
 		zpool help 2>&1 | $EGS get \
 			&& zpsup=$(zpool upgrade -v \
 			| sed '1!d;s/^.*version \([0-9]*\).*$/\1/')
+
+		# Get the zpool under cluster control
+
+		if can_has clresource
+		then
+			zpclus=" $(clresource show -v -t HAStoragePlus | sed -n
+			'/Zpools:/s/^.* //p' | tr '\n' ' ') "
+		fi
 
 		# zpool's get command doesn't have the -H and -o options, so this is
 		# harder than it need be.
@@ -2318,7 +2327,7 @@ function get_zpools
 					zpext="$zpext [${zv}/${zpsup}]"
 				fi
 
-				# Get the pool layout - this is hard
+				# Get the pool layout - this is hard and might change
 
 				zpool iostat -v $zp | sed -e '1,/^--/d' -e '/^--/,$d' \
 				-e 's/ *//' | egrep -v "^c[0-9]+[td][0-9]+|^$zp " \
@@ -2326,7 +2335,12 @@ function get_zpools
 
 				ndev=$(zpool iostat -v $zp | egrep -c "c[0-9]+[dt][0-9]+")
 
-				disp "zpool" "$zp $st $zpext (${ztyp:-concat}: $ndev devices)"
+				# Is it under cluster control?
+
+				[[ $zpclus == *" $zp "* ]] && cl=" CLUSTERED" || cl=""
+
+				disp "zpool" \
+				"$zp $st $zpext (${ztyp:-concat}: $ndev devices)$cl"
 			fi
 
 		done
