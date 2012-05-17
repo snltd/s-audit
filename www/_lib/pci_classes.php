@@ -3,16 +3,15 @@
 abstract class pci_parser {
 
 	// A template for parsing PCI card info from prtdiag
-            // [bus]      the bus type - sbus/pci/pcie/pci-x
-            // [c_type]   the card type. Normally this is something generic
-            //            like "network", but with legacy data, can also be
-            //            the model name.
-            // [c_model]  the model name of the card. Often not available
-            // [c_loc]    the slot the card is in Sometimes has the
-            //            backplane or side
-            // [c_name]   the name prtdiag gives the card. e.g. SUNW,pci-ce
-            // [c_hz]     the speed the card is running at, in MHz
-
+	// [bus]      the bus type - sbus/pci/pcie/pci-x
+	// [c_type]   the card type. Normally this is something generic
+	//            like "network", but with legacy data, can also be
+	//            the model name.
+	// [c_model]  the model name of the card. Often not available
+	// [c_loc]    the slot the card is in Sometimes has the
+	//            backplane or side
+	// [c_name]   the name prtdiag gives the card. e.g. SUNW,pci-ce
+	// [c_hz]     the speed the card is running at, in MHz
 
 	protected $row;
 		// The raw row of data we are given
@@ -34,15 +33,24 @@ abstract class pci_parser {
 	protected $c_type_field;
 	protected $c_loc_field;
 
+	protected $filter_str;
+		// A string used by preg_match in the filter() method to screen out
+		// unwanted information. Don't put the leading and trailing slashes
+		// in
+
 	public function __construct($row)
 	{
-		// Populate variables. That is all
+		// Are we interested in this row?
 
 		if($this->filter($row))
 			return false;
 
+		// Populate variables
+
 		$this->row = preg_replace("/^\S+ \((.*)\)$/", "$1", $row);
 		$this->a =  preg_split("/\s+/", $this->row);
+
+		// Call methods to populate more variables
 
 		$this->ret["bus"] = $this->get_bus();
 		$this->ret["c_type"] = $this->get_c_type();
@@ -56,16 +64,12 @@ abstract class pci_parser {
 		if ($this->ret["c_model"] == $this->ret["c_name"])
 			unset($this->ret["c_name"]);
 
-		$this->ret = array_unique($this->ret);
 	}
 
-	protected function filter($data)
-	{
-		// Used to filter out things like PCI-bridges and backplanes
+	// These are all broken out into methods so they can be easily
+	// overridden if you need to do something more complicated than just
+	// pick an element out of an array
 
-		return $data;
-	}
-	
 	protected function get_bus()
 	{
 		// Get the bus type: e.g. PCI
@@ -118,21 +122,49 @@ abstract class pci_parser {
 			: false;
 	}
 
+	protected function filter($data)
+	{
+		// Use a regex to filter out things like PCI bridges and controllers
+		// that are on the main board or riser. If $filter_str isn't set,
+		// let everything pass through
+
+		$ret = false;
+
+		if (isset($this->filter_str)) {
+			
+			if (preg_match("/$this->filter_str/", $data)) {
+				$ret = true;
+			}
+
+		}
+
+		return $ret;
+	}
+
 	public function get_info()
 	{
+		// Return the information
 		//pr($this->ret);
 		return $this->ret;
 	}
 
 }
 
+//============================================================================
+//
+// Every machine we come across needs a class which extends pci_parser. Some
+// are the same, but there are a lot of subtle (and not so subtle)
+// differences. Few of these are perfect, as PCI card information is often
+// incomplete, and it's sometimes hard to screen out things which are part
+// of the machine itself. Still, I hope they all provide information which
+// is useful, and not confusing.
+
+//- old SunFire machines -----------------------------------------------------
+
 class pci_sunfirev490 extends pci_parser {
 
-// io_typ | port ID | side | slot | freq | max freq |dev,func | state |
-//  0     | 1       | 2    | 3    | 4    | 5        | 6       |  7 
-
-// name | model
-// 8    | 9
+// io_typ | portID | side | slot | hz | max_hz |d,f | state | name | model
+//  0     | 1      | 2    | 3    | 4  | 5      | 6  |  7    | 8    | 9
 	
 	protected $c_hz_field = 4;
 	protected $c_type_field = 8;
@@ -141,6 +173,7 @@ class pci_sunfirev490 extends pci_parser {
 	protected $c_side_field = 2;
 	protected $c_model_field1 = 9;
 	protected $c_model_field2 = 10;
+	protected $filter_str = "PCI-BRIDGE";
 
 	protected function get_c_model()
 	{
@@ -159,46 +192,47 @@ class pci_sunfirev490 extends pci_parser {
 
 	protected function get_c_loc()
 	{
-		return "side " . $this->a[$this->c_slot_field] . "/slot " .
-		$this->a[$this->c_side_field];
+		return "side " . $this->a[$this->c_side_field] . "/slot " .
+		$this->a[$this->c_slot_field];
 	}
 
-	protected function filter($data)
-	{
-		return preg_match("/PCI-BRIDGE/", $data)
-			? true
-			: false;
-	}
 }
 
 class pci_sunfire880 extends pci_sunfirev490 {
 
 // Almost the same as the v490
 
-// brd | IOtyp | Port| Side | Slot | Freq | max Freq | dev,func | state 
-// 0   | 1     | 2   | 3    | 4    | 5    | 6        | 7        | 8
-
-// name | model
-// 9    | 10
+// brd | type | Port| Side | Slot | hz | max_hz | d,f | state | name | model
+// 0   | 1    | 2   | 3    | 4    | 5  | 6      | 7   | 8     | 9    | 10
 
 	protected $bus_field = 1;
 	protected $c_type_field = 9;
 	protected $c_hz_field = 5;
 	protected $c_model_field1 = 10;
 	protected $c_model_field2 = 11;
-
 	protected $c_slot_field = 4;
 	protected $c_side_field = 3;
-
-	protected function filter($data)
-	{
-		return preg_match("/PCI-BRIDGE/", $data)
-			? true
-			: false;
-	}
-	
+	protected $filter_str = "usb-";
 }
 
+class pci_sunfiree25k extends pci_sunfirev490 {
+
+// slot | type | Port | side | hz | max_hz | d,f | state | name | model
+// 0    | 1    | 2    | 3    | 4  | 5      | 6   | 7     | 8    | 9
+
+	protected $bus_field = 1;
+	protected $c_side_field = 3;
+	protected $c_slot_field = 0;
+	protected $c_hz_field = 4;
+	protected $c_model_field = 9;
+	protected $c_name_field = 8;
+
+	protected $filter_str = "pci-bri|bootb|firewir|usb-|scsi-pci1000|pci108e";
+
+
+}
+
+//- T-series -----------------------------------------------------------------
 
 class pci_sunfiret200 extends pci_parser {
 
@@ -210,14 +244,7 @@ class pci_sunfiret200 extends pci_parser {
 	protected $c_type_field = 4;
 	protected $c_model_field = 5;
 	protected $c_loc_field = 0;
-
-	protected function filter($data)
-	{
-		return preg_match("/usb|IOBD\/NET|\/PCIX |PCI-SWITCH/", $data)
-			? true
-			: false;
-	}
-
+	protected $filter_str = "usb|IOBD\/NET|\/PCIX |PCI-SWITCH";
 }
 
 class pci_sparct32 extends pci_parser {
@@ -230,14 +257,7 @@ class pci_sparct32 extends pci_parser {
 	protected $c_type_field = 5;
 	protected $c_model_field = 3;
 	protected $c_loc_field = 0;
-
-	protected function filter($data)
-	{
-		return preg_match("/MB\/NET|USB|usb-/", $data)
-			? true
-			: false;
-	}
-
+	protected $filter_str = "MB\/NET|USB|usb-";
 }
 
 class pci_sparcenterpriset5120 extends pci_sparct32 {
@@ -269,12 +289,7 @@ pci_parser {
 	protected $c_name_field = 12;
 	protected $c_model_field = 13;
 	protected $c_loc_field = 2;
-
-	protected function filter($data) {
-		return preg_match("/N\/A/", $data)
-			? true
-			: false;
-	}
+	protected $filter_str = "N\/A";
 
 	protected function get_c_hz()
 	{

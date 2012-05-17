@@ -1175,8 +1175,10 @@ class HostGrid {
 		else
 			$processed = $this->parse_cards_pci($data);
 		
+		// If we got no processed data back, something went wrong
+
 		if (count($processed) == 0 && count($data) > 0) {
-			return new Cell("cannot process data");
+			return new Cell("cannot process data", "error");
 		}
 
 		foreach($processed as $card) {
