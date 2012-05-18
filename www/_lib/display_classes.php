@@ -12,6 +12,8 @@
 //
 //============================================================================
 
+require_once(LIB . "/pci_classes.php");
+
 //- generic host grid base class ---------------------------------------------
 
 class HostGrid {
@@ -1165,6 +1167,8 @@ class HostGrid {
 		// A system can only have PCI or SBUS. It can't have both. PCI
 		// format changed in 3.2.
 
+		// Watch out for multiple exit points!
+
 		$data = array_unique($data);
 		$unique = array();
 
@@ -1172,14 +1176,31 @@ class HostGrid {
 			$processed = $this->parse_cards_sbus($data);
 		elseif($this->af_ver < 3.2) 
 			$processed = $this->parse_cards_pci_legacy($data);
-		else
-			$processed = $this->parse_cards_pci($data);
-		
-		// If we got no processed data back, something went wrong
+		else {
+			
+			// We need a suitable class to process the raw prtdiag
+			// information. Work out what that class should be called and,
+			// if we have it, tell parse_cards_pci() to use it. If we don't,
+			// issue a warning
 
-		if (count($processed) == 0 && count($data) > 0) {
-			return new Cell("cannot process data", "error");
+			$pci_class = "pci_" . strtolower(preg_replace("/\W+/", "", 
+			preg_replace("/ \(.*$/", "", $this->cz["hardware"][0])));
+	
+			if (class_exists($pci_class))
+				$processed = $this->parse_cards_pci($data, $pci_class);
+			else
+				return new Cell("No PCI info.<br/>(Require class
+				'$pci_class'.)", "solidamber");
 		}
+
+		// If we got no processed data back, something went wrong - not
+		// necessarily! Now we have better filtering, there might just be no
+		// cards!
+
+		//if (count($processed) == 0 && count($data) > 0)
+			//return new Cell("cannot process data", "error");
+
+		$c_arr = array();
 
 		foreach($processed as $card) {
 		
@@ -1327,19 +1348,14 @@ class HostGrid {
 		return $ret_arr;
 	}
 
-	protected function parse_cards_pci($data)
+	protected function parse_cards_pci($data, $class)
 	{
-		require_once(LIB . "/pci_classes.php");
-
-		// Parse raw PCI info from prtdiag. Varies from machine to machine.
-		// Got to catch 'em all.
-
-		// return an array of slot "bus" (PCI/PCIE/PCI-X) and slot "text"
-		// which tries to be of the form
-
-		// card_type (card_name card location@card_speed) card_model
-		// e.g.
-		// network (SUNW,qfe B/4@33MHz) Sun Quad fast ethernet
+		// Parse raw PCI info from prtdiag. prtdiag output varies from
+		// machine to machine, so the client no longer tries to process it.
+		// We receive raw prtdiag output, and a class exists for the machine
+		// in the pci_classes.php file which turns that information into an
+		// array. If there's no class, a warning is printed by the
+		// show_card() method.
 
 		$ret_arr = array();
 
@@ -1350,13 +1366,12 @@ class HostGrid {
 	
 			$pci_class = "pci_$mach";
 
-			if (class_exists($pci_class)) {
-				$x = new $pci_class($card);
-				$info = $x->get_info();
-				if ($info) $ret_arr[] = $info;
-			}
-			else
-				page::warn("No PCI definition for &quot;${mach}&quot;.");
+			// We've already checked the pci class exists
+
+			$x = new $pci_class($card);
+
+			if ($info = $x->get_info())
+				$ret_arr[] = $info;
 
 		}
 

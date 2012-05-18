@@ -161,6 +161,22 @@ abstract class pci_parser {
 
 //- old SunFire machines -----------------------------------------------------
 
+class pci_sunfirev240 extends pci_parser {
+
+// This is nasty - it comes on two rows
+// bus type | MHz | Slot   | Name | model
+// 0        | 1   | 2      | 3    | 4
+//                | status | path
+//                  0      | 1 
+
+	protected $bus_type = 0;
+	protected $c_hz_field = 1;
+	protected $c_slot_field = 2;
+
+	protected $filter_str = "pci@|MB|rmc-comm|\(usb\)";
+
+}
+
 class pci_sunfirev490 extends pci_parser {
 
 // io_typ | portID | side | slot | hz | max_hz |d,f | state | name | model
