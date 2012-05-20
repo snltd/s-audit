@@ -15,17 +15,19 @@ $dh = new docHelper();
 <h1>The &quot;Friends&quot; File</h1>
 
 <p>The <a href="../03_interface/class_compare.php">server comparison
-page</a> allows you to select any two zones for comparison. You can also set
-up &quot;quick links&quot; to servers you may wish to comapare frequently.
-This functionality was created when I managed a lot of zones which were
-in load-balanced pairs, and after upgrades or patching, I wanted to be sure
+page</a> allows you to select hosts for comparison. You can also set up
+&quot;quick links&quot; to servers you may wish to comapare frequently.
+This functionality was created when I managed a lot of zones which were in
+load-balanced pairs, and after upgrades or patching, I wanted to be sure
 things were properly in-sync.</p>
 
 <h2>File Format</h2>
 
-<p>The friends file simply lists of pairs of machines, whitespace separated,
-one pair per line. Comments can be prefixed with a <tt>#</tt>, blank lines
-are permitted..</p>
+<p>The friends file lists groups of machines, with an optional description.
+Each group of friends goes on its own line, with hostnames separated by
+commas. The host list is separated from the description by a colon
+character.  Comments can be prefixed with a <tt>#</tt>, blank lines are
+permitted..</p>
 
 <h2>Example File</h2>
 
@@ -35,14 +37,20 @@ are permitted..</p>
 <pre>
 # infrastructure server pairs
 
-cs-infra-01 cs-infra-02
-cs-infra-01z-mail cs-infra-02z-mail
+cs-infra-01,cs-infra-02
+cs-infra-01z-mail,cs-infra-02z-mail:mail servers
 
 # web server pairs
 
-cs-w-01 cs-w-02
-cs-w-01z-live	cs-w-02z-live
-cs-w-01z-uat	cs-w-02z-uat
+cs-w-01,cs-w-02,cs-w-03:physical webserver hosts
+cs-w-01z-live,cs-w-02z-live,cs-w-03-live:live webserver zones
+cs-w-01z-uat,cs-w-02z-uat:test webserver zones
+
+# Cluster nodes
+
+finclusta,finclustb:'financials' Veritas Cluster
+
+
 </pre>
 
 <h2>Location</h2>

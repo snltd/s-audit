@@ -59,11 +59,6 @@ class compareListPage extends audPage {
 		parent::__construct($title, false);
 	}
 
-    protected function add_toggle_link()
-	{
-		echo "here";
-	}
-
 	public function ff_list()
 	{
 		// Say whether or not we're using a friends file. If we are, display
@@ -74,52 +69,76 @@ class compareListPage extends audPage {
 
 		$ret = "\n\n<p class=\"center\">";
 		
-		if (file_exists($this->ff)) {
+		// If we don't have a friends file, we're done
 
-			$friends = file($this->ff);
+		if (!file_exists($this->ff)) 
+			return $ret
+			. "You do not have a $ff_link for this audit group.</p>";
+		else
+			$ret .= "The following server comparisons are defined in the
+			$ff_link at <tt>$this->ff</tt>.</p>\n\n<ul>";
 
-			// Read in the friends file and make an array of the pairs, and
-			// possibly descriptions, inside it. 
+		// Read in the friends file and make an array of the pairs, and
+		// possibly descriptions, inside it. 
 
-			foreach($friends as $row) {
+		foreach(file($this->ff) as $row) {
+			$desc = $pass = false;
 
-				if (preg_match("/^\w/", $row)) {
-					$a = preg_split("/\s+/", $row, 3);
+			// Discard anything that doesn't start with a letter.  Hostnames
+			// have to start with a letter
 
-					// Discard friendless loners
+			if (!preg_match("/^\w/", $row)) continue;
+	
+			// Split off the description, if we have one
 
-					if (count($a) >= 3)
-							$arr = array(0 => $a[0], 1 => $a[1]);
+			$a = explode(":", $row, 2);
 
-					// friends can have optional descriptions
+			$desc = (isset($a[1])) ? $a[1] : false;
 
-					if (isset($a[2])) $arr["desc"] = $a[2];
+			// a[0] has the friends, a[1] has the comment
 
-					$pairs[] = $arr;
+			$friends = explode(",", $a[0]);
+
+			// Discard friendless loners
+
+			if (count($friends) == 1) continue;
+
+			// Make sure all the friends exist in the map. If they don't,
+			// make an array called "missing".
+		
+			foreach($friends as $h) {
+
+				if (!$this->map->has_data(trim($h))) {
+					$missing[] = array($friends, $desc);
+					$pass = true;
+					break;
 				}
 
 			}
 
-		    $ret .= "The following server comparisons are defined in the
-			$ff_link at <tt>$this->ff</tt>.</p>";
+			// if $pass is true, we take no further action on this group of
+			// friends
 
-			$ret .= "\n\n<ul>";
+			if ($pass) continue;
 
-			foreach($pairs as $pair) {
+			// Create the list entry for this group of friends
 
-				// Only display pairs which both exist in the map
+			$ret .= "\n  <ul><a href=\"" . $_SERVER["PHP_SELF"] . "?g="
+			. $this->group . "&amp;d=" . urlencode(serialize($friends))
+			. "\">" . $friends[0];
 
-				if ($this->map->has_data($pair[0]) &&
-					$this->map->has_data($pair[1])) {
-						$ret .= "\n  <li><a href=\"$_SERVER[PHP_SELF]?g="
-						.  $this->group . "&amp;z1=$pair[0]&amp;z2=$pair[1]\">"
-						."$pair[0] and $pair[1]</a>";
-					
-						if (isset($pair["desc"])) $ret .= $pair["desc"];
+			for ($i = 1; $i < count($friends) - 1; $i++)
+				$ret .= ", " . $friends[$i];
 
-						$ret .= "</li>";
-				}
-				else
+			$ret .= " and " . $friends[count($friends) - 1] . "</a>";
+
+			if ($desc) $ret .= " ($desc)";
+
+			$ret .= "</ul>";
+		}
+
+
+			/*
 					$missing_friends[] = $pair;
 			}
 
@@ -145,8 +164,7 @@ class compareListPage extends audPage {
 			}
 
 		}
-		else
-			$ret .= "You do not have a $ff_link for this audit group.</p>";
+			*/
 
 		return $ret . new compareCyc($this->map->list_all(), $this->group);
 	}
