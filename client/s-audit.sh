@@ -1240,7 +1240,8 @@ function get_cards
 
 		[[ -n $OUT_P ]] && x_sed='' || x_sed="s/[${WSP}]\{1,\}/ /g"
 
-		$PRTDIAG -v | grep PCI | sed "$x_sed" | while read line
+		$PRTDIAG -v | grep -i pci | egrep -v "^[$WSP]+/pci@" \
+		| sed "$x_sed" | while read line
 		do
 			disp "card" "PCI ($line)"
 		done
@@ -2277,6 +2278,8 @@ function get_zpools
 	# Get a list of zpools, their versions, and capacities. There's no
 	# "zpool get" in early ZFS releases. Output:
 	# name status (last scrub:) [ver/max_ver]
+	# Now does parseable output 
+	# pool|status|size|%full|scrub|ver|supp_ver|layout|devs|clustered
 
 	if [[ -n $HAS_ZFS ]]
 	then
@@ -2285,14 +2288,14 @@ function get_zpools
 		# flag pools running something different. Can't always get this.
 
 		zpool help 2>&1 | $EGS get \
-			&& zpsup=$(zpool upgrade -v \
+			&& zsup=$(zpool upgrade -v \
 			| sed '1!d;s/^.*version \([0-9]*\).*$/\1/')
 
-		# Get the zpool under cluster control
+		# Get all the zpools under cluster control
 
 		if can_has clresource
 		then
-			zpclus=" $(clresource show -v -t HAStoragePlus | sed -n
+			zpclus=" $(clresource show -v -t HAStoragePlus | sed -n \
 			'/Zpools:/s/^.* //p' | tr '\n' ' ') "
 		fi
 
@@ -2309,38 +2312,48 @@ function get_zpools
 
 				# get the last scrub
 
-				lscr=$(zpool status $zp | egrep " scrub: | scan: " | \
+				zls=$(zpool status $zp | egrep " scrub: | scan: " | \
 				sed 's/^.*s on //')
 
-				[[ -z $lscr || $lscr == *"none requested"*
-				|| $lscr == *cancel* || $lscr = *resilver* || $lscr == \
-				*progress* ]] && lscr="none"
+				[[ -z $zls || $zls == *"none requested"*
+				|| $zls == *cancel* || $zls = *resilver* || $zls == \
+				*progress* ]] && zls="none"
 
-				zpext="(last scrub: $lscr)"
+				zpext="(last scrub: $zls)"
 
 				# Get the version, if we can
 
-				if [[ -n $zpsup ]]
+				if [[ -n $zsup ]]
 				then
 					zpool get version,size $zp | sed '1d;$!N;s/\n/ /' \
-					| read a b zv c d e zs f
-					zpext="$zpext [${zv}/${zpsup}]"
+					| read a b zv x
+					zpext="$zpext [${zv}/${zsup}]"
 				fi
+
+				# capacity and %used
+
+				zpool get capacity $zp | sed 1d | read a b zc x
+				zpool get size $zp | sed 1d | read a b zsz x
 
 				# Get the pool layout - this is hard and might change
 
 				zpool iostat -v $zp | sed -e '1,/^--/d' -e '/^--/,$d' \
 				-e 's/ *//' | egrep -v "^c[0-9]+[td][0-9]+|^$zp " \
-				| read ztyp junk
+				| read zt junk
 
-				ndev=$(zpool iostat -v $zp | egrep -c "c[0-9]+[dt][0-9]+")
+				[[ -z $zt ]] && zt="concat"
+
+				zd=$(zpool iostat -v $zp | egrep -c "c[0-9]+[dt][0-9]+")
 
 				# Is it under cluster control?
 
 				[[ $zpclus == *" $zp "* ]] && cl=" CLUSTERED" || cl=""
 
-				disp "zpool" \
-				"$zp $st $zpext (${ztyp:-concat}: $ndev devices)$cl"
+				[[ -n $OUT_P ]] \
+					&& dispdat="$zp|$st|$zsz|$zc|$zls|$zv|$zsup|$zt|$zd|$cl" \
+					|| dispdat="$zp $st $zsz/$zc $zpext ($zt: $zd devices)$cl"
+
+		 		disp "zpool" $dispdat
 			fi
 
 		done
