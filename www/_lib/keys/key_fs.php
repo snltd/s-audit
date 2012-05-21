@@ -18,6 +18,7 @@ $grid_key = array(
 		array("faulted zpool", "solidred", false),
 		array("degraded zpool", "boxamber", false),
 		array("online zpool", "boxgreen", false),
+		array("pool under cluster control", "solidpink", false),
 		array("pool can be upgraded", "solidorange", false)
 	),
 

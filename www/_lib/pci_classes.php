@@ -273,7 +273,7 @@ class pci_sparct32 extends pci_parser {
 	protected $c_type_field = 5;
 	protected $c_model_field = 3;
 	protected $c_loc_field = 0;
-	protected $filter_str = "MB\/NET|USB|usb-";
+	protected $filter_str = "MB\/NET|USB|usb-|\/pci@";
 }
 
 class pci_sparcenterpriset5120 extends pci_sparct32 {
@@ -293,7 +293,6 @@ class pci_t5240 extends pci_sparct32 {
 	// Same as the T3-2
 
 }
-
 
 class pci_fujitsusiemenscomputerssparcenterprisem4000server extends
 pci_parser {

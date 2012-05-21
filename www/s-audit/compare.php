@@ -28,16 +28,16 @@ define("SINGLE_SERVER", 1);
 
 $map = new ZoneMap();
 
-// $z1 and $z2 are the zones to compare. We can get them from _GET or _POST.
+// $d should contain a serialized array of the hosts to compare
 
-if (isset($_GET["z1"]))
-	$in = $_GET;
-elseif(isset($_POST["g"]))
-	$in = $_POST;
+if (isset($_GET["d"]))
+	$hosts = unserialize(urldecode($_GET["d"]));
+elseif(isset($_POST["hosts"]))
+	$hosts = $_POST["hosts"];
 else {
 	
-	// Looks like we don't have z1 set. Show the friends list and the
-	// compare selector
+	// Looks like we don't have any hosts to compare. Show the friends list
+	// and the compare selector
 
 	$pg = new compareListPage("Host Comparison Tool", $map);
 	echo $pg->ff_list();
@@ -45,41 +45,55 @@ else {
 	exit();
 }
 
-$pg = new comparePage("Comparing $in[z1] and $in[z2]", false);
+// Generate a nice title for the page
+
+$title = "Comparing $hosts[0]";
+
+for ($i = 1; $i < count($hosts) - 1; $i++) 
+	$title .= ", $hosts[$i]";
+
+// Create the page
+
+$pg = new comparePage($title . " and " . $hosts[count($hosts) - 1], false);
+
+// We need at least two hosts
+
+if (count($hosts) < 2)
+	$pg->f_error("need a minimum of two hosts to compare");
+
+// We need all the hosts to be different, otherwise what's the point?
+
+if (count($hosts) != count(array_unique($hosts)))
+	$pg->f_error("hosts are not unique");
+
+// Echo out the Javascript button to show/hide common data
 
 echo "\n\n<div id=\"togglehidden\"><p><a id=\"displayText\" 
 href=\"javascript:toggleCommon();\">hide common data</a></p></div>";
 
-if (isset($in["z1"]) && isset($in["z2"])) {
-	$z1 = $in["z1"];
-	$z2 = $in["z2"];
+// Get host data
 
-	// Do a few sanity checks
+foreach($hosts as $host) {
 
-	if (!$map->has_data($z1))
-		$pg->f_error("no audit data for $z1");
+	// Make sure we have data for the host
 
-	if (!$map->has_data($z2))
-		$pg->f_error("no audit data for $z2");
+	if (!$map->has_data($host))
+		$pg->f_error("no audit data for $host");
 
-	if ($z1 == $z2)
-		$pg->f_error("You can't compare a host with itself");
+	// See if we're doing any local zones. If not, we don't bother fetching
+	// local host data
 
-	// Get the zone data. If both zones are global, don't bother with the
-	// locals
-
-	if ($map->is_global($z1) && $map->is_global($z2))
-		define("NO_ZONES", 1);
-
-	$data = new GetServers($map, array($z1, $z2), array("os", "net", "fs",
-	"app", "tool", "hosted", "security", "patch" ));
-
-	$view = new compareView($data->get_array(), $map);
-
-	echo $view->show_grid("40%", true), $pg->spacer();
+	if (!$map->is_global($host)) $locals = true;
 }
-else
-	$pg->f_error("comparison needs two zones");
+
+if (!isset($locals)) define("NO_ZONES", 1);
+
+$data = new GetServers($map, $hosts, array("os", "net", "fs", "app", "tool",
+"hosted", "security", "patch" ));
+
+$view = new compareView($data->get_array(), $map);
+
+echo $view->show_grid("40%", true), $pg->spacer();
 
 $pg->close_page();
 

@@ -1247,7 +1247,7 @@ class HostGrid {
 				? $bus
 				: "pci";
 
-			if (empty($c_model)) {
+			if (empty($c_model) && isset($card["c_name"])) {
 				$bold = $card["c_name"];
 				$name_used = true;
 			}
@@ -2445,8 +2445,97 @@ class HostGrid {
 
 	protected function show_zpool($data)
 	{
-		// List Zpools and their sizes. Ones which can be upgraded are on an
-		// orange field. Red for faulted, amber for degraded
+		// Zpools are now reported differently in parseable mode. If we
+		// don't have parseable output, pass the data on to the legacy
+		// method
+		//
+    	//  [0] => pool name
+		//  [1] => status
+		//  [2] => size
+		//  [3] => %full (capacity)
+		//  [4] => time of last scrub
+		//  [5] => zpool version
+		//  [6] => highest supported zpool version
+		//  [7] => pool layout
+		//  [8] => number of devices in pool
+		//  [9] => clustered (blank or literal string 'CLUSTERED')
+		
+		if (count(explode("|", $data[0])) < 9)
+			return $this->show_zpool_legacy($data);
+		
+		$c_arr = false;
+
+		foreach($data as $pool) {
+			$a = explode("|", $pool);
+			
+			// Pool name in bold, (status) after it
+
+			$txt = "<strong>$a[0]</strong> ($a[1])";
+
+			// Pool size, and how much of it is used. Highlight in amber or
+			// red if it's nearly full
+
+			$id["size"] = $a[2] . " ($a[3] used)";
+
+			if ($a[3] > 90)
+				$idc["size"] = "solidred";
+			elseif ($a[3] > 80)
+				$idc["size"] = "solidamber";
+
+			// pool layout, and the number of devices it contains
+
+			$id["layout"] = $a[7];
+			$id["devices"] = $a[8];
+
+			// Is the pool under cluster control? Highlight this, because
+			// it's unusual
+
+			if ($a[9] == "CLUSTERED") {
+				$id["clustered"] = "yes";
+				$idc["clustered"] = "solidpink";
+			}
+
+			// The pool version. If a higher version is supported (i.e. the
+			// pool can be upgraded) put it on an orange field
+
+			if ($a[5] == $a[6])
+				$id["version"] = $a[5];
+			else {
+				$id["version"] = "$a[5] ($a[6] supported)";
+				$idc["version"] = "solidorange";
+			}
+			
+			// When the pool was last scrubbed. See legacy function for the
+			// $c[] array
+
+			if ($a[4] == "none") 
+				$id["scrubbed"] = $a[4];
+			else {
+				$c = preg_split("/\W+/ ", $a[4]);
+				$id["scrubbed"] = "$c[2] $c[1] $c[6]";
+			}
+
+			// Get the class for the cell. This depends on the pool's status
+
+			if ($a[1] == "FAULTED")
+				$class = "solidred";
+			elseif($a[1] == "DEGRADED")
+				$class = "boxamber";
+			else
+				$class = "boxgreen";
+
+			// Done. Life is so much easier with delimiters
+
+			$c_arr[] = array($txt . $this->indent_print($id, $idc), $class);
+
+		}
+
+		return new listCell($c_arr, "auditl", false, 1);
+	}
+
+	protected function show_zpool_legacy($data)
+	{
+		// List Zpools. Legacy version. This won't be updated.
 
 		$c_arr = false;
 
@@ -2491,6 +2580,7 @@ class HostGrid {
 						$id["version"] = "$b[1] ($b[2] supported)";
 						$idc["version"] = "solidorange";
 					}
+
 				}
 
 				// Now the scrub. Don't bother reporting it if there isn't
@@ -3685,8 +3775,8 @@ class PlatformGrid extends HostGrid
 	protected $hw_db;	// Card definitions from misc.php
 
 	protected $def_fields = array("hardware", "virtualization", "CPU",
-	"memory", "OBP", "ALOM f/w", "ALOM IP", "storage", "multipath",
-	"EEPROM", "serial number", "printer", "card");
+	"memory", "OBP", "ALOM f/w", "LOM f/w", "ALOM IP", "LOM IP", "storage",
+	"multipath", "EEPROM", "serial number", "printer", "card");
 
 	public function __construct($map, $servers, $c)
 	{

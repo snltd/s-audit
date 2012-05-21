@@ -82,7 +82,10 @@ class compareListPage extends audPage {
 		// possibly descriptions, inside it. 
 
 		foreach(file($this->ff) as $row) {
-			$desc = $pass = false;
+
+			// clear some vars
+
+			$desc = $pass = $trimmed = false;
 
 			// Discard anything that doesn't start with a letter.  Hostnames
 			// have to start with a letter
@@ -107,12 +110,15 @@ class compareListPage extends audPage {
 			// make an array called "missing".
 		
 			foreach($friends as $h) {
+				$h = trim($h);
 
-				if (!$this->map->has_data(trim($h))) {
+				if (!$this->map->has_data($h)) {
 					$missing[] = array($friends, $desc);
 					$pass = true;
 					break;
 				}
+				else
+					$trimmed[] = $h;
 
 			}
 
@@ -124,13 +130,13 @@ class compareListPage extends audPage {
 			// Create the list entry for this group of friends
 
 			$ret .= "\n  <ul><a href=\"" . $_SERVER["PHP_SELF"] . "?g="
-			. $this->group . "&amp;d=" . urlencode(serialize($friends))
-			. "\">" . $friends[0];
+			. $this->group . "&amp;d=" . urlencode(serialize($trimmed))
+			. "\">" . $trimmed[0];
 
-			for ($i = 1; $i < count($friends) - 1; $i++)
-				$ret .= ", " . $friends[$i];
+			for ($i = 1; $i < count($trimmed) - 1; $i++)
+				$ret .= ", " . $trimmed[$i];
 
-			$ret .= " and " . $friends[count($friends) - 1] . "</a>";
+			$ret .= " and " . $trimmed[count($trimmed) - 1] . "</a>";
 
 			if ($desc) $ret .= " ($desc)";
 
@@ -192,8 +198,8 @@ class compareCyc {
 		. "\n<div id=\"cycle_row\">"
         . $h->dialog_form($_SERVER["PHP_SELF"])
         . $h->dialog_submit("c", "compare")
-        . $h->dialog_cycle("z1", $z_list, $z1, false) . " with "
-        . $h->dialog_cycle("z2", $z_list, $z2, false)
+        . $h->dialog_cycle("hosts[0]", $z_list, $z1, false) . " with "
+        . $h->dialog_cycle("hosts[1]", $z_list, $z2, false)
 		. $h->dialog_hidden("g", $group)
         . "</form>\n</div>";
     }
