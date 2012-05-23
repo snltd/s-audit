@@ -2686,38 +2686,25 @@ function get_exports
 	fi
 }
 
-function get_zfs_ver
-{
-	# Get supported versions of zpool and zfs
-
-	can_has zfs || return
-
-	ZFV=$(zfs upgrade | sed -n '1s/^.*version \([0-9]*\).*$/\1/p')
-
-	disp "ZFS version" "$(zpool upgrade | \
-	sed -n '1s/^.*version \([0-9]*\).*$/\1/p') (zpool)"
-
-	disp "ZFS version" "$(zfs upgrade | \
-	sed -n '1s/^.*version \([0-9]*\).*$/\1/p') (zfs)"
-
-}
-
 function get_metasets
 {
-	# Simply lists metasets and owners
+	# Get metasets, number of disks, number of hosts, and say if we own it
 
 	if can_has metaset
 	then
 		metaset 2>/dev/null \
 		| sed -n '/^Set/s/^.*name = \([^,]*\),.*$/\1/p' | while read set
 		do
+			metaset -s $set | $EGS "$HOSTNAME .*Yes" && x=" [owner]" || x=""
+			snh=$(metaset -s $set | sed -n '/^Host/,/^$/p' | egrep -c " +[a-z]")
+			snd=$(metastat -s $set -p | grep -c /rdsk/)
 
-			metaset -s $set | $EGS "$HOSTNAME .*Yes" && x=" (owner)" || x=""
-			disp metaset "${set}$x"
+			disp metaset "$set ($snd disks/$snh hosts)$x"
 		done
 
 	fi
 }
+
 #-- APPLICATION AUDITING FUNCTIONS -------------------------------------------
 
 function get_apache
@@ -2811,8 +2798,8 @@ function get_php_mod
 
 		pv=$(strings $pl 2>/dev/null | sed -n '/^X-Powered/s/.*\///p')
 
-		[[ -z $pv ]] \
-			&& pv=$(strings $pl 2>/dev/null | egrep "^[3-5]\.[0-9]\.[0-9]*$" | head -1)
+		[[ -z $pv ]] && pv=$(strings $pl 2>/dev/null \
+		| egrep "^[3-5]\.[0-9]\.[0-9]*$" | head -1)
 
 		[[ -z $pv ]] && pv="unknown"
 
