@@ -183,7 +183,7 @@ G_SECURITY_TESTS="users uid_0 empty_passwd authorized_keys ssh_root
 	RBAC root_shell dtlogin cron jass_appl"
 L_SECURITY_TESTS=$G_SECURITY_TESTS
 
-G_FS_TESTS="zpools vx_dgs metasets zfs_ver capacity root_fs fs exports"
+G_FS_TESTS="zpools vx_dgs metasets capacity root_fs fs exports"
 L_FS_TESTS="zpools root_fs fs exports"
 
 #-----------------------------------------------------------------------------
