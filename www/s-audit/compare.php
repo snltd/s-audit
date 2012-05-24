@@ -26,7 +26,7 @@ define("SINGLE_SERVER", 1);
 //-----------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$map = new ZoneMap();
+$map = ZoneMap::getInstance();
 
 // $d should contain a serialized array of the hosts to compare
 

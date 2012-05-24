@@ -38,7 +38,8 @@ $res_doc = "<a href=\"" . DOC_URL .
 //------------------------------------------------------------------------------
 // SCRIPT STARTS HERE
 
-$map = new ZoneMap();
+$map = ZoneMap::getInstance();
+
 $servers = new GetServers($map, false, "net");
 $s = new GetIPList($map, $servers->get_array());
 $grid = new IPGrid($s, $map);

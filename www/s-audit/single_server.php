@@ -26,7 +26,8 @@ define("SINGLE_SERVER", 1);
 // present a list of all the servers we know about
 
 $server = (isset($_GET["s"])) ? $_GET["s"] : false;
-$map = new ZoneMap();
+
+$map = ZoneMap::getInstance();
 
 if (($server)) {
 

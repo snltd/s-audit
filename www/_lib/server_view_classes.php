@@ -631,12 +631,12 @@ Class serverListGrid extends HostGrid
 
 		$i = 0; // column count. Should not exceed $this->cols
 
-		$ret = "<tr>" . new Cell($this->s_link($server), "sa");
+		$ret = "<tr>" . new Cell(new singleServerLink($server), "sa");
 
 		// Now do the local zones
 
 		foreach($zones as $z) {
-			$ret .= new Cell($this->s_link($z, $server), "za");
+			$ret .= new Cell(new singleServerLink($z, false, $server), "za");
 
 			// handle row padding. This probably isn't scrictly necessary, I
 			// think all browsers handle short rows properly, but I like to
@@ -659,19 +659,6 @@ Class serverListGrid extends HostGrid
 			$ret .= new Cell(false, false, false, false, $pad) . "</tr>";
 
 		return $ret;
-	}
-	
-	private function s_link($server, $parent = false)
-	{
-		// Just returns an HTML link to this page, with the right query
-		// string to display the named server.
-
-		$lserver= ($parent)
-			? "${server}@$parent"
-			: $server;
-
-		return "<a href=\"$_SERVER[PHP_SELF]?g=" . $_GET["g"]
-		. "&amp;s=$lserver\">$server</a>";
 	}
 	
 	protected function grid_key()

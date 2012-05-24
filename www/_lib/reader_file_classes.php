@@ -26,9 +26,12 @@ class ZoneMap extends ZoneMapBase {
 	// Class variables are defined in the ZoneMapBase class in
 	// reader_classes.php
 
+	private static $map_instance;
+		// The map is now a singleton
+
 	private $fs;
 
-	public function __construct()
+	private function __construct()
 	{
 		// Record the start time
 
@@ -94,6 +97,14 @@ class ZoneMap extends ZoneMapBase {
 		$this->paths = $this->set_extra_paths(AUDIT_DIR . "/" . $group);
 	}
 	
+	public static function getInstance()
+	{
+		if (!self::$map_instance)
+			self::$map_instance = new ZoneMap();
+
+		return self::$map_instance;
+	}
+
 	public function get_fname($server)
 	{
 		// Return the audit filename for the given server
@@ -212,7 +223,8 @@ class GetServers extends GetServersBase {
 			elseif($t == "VMware")
 				$map->vmws[] = $hn;
 			elseif($t == "zone") {
-				$map->locals[] = $map->servers[$c_g][] = $hn;
+				$map->locals[] = "${c_g}/$hn";
+				$map->servers[$c_g][] = $hn;
 				}
 			elseif($t == "undetermined")
 				$map->unknowns[] = $hn;

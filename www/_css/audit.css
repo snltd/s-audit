@@ -75,6 +75,10 @@ div.strl { /* strong text on its own line */
 	font-weight: bold;
 }
 
+.faint { /* used for things that aren't important, like uncabled NICs */
+	color: #777;
+}
+
 /*-- backgrounds for rows --------------------------------------------------*/
 
 .sa {	/* normal global zone */

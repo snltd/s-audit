@@ -15,7 +15,8 @@
 require_once("$_SERVER[DOCUMENT_ROOT]/_conf/s-audit_config.php");
 require_once(LIB . "/display_classes.php");
 
-$map = new ZoneMap();
+$map = ZoneMap::getInstance();
+
 $s = new GetServers($map, false, "platform");
 $grid = new PlatformGrid($map, $s->get_array(), "platform");
 

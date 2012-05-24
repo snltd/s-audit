@@ -22,6 +22,10 @@ abstract class pci_parser {
 	protected $ret;
 		// the array we return via the get_info method
 
+	protected $debug = false;
+		// Set this to true and you'll get the input strings at the top of 
+		// the page
+
 	// The following variables point to the array element holding the data
 	// we're interested in. If the element needs further processing,
 	// overload the method that gets it.
@@ -33,22 +37,25 @@ abstract class pci_parser {
 	protected $c_type_field;
 	protected $c_loc_field;
 
-	protected $filter_str;
-		// A string used by preg_match in the filter() method to screen out
+	protected $ignore_str;
+		// A string used by preg_match in the ignore() method to screen out
 		// unwanted information. Don't put the leading and trailing slashes
 		// in
 
 	public function __construct($row)
 	{
+
 		// Are we interested in this row?
 
-		if($this->filter($row))
+		if($this->ignore($row))
 			return false;
 
 		// Populate variables
 
 		$this->row = preg_replace("/^\S+ \((.*)\)$/", "$1", $row);
 		$this->a =  preg_split("/\s+/", $this->row);
+
+		if ($this->debug) pr($this->a);
 
 		// Call methods to populate more variables
 
@@ -88,7 +95,7 @@ abstract class pci_parser {
 
 	protected function get_c_loc()
 	{
-		// Get the slot the card is in
+		// Get the slot (and possibly the side) the card is in
 
 		return $this->a[$this->c_loc_field];
 	}
@@ -98,9 +105,26 @@ abstract class pci_parser {
 		// get the card model name. Often you only have it for certain
 		// cards, so check the field exists
 
-		return (isset($this->a[$this->c_model_field]))
-			? $this->a[$this->c_model_field]
-			: false;
+		// Sometimes we have to give a choice of fields through the
+		// model_field1 and 2 variables
+
+		if (isset($this->c_model_field1)) {
+
+			if (isset($this->a[$this->c_model_field2]))
+				$ret = $this->a[$this->c_model_field2];
+			elseif (isset($this->a[$this->c_model_field1]))
+				$ret = $this->a[$this->c_model_field1];
+			else
+				$ret = false;
+		}
+		else {
+
+			$ret = (isset($this->a[$this->c_model_field]))
+				? $this->a[$this->c_model_field]
+				: false;
+		}
+
+		return $ret;
 	}
 
 	protected function get_c_name()
@@ -122,17 +146,17 @@ abstract class pci_parser {
 			: false;
 	}
 
-	protected function filter($data)
+	protected function ignore($data)
 	{
 		// Use a regex to filter out things like PCI bridges and controllers
-		// that are on the main board or riser. If $filter_str isn't set,
+		// that are on the main board or riser. If $ignore_str isn't set,
 		// let everything pass through
 
 		$ret = false;
 
-		if (isset($this->filter_str)) {
+		if (isset($this->ignore_str)) {
 			
-			if (preg_match("/$this->filter_str/", $data)) {
+			if (preg_match("/$this->ignore_str/", $data)) {
 				$ret = true;
 			}
 
@@ -171,10 +195,23 @@ class pci_sunfirev240 extends pci_parser {
 
 	protected $bus_type = 0;
 	protected $c_hz_field = 1;
-	protected $c_slot_field = 2;
+	protected $c_loc_field = 2;
+	protected $c_name_field = 3;
+	protected $c_model_field1 = 4;
+	protected $c_model_field2 = 5;
 
-	protected $filter_str = "pci@|MB|rmc-comm|\(usb\)";
+	protected $ignore_str = "pci@|MB|rmc-comm|\(usb\)";
 
+}
+
+class pci_sunfirev440 extends pci_sunfirev240 {
+
+	// Same as the v240
+}
+
+class pci_sunfirev210 extends pci_sunfirev240 {
+
+	// Same as the v240
 }
 
 class pci_sunfirev490 extends pci_parser {
@@ -189,22 +226,7 @@ class pci_sunfirev490 extends pci_parser {
 	protected $c_side_field = 2;
 	protected $c_model_field1 = 9;
 	protected $c_model_field2 = 10;
-	protected $filter_str = "PCI-BRIDGE";
-
-	protected function get_c_model()
-	{
-		// Sometimes the model name is 9, sometimes 10, because field 8 can
-		// have whitespace
-
-		if (isset($this->a[$this->c_model_field2]))
-			$ret = $this->a[$this->c_model_field2];
-		elseif (isset($this->a[$this->c_model_field1]))
-			$ret = $this->a[$this->c_model_field1];
-		else
-			$ret = false;
-
-		return $ret;
-	}
+	protected $ignore_str = "PCI-BRIDGE";
 
 	protected function get_c_loc()
 	{
@@ -228,7 +250,7 @@ class pci_sunfire880 extends pci_sunfirev490 {
 	protected $c_model_field2 = 11;
 	protected $c_slot_field = 4;
 	protected $c_side_field = 3;
-	protected $filter_str = "usb-";
+	protected $ignore_str = "usb-";
 }
 
 class pci_sunfiree25k extends pci_sunfirev490 {
@@ -243,7 +265,7 @@ class pci_sunfiree25k extends pci_sunfirev490 {
 	protected $c_model_field = 9;
 	protected $c_name_field = 8;
 
-	protected $filter_str = "pci-bri|bootb|firewir|usb-|scsi-pci1000|pci108e";
+	protected $ignore_str = "pci-bri|bootb|firewir|usb-|scsi-pci1000|pci108e";
 
 
 }
@@ -260,7 +282,7 @@ class pci_sunfiret200 extends pci_parser {
 	protected $c_type_field = 4;
 	protected $c_model_field = 5;
 	protected $c_loc_field = 0;
-	protected $filter_str = "usb|IOBD\/NET|\/PCIX |PCI-SWITCH";
+	protected $ignore_str = "usb|IOBD\/NET|\/PCIX |PCI-SWITCH";
 }
 
 class pci_sparct32 extends pci_parser {
@@ -273,7 +295,7 @@ class pci_sparct32 extends pci_parser {
 	protected $c_type_field = 5;
 	protected $c_model_field = 3;
 	protected $c_loc_field = 0;
-	protected $filter_str = "MB\/NET|USB|usb-|\/pci@";
+	protected $ignore_str = "MB\/NET|USB|usb-|\/pci@";
 }
 
 class pci_sparcenterpriset5120 extends pci_sparct32 {
@@ -294,6 +316,26 @@ class pci_t5240 extends pci_sparct32 {
 
 }
 
+//- Fujitsu hardware ---------------------------------------------------------
+
+class pci_fujitsusiemensprimepower6501slot8xsparc64v extends pci_parser {
+
+// board | type | freq | slot | name | model
+// 0     | 1    | 2    | 3    | 4    | 5
+
+	protected $bus_field = 1;
+	protected $c_name_field = 4;
+	protected $c_model_field1 = 5;
+	protected $c_model_field2 = 6;
+	protected $c_hz_field = 2;
+	protected $ignore_str = "pci Rev|SUNW,hme|53C875|pci10df|375-3290";
+
+	protected function get_c_loc()
+	{
+		return "board " . $this->a[0] . "/slot" . $this->a[3];
+	}
+}
+
 class pci_fujitsusiemenscomputerssparcenterprisem4000server extends
 pci_parser {
 
@@ -304,7 +346,7 @@ pci_parser {
 	protected $c_name_field = 12;
 	protected $c_model_field = 13;
 	protected $c_loc_field = 2;
-	protected $filter_str = "N\/A";
+	protected $ignore_str = "N\/A";
 
 	protected function get_c_hz()
 	{

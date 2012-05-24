@@ -670,9 +670,14 @@ class HostGrid {
 
 		// The row background is set for either global or local zones
 
-		$row_class = ($this->map->is_global($z))
-			? "server"
-			: "zone";
+		if ($this->map->is_global($z)) {
+			$row_class = "server";
+			$parent = false;
+		}
+		else {
+			$row_class = "zone";
+			$parent = $this->get_parent_prop($z, "platform", "hostname");
+		}
 
 		// The hostname cell is coloured according to the virtualization (or
 		// lack of it)
@@ -734,28 +739,11 @@ class HostGrid {
 		else
 			$class = "zonehn";
 
-		return new Cell($this->ss_link($z), $c);
-	}
+		// All hostnames are clickable links to a single-server view
 
-	protected function ss_link($zn, $as_global = false)
-	{
-		// return a link to the single-server view of the given host
-		// if $as_global is set, the zlink link class is not used
+		$zlink = new singleServerLink($z, false, $parent);
 
-		$class = false;
-
-		$qs = "g=" . $_GET["g"] . "&amp;s=";
-
-		if ($this->map->is_global($zn))
-			$qs .= $zn;
-		else {
-			$qs .= "${zn}@" . $this->get_parent_prop($zn, "platform",
-			"hostname");
-
-			if (!$as_global) $class = "class=\"zlink\"";
-		}
-
-		return "<a ${class}href=\"single_server.php?$qs\">$zn</a>";
+		return new Cell($zlink, $c);
 	}
 
 	protected function show_audit_completed($data)
@@ -1766,7 +1754,9 @@ class HostGrid {
 				continue;
 			}
 
-			$txt = "<strong>$a[2]</strong> ($a[1])";
+			$txt = "<strong>" . $zlink = new singleServerLink($a[2], false, 
+			$this->get_parent_prop($a[2], "platform", "hostname")) .
+			"</strong> ($a[1])";
 
 			$id["state"] = $a[4];
 
@@ -2101,13 +2091,16 @@ class HostGrid {
 				//? "<strong>" . $na[0] . ": <u>$na[1]</u></strong>"
 				//: "$na[0]: $na[1]";
 
-			$txt = "<strong>" . $na[0] . ": <u>$na[2]</u></strong>";
+			$txt = ($na[2] == "uncabled" || $na[2] == "unconfigured")
+				? "<div class=\"faint\"><strong>$na[0]</strong> :
+				$na[2]</div>"
+				: "<strong>" . $na[0] . ": <u>$na[2]</u></strong>";
 
 			if ($na[4]) $txt .= " ($na[4])";
 
 			// Type of object. Some need to made more human-readable
 
-			if ($na[1] == "phys")
+			if ($na[1] == "phys" || $na[1] == "legacy")
 				$d["type"] = "NIC";
 			elseif ($na[1] == "aggr")
 				$id["type"] = "aggregate";
@@ -2200,7 +2193,12 @@ class HostGrid {
 			// Colours. We can colour on device type, or on subnet
 
 			if (!defined(SUBNET_COLS)) {
-				$class = "boxnet" . $na[1];
+
+				$type = ($na[1] == "legacy")
+					? "phys"
+					: $na[1];
+
+				$class = "boxnet${type}" ;
 			}
 
 
@@ -2466,6 +2464,7 @@ class HostGrid {
 		$c_arr = false;
 
 		foreach($data as $pool) {
+			$id = $idc = array();
 			$a = explode("|", $pool);
 			
 			// Pool name in bold, (status) after it
@@ -2704,7 +2703,61 @@ class HostGrid {
 			"box$class");
 		}
 
-		 return new listCell($c_arr, "auditl", false, 1);
+		return new listCell($c_arr, "auditl", false, 1);
+	}
+
+	protected function show_metaset($data)
+	{
+		// show metasets on multiple lines. If we own the set, outline the
+		// box in green
+		// input of the form:
+		//   set_name (n disks/n hosts) [owner]
+		// [owner] may or may not be there
+
+		sort($data);
+
+		foreach($data as $set) {
+			$id = $idc = array();
+			preg_match("/(\S+) \((\d+) .*\/(\d+).*\)(.*)$/", $set, $a);
+
+			// LEGACY SUPPORT - we just used to get the set name. So if the
+			// preg_match() failed, print the set string
+
+			if(count($a) == 0) {
+				
+				$class= (preg_match("/OWNER/", $set))
+					? "green"
+					: "red";
+
+				$list_class = "audit";
+
+				$c_arr[] = array(preg_replace("/ .*$/", "", $set), $class);
+			}
+			else {
+
+				// [1] => set name
+				// [2] => number of disks
+				// [3] => number of hosts
+				// [4] => blank or " [owner]"
+	
+				$txt = "<strong>$a[1]</strong>";
+	
+				$class = empty($a[4])
+					? "boxred"
+					: "boxgreen";
+
+				$id["disks"] = $a[2];
+				$id["hosts"] = $a[3];
+
+				$list_class = "auditl";
+
+				$c_arr[] = array($txt . $this->indent_print($id, $idc),
+				$class);
+			}
+
+		}
+
+		return new listCell($c_arr, $list_class, false, 1);
 	}
 
 	protected function show_capacity($data)
@@ -2789,8 +2842,8 @@ class HostGrid {
 			}
 
 			if ($a[1] == "unmounted") {
-				$txt = "<strong>$a[4]</strong> unmounted ZFS ($a[3]
-				referenced)";
+				$txt = "<div class=\"faint\"><strong>$a[4]</strong>"
+				. "unmounted ZFS ($a[3] referenced)</div>";
 				$c_arr[] = array($txt);
 				continue;
 			}
@@ -5454,6 +5507,37 @@ class listCell {
 	public function __toString()
 	{
 		return (string) $this->html;
+	}
+
+}
+
+class singleServerLink {
+
+	// return a link to the single-server view of the given host. If the
+	// host isn't known to the system, return plain text
+
+	protected $html;
+
+	public function __construct($host, $class = false, $parent = false)
+	{
+		$map = ZoneMap::getInstance();
+
+		if (!$map->has_data($host))
+			$this->html = $host;
+		else {
+			$qs = "g=" . $_GET["g"] . "&amp;s=";
+
+			$qs .= ($parent)
+				? "${host}@$parent"
+				: $host;
+
+			$this->html = "<a ${class}href=\"single_server.php?$qs\">$host</a>";
+		}
+	}
+
+	public function __toString()
+	{
+		return $this->html;
 	}
 
 }

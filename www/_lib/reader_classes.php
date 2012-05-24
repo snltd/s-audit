@@ -206,6 +206,8 @@ class ZoneMapBase {
 			: false;
 	}
 
+	// XXX CAN'T BE TRUSTED - ZONES WITH THE SAME NAMES CONFUSE IT
+
 	public function get_parent_zone($zone)
 	{
 		// Return the global zone which manages the given local
@@ -222,6 +224,7 @@ class ZoneMapBase {
 		}
 
 		return $ret;
+	
 	}
 
 	public function has_data($zone)

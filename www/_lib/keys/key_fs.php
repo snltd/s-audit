@@ -30,6 +30,11 @@ $grid_key = array(
 		array("unused subdisk or plex", "solidamber", false)
 	),
 
+	"metaset" => array(
+		array("current owner", "boxgreen"),
+		array("not owner", "boxred")
+	),
+
 	"capacity" => array(
 		array("&gt;90% of capacity used", "solidred", false),
 		array("&gt;85% of capacity used", "solidamber", false)

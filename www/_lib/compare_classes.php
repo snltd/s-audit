@@ -143,6 +143,30 @@ class compareListPage extends audPage {
 			$ret .= "</ul>";
 		}
 
+		if (isset($missing)) {
+			$ret .= "<p class=\"center\">The following friends are defined,
+			but we do not have sufficient data to compare them.</p>\n<ul>";
+
+			foreach ($missing as $friends) {
+				$hosts = $friends[0];
+				$nhosts = count($hosts);
+
+				$ret .= "\n<li>" . new singleServerLink($hosts[0]);
+
+				for($i = 1; $i < $nhosts - 1; $i++) {
+					$ret .= ", " . new singleServerLink($hosts[$i]);
+				}
+
+				$ret .= " and " . new singleServerLink($hosts[$i]);
+
+				if (isset($friends[1])) $ret .= " (" . $friends[1] . ")";
+
+				$ret .= "</li>";
+			}
+
+			$ret .= "\n</ul>";
+
+		}
 
 			/*
 					$missing_friends[] = $pair;
@@ -151,10 +175,6 @@ class compareListPage extends audPage {
 			$ret .= "\n</ul>";
 
 			if (isset($missing_friends)) {
-
-				$ret .= "<p class=\"center\">The following friends are
-				defined, but we do not have sufficient data to compare
-				them.</p>";
 
 				$ret .= "\n\n<ul>";
 
@@ -835,7 +855,7 @@ class compareGeneric {
 class comparePlatform extends compareGeneric {
 
 	protected $no_colour = array("hostname", "audit completed", "hardware",
-	"virtualization", "serial number", "ALOM IP", "card", "memory",
+	"virtualization", "serial number", "ALOM IP", "LOM IP", "card", "memory",
 	"storage", "EEPROM", "multipath");
 
 	protected function preproc_storage($data)

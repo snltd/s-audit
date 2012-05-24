@@ -110,6 +110,7 @@ class defs {
 			),
 
 			"pci" => array(
+				"Broadcom,BCM5703C" => "Broadcom BCM5730C 1Gb Ethernet",
 				"FCX2-6562" => "JNI FXC2-6552 dual-port HBA",
 				"FCX2-6562-L" => "JNI FXC2-6552-L dual-port HBA",
 				"LPe11000-S" => "Emulex LPe11000 4Gb/s HBA",
@@ -117,6 +118,7 @@ class defs {
 				"LPe12002-S" => "Emulex LPe12002-S 8Gb/s HBA",
 				"LP11002-E" => "Emulex LP11002 4Gb/s HBA",
 				"LPe12002-S" => "Emulex LPe12002-S 8Gb/s HBA",
+				"LP10000" => "Emulex LP1000 2Mb/s HBA",
 				"LP9002" => "Emulex LP9002-E HBA",
 				"LSI,1030" => "LSI diffrential SCSI",
 				"LSI,1064" => "LSI SAS1064 4-port SAS",
@@ -132,6 +134,7 @@ class defs {
 				"SUNW,pci-x-qge/pci-bri+" => "Sun Quad Gigaswift Ethernet",
 				"SUNW,pci-ce/pci-bridge" => "Sun Gigaswift FC Ethernet",
 				"SUNW,pcie-qgc" => "Sun Quad Gigabit Ethernet",
+				"Symbios,53C875" => "Symbios 53C875 SCSI"
 			)
 
 		);
