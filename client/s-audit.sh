@@ -1436,6 +1436,7 @@ function get_vboxes
 
 	fi
 }
+
 function get_os_dist
 {
 	# Try to get the "distribution". Could be "proper" Solaris, SXCE,
@@ -1458,6 +1459,9 @@ function get_os_dist
 	elif $EGS Community $r
 	then
 		OS_D="SXCE"
+	elif [[ $KERNVER == omni* ]]
+	then
+		OS_D="OmniOS"
 	elif [[ $KERNVER == Belen* ]]
 	then
 		OS_D="BeleniX"
