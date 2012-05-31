@@ -1824,6 +1824,9 @@ function get_net
 		if [[ $nic == *[0-9]:[0-9]* ]]
 		then
 			type=virtual
+		elif [[ $nic == dman* ]]
+			type="domain meta-interface"
+		then
 		elif [[ $nic == clprivnet* ]]
 		then
 			type="clprivnet"
