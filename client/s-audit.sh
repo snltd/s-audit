@@ -241,7 +241,8 @@ function disp
 
 	# Some thing like patches or memory have multiple values, and for JSON
 	# we need to group those together. Store the key we last saw in LAST_KEY
-	# and the values so far in an array called J_DAT
+	# and the values so far in an array called J_DAT. We need to escape soft
+	# quotes in JSON
 
 	if [[ -n $OUT_J ]]
 	then
@@ -255,7 +256,10 @@ function disp
 		[[ -n $SHOW_PATH && -n $pth ]] && sp="@=$pth"
 		[[ -n $LAST_KEY && $key != $LAST_KEY ]] && flush_json
 
-		J_DAT[$J_C]="${val}$sp"
+		[[ ${val}$sp == *\"* ]] \
+			&& J_DAT[$J_C]=$(print "${val}$sp" | sed 's/"/\\"/g') \
+			|| J_DAT[$J_C]="${val}$sp"
+
 		J_C=$(($J_C+1))
 		LAST_KEY=$key
 	elif [[ -n $OUT_P ]]
