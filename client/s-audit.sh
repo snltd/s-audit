@@ -54,6 +54,9 @@ LOCKFILE="${VARBASE}/s-audit.lock"
 RUN_HERE=1
 	# run checks in this zone, unless told otherwise
 
+Z_OPTS="-C"
+	# options passed to script when it is run via zlogin
+
 # Set a big PATH. This should try to include everywhere we expect to find
 # software. SPATH is for quicker searching later.
 
@@ -191,13 +194,34 @@ L_FS_TESTS="zpools root_fs fs exports"
 
 #-- GENERAL FUNCTIONS --------------------------------------------------------
 
+function flush_json
+{
+	if [[ ${#J_DAT[@]} == 1 ]]
+	then
+		print "    \"$LAST_KEY\": \"$J_DAT\","
+	else
+		print "    \"$LAST_KEY\": ["
+		typeset -i i=0
+		rows=$(( ${#J_DAT[@]} - 1))
+
+		while (( $i < $rows))
+		do
+	    	print "      \"${J_DAT[$i]}\","
+		    (( i=i+1 ))
+		done
+
+		print "      \"${J_DAT[$rows]}\"\n    ],"
+	fi
+
+	J_C=0
+	unset J_DAT
+}
+
 function disp
 {
-	# Print information in one of two ways. If OUT_P isn't set, display
-	# in a nice tabular way that people will like, otherwise print in a
-	# cold, clinical fashion that a heartless computer enjoys.  If SHOW_PATH
-	# is set, the path to the binary is printed, presuming it was ever
-	# passed.
+	# Print information in plain, machine-parseable or JSON form.
+	# If SHOW_PATH is set, the path to the binary is printed, presuming it
+	# was ever passed.
 
 	# $1 is the name of the thing, e.g. MySQL or the OBP @PATH
     # remaining arguments are the version strings
@@ -213,12 +237,32 @@ function disp
     shift
 	val=$*
 
-	if [[ -n $val && -n $OUT_P ]]
+	[[ -z $val ]] && return
+
+	# Some thing like patches or memory have multiple values, and for JSON
+	# we need to group those together. Store the key we last saw in LAST_KEY
+	# and the values so far in an array called J_DAT
+
+	if [[ -n $OUT_J ]]
+	then
+		if [[ $key == "audit completed" ]]
+		then
+			flush_json
+			print -n "    \"${key}\": \"${val}$sp\"\n"
+			return
+		fi
+
+		[[ -n $SHOW_PATH && -n $pth ]] && sp="@=$pth"
+		[[ -n $LAST_KEY && $key != $LAST_KEY ]] && flush_json
+
+		J_DAT[$J_C]="${val}$sp"
+		J_C=$(($J_C+1))
+		LAST_KEY=$key
+	elif [[ -n $OUT_P ]]
 	then
 		[[ -n $SHOW_PATH && -n $pth ]] && sp="@=$pth"
 		print "${key}=${val}$sp"
-	elif [[ -n $val ]]
-	then
+	else
 		[[ -n $SHOW_PATH && -n $pth ]] && sp=" [@$pth]"
 		RKEY=$key
 		print "$RKEY : ${val}$sp"
@@ -572,7 +616,11 @@ function class_head
 	# $1 is the zone
 	# $2 is the class
 
-	if [[ -n $OUT_P ]]
+	if [[ -n $OUT_J ]]
+	then
+		unset LAST_KEY
+		print "  \"$2\": {"
+	elif [[ -n $OUT_P ]]
 	then
 		print "BEGIN $2@$1"
 	elif [[ -z $TO_FILE ]]
@@ -589,7 +637,10 @@ function class_foot
 	# $1 is the zone
 	# $2 is the class
 
-	if [[ -n $OUT_P ]]
+	if [[ -n $OUT_J ]]
+	then
+		[[ $2 != ${CL##* } ]] && print "  }," || print "  }"
+	elif [[ -n $OUT_P ]]
 	then
 		print "END $2@$1"
 	elif [[ -z $TO_FILE ]]
@@ -758,56 +809,43 @@ function usage
 	# How to use the script
 
 	cat<<-EOUSAGE
-
-	usage:
-
-	    s-audit.sh [-f [dir]] [-z all|zone] [-qpPM] [-D secs] [-L facility]
-		[-T secs ] [-o test,test,...,test] [-R user@host:dir ] [-e file]
-		[-u file] $(print $CL_LS | tr " " "|")|all|machine
-
-	    s-audit.sh -l
+	Usage: s-audit.sh [-f [dir]] [-z zone,...|all] [-qjpPMlV] [-D sec] [T sec]
+	[-L facility] [-o test,...] [-R user@host:dir ] [-e file] audit_type
 
 	where
-	  -f :     write files to an (optionally) supplied local directory.
-	  -z :     audit a zone. A single zone name may be supplied, or "-z all"
-	           may be used to audit all running zones
-	  -M :     in network audits, plumb and unplumb uncabled NICs to obtain
-	           their MAC address (potentially destructive!)
-	  -o :     omit these a comma-separated list of tests
-	  -p :     write machine-parseable output
-	  -P :     print paths to tools and applications. (Implied by -f.)
-	  -q :     be quiet
-	  -R :     information for scp to copy audit files to remote host. Of
-	           form "user@host:directory"
-	  -D :     delay this many seconds before beginning the audit
-	  -u :     path to user check file
-	  -e :     full path to "extras" file
-	  -L :     syslog facility - must be lower case
-	  -l :     list tests in each audit type
-	  -T :     maximum time, in s, for any audit class
-	  -V :     print version and exit
+	  -f   write files to an (optionally) supplied local directory.
+	  -z   specify zone(s) to audit. Comma-separated list, or 'all' to run
+	       audit on all running zones
+	  -M   in network audits, plumb and unplumb uncabled NICs to obtain MAC
+	       address (potentially destructive!)
+	  -o   omit tests (comma-separated list)
+	  -j   write output in JSON format
+	  -p   write machine-parseable output
+	  -P   print paths to tools and applications. (Implied by -f.)
+	  -q   be quiet
+	  -R   string used to scp audit files to remote host. 'user@host:directory'
+	  -D   delay this many seconds before beginning the audit
+	  -e   full path to "extras" file
+	  -L   syslog facility - must be lower case
+	  -T   maximum time, in s, for any audit class
+	  -v   be verbose
+	  -l   list tests in each audit type
+	  -V   print version and exit
 
-	The final argument tells the script what kind of audit to perform.
+	The audit_type argument tells the script which of the following audits
+	to perform.
 
-	           platform : looks at the box and things attached to it
-	           net      : looks at network connections and configuration
-	           os       : looks at the OS and virtualizations
-	           app      : examines installed versions of a range of
-	                      application software
-	           tool     : examines installed versions of various tools.
-	                      "apps" are normally things which are run as
-	                      daemons, "tools" things which are run by a user
-	           hosted   : looks at services hosted on the box, like
-	                      databases and web sites
-	           fs       : local and remote filesystem information
-	           patch    : lists installed patches and packages
-	           security : examines security issues and NFS
-	           machine  : all of the above, for all zones
-	           all      : all audit types for the current zone
-
-	"machine" can only be run from a global zone, and performs all the other
-	audit types in the global, and every local, zone. It only really makes
-	sense when used with the -f flag.
+    platform : describes the physical or virtual machine
+         net : shows network devices, connections and configuration
+          os : shows the OS and virtualizations
+         app : reports paths and versions of selected application software
+        tool : reports paths and versions of tools and programming languages
+      hosted : looks at some DB and websites running on the host
+          fs : local and remote filesystem information
+       patch : lists installed patches and packages
+    security : shows some potential security issues, cron jobs, and  RBAC
+     machine : all of the above, for all zones
+         all : all audit types for the current zone
 
 	EOUSAGE
 	exit 2
@@ -865,8 +903,8 @@ function get_printers
 			disp "printer" "${pr}$e"
 		done
 	fi
-
 }
+
 #-- PLATFORM AUDITING FUNCTIONS ----------------------------------------------
 
 function get_hardware
@@ -1375,6 +1413,7 @@ function get_virtualization
 
 	disp "virtualization" $VIRT
 }
+
 #-- O/S AUDITING FUNCTIONS ---------------------------------------------------
 
 function get_kernel
@@ -1531,6 +1570,7 @@ function get_os_rel
 
 	disp "release" $OS_R
 }
+
 function get_be
 {
 	# Get beadm, LiveUpgrade and failsafe boot environments
@@ -1592,7 +1632,7 @@ function get_be
 					i=1
 				elif [[ -n $i && $l == "title"* ]]
 				then
-					disp "boot env" "failsafe: \"${l#* }\" ($f)"
+					disp "boot env" "failsafe: '${l#* }' ($f)"
 					break;
 				fi
 
@@ -1742,6 +1782,7 @@ function get_ldoms
 
 	fi
 }
+
 #-- NETWORK AUDITING FUNCTIONS -----------------------------------------------
 
 function mk_nic_devlist
@@ -1825,8 +1866,8 @@ function get_net
 		then
 			type=virtual
 		elif [[ $nic == dman* ]]
-			type="domain meta-interface"
 		then
+			type="domain meta-interface"
 		elif [[ $nic == clprivnet* ]]
 		then
 			type="clprivnet"
@@ -2243,6 +2284,7 @@ function get_nfs_domain
 		disp "NFS domain" \
 		$(sed -n "/^[$WSP]*NFSMAPID/s/^.*NFSMAPID_DOMAIN=//p" /etc/default/nfs)
 }
+
 #-- FILESYSTEM AUDIT FUNCTIONS -----------------------------------------------
 
 function get_capacity
@@ -2562,7 +2604,7 @@ function get_exports
 			if [[ $fstyp == "nfs" ]]
 			then
 				x="[$opts]"
-				[[ -n $desc ]] && x="$x \"$desc\""
+				[[ -n $desc ]] && x="$x '$desc'"
 			elif [[ $fstyp == "smb" ]]
 			then
 				fstyp="smb/ZFS"
@@ -3359,6 +3401,7 @@ function get_x
 
 	[[ -n $XBIN ]] && is_run_ver "X server" $XBIN "$XVER"
 }
+
 #-- TOOL TESTS --------------------------------------------------------------
 
 function get_openssl
@@ -4089,6 +4132,7 @@ function get_ai
 	fi
 
 }
+
 #-- PATCH AND PACKAGE FUNCTIONS ----------------------------------------------
 
 function get_package_list
@@ -4145,9 +4189,14 @@ log "${0##*/} invoked"
 trap 'die "user hit CTRL-C"' 2
 # Get options
 
-while getopts "D:e:f:lL:Mo:pPqR:T:uvVz:" option 2>/dev/null
+while getopts "CD:e:f:lL:Mo:pjPqR:T:vVz:" option 2>/dev/null
 do
 	case $option in
+
+		"C")	# AM_CHILD - undocumented, used to tell the script it's
+				# a copy in a zone
+			AM_CHILD=1
+			;;
 
 		"D")	# Delay startup by OPTARG seconds
 			T_DELAY=$OPTARG
@@ -4189,6 +4238,12 @@ do
 			SHOW_PATH=1
 			;;
 
+		"j")    # We want JSON output
+			OUT_J=1
+			Z_OPTS="$Z_OPTS -j"
+			SHOW_PATH=1
+			;;
+
 		"P")	# Print PATH information
 			SHOW_PATH=1
 			;;
@@ -4208,11 +4263,6 @@ do
 			Z_OPTS="$Z_OPTS -T $OPTARG"
 			;;
 
-		"u")	# User check file
-			UCHK=$OPTARG
-			Z_OPTS="$Z_OPTS -u $OPTARG"
-			;;
-
 		"v")	# Be verbose
 			VERBOSE=1
 			;;
@@ -4227,7 +4277,8 @@ do
 			unset RUN_HERE
 			;;
 
-		*)	usage
+		*)	print -u2 "unknown option '$option'"
+			exit 2
 
 	esac
 
@@ -4264,7 +4315,7 @@ if [[ "$CL" == "machine" ]]
 then
 	is_global || die "machine audits can only be run from the global zone."
 	ZL=all
-	CL=$CL_LS
+	CL=${CL_LS% }
 elif [[ "$CL" == "all" ]]
 then
 	CL=$CL_LS
@@ -4351,11 +4402,13 @@ then
 	# parseable audits write to a single file, human-readable to one file
 	# per class. It has a header.
 
-	if [[ -n $OUT_P ]]
+	if [[ -n $OUT_J ]]
+	then
+		exec 3>"${OD}/${HOSTNAME}.machine.json"
+	elif [[ -n $OUT_P ]]
 	then
 		exec 3>"${OD}/${HOSTNAME}.machine.saud"
-		print -u3 "@@BEGIN_s-audit v-$MY_VER "$(date "+%Y %m %d %H %M")
-
+		print -u3 "@@BEGIN_s-audit v-$MY_VER $MY_DATE" $(date "+%Y %m %d %H %M")
 	fi
 
 	msg "Writing audit data to ${OD}."
@@ -4366,7 +4419,7 @@ fi
 # Now ZL is the list of zones to do, and RUN_HERE is set if we're doing this
 # zone. We can run the checks
 
-[[ -z $OUT_P && -n $TO_FILE ]] && of_h=1
+[[ -z $OUT_P && -z $OUT_J && -n $TO_FILE ]] && of_h=1
 
 # If we're doing filesystem audits, do we have ZFS datasets?
 
@@ -4378,6 +4431,25 @@ then
 	# Don't write head and foot to file for non-parseable, and issue a
 	# warning if we're not root
 
+	if [[ -n $OUT_J ]]
+	then
+		if [[ -z $AM_CHILD ]]
+		then
+			cat <<-EOJSON
+			{
+			"header": {
+			  "sauditver": "$MY_VER",
+			  "hostname": "$HOSTNAME",
+			  "starttime": "$(date "+%Y %m %d %H %M")"
+			},
+			EOJSON
+		else
+			print ","
+		fi
+
+		print "\"$HOSTNAME\": {"
+	fi >&3
+
 	for myc in $CL
 	do
 
@@ -4388,7 +4460,7 @@ then
 
 		WARN=$(nr_warn $myc)
 
-		if [[ -n $WARN ]] && ! is_root
+		if [[ -n $WARN ]] && ! is_root 
 		then
 			prt_bar
 			print "WARNING: running this script as an unprivileged user may
@@ -4412,6 +4484,8 @@ then
 		class_foot $HOSTNAME $myc
 		} >&3
 	done
+
+	[[ -n $OUT_J && -z $AM_CHILD ]] && print -nu3 "}"
 
 fi
 
@@ -4444,7 +4518,7 @@ then
 		# times, changing the file descriptor each time. Also run multiple
 		# times for a non-running zone
 
-		if [[ -n $ofh || -z $live ]]
+		if [[ -n $of_h || -z $zlive ]]
 	 	then
 
 			for c1 in $CL
@@ -4480,6 +4554,8 @@ fi
 # Write a footer if we've just done a parseable file
 
 [[ -n $TO_FILE && -n $OUT_P ]] && print -u3 "@@END_s-audit"
+
+[[ -n $OUT_J ]] && print -u3 "}"
 
 # Do we have to copy the output directory?
 
