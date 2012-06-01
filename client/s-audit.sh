@@ -809,7 +809,7 @@ function usage
 	# How to use the script
 
 	cat<<-EOUSAGE
-	Usage: s-audit.sh [-f [dir]] [-z zone,...|all] [-qjpPMlV] [-D sec] [T sec]
+	Usage: s-audit.sh [-f [dir]] [-z zone,...|all] [-qjpPMFlV] [-D sec] [T sec]
 	[-L facility] [-o test,...] [-R user@host:dir ] [-e file] audit_type
 
 	where
@@ -829,6 +829,7 @@ function usage
 	  -L   syslog facility - must be lower case
 	  -T   maximum time, in s, for any audit class
 	  -v   be verbose
+	  -F   if lock file exists, ignore and remove it
 	  -l   list tests in each audit type
 	  -V   print version and exit
 
@@ -4189,7 +4190,7 @@ log "${0##*/} invoked"
 trap 'die "user hit CTRL-C"' 2
 # Get options
 
-while getopts "CD:e:f:lL:Mo:pjPqR:T:vVz:" option 2>/dev/null
+while getopts "CD:e:f:FlL:Mo:pjPqR:T:vVz:" option 2>/dev/null
 do
 	case $option in
 
@@ -4210,6 +4211,11 @@ do
 				# in the named directory
 			OD_R=${OPTARG##* }
 			TO_FILE=1
+			;;
+
+		"F")	# Force removal of lock file
+			rm -f $LOCKFILE
+			Z_OPTS="$Z_OPTS -F"
 			;;
 
 		"l")	# display the checks we have
@@ -4265,6 +4271,7 @@ do
 
 		"v")	# Be verbose
 			VERBOSE=1
+			Z_OPTS="$Z_OPTS -v"
 			;;
 
 		"V")	# Print version and exit
@@ -4308,6 +4315,8 @@ print $C_TIME | $EGS "^[0-9]*$" || die "Invalid timeout. [${C_TIME}]"
 
 [[ -n $SYSLOG ]] && [[ $SYSLOG != "local"[0-7] ]] \
 	&& die "Invalid syslog facility. [${SYSLOG}]"
+
+[[ -n $OUT_P && -n $OUT_J ]] && die "-p and -j are mutually exclusive."
 
 # Verify classes and zones
 
@@ -4455,8 +4464,7 @@ then
 
 		[[ -n $of_h ]] && exec 3>"${OD}/${HOSTNAME}.${myc}.saud"
 
-		[[ -n $VERBOSE && -n $TO_FILE ]] \
-			&& print -u2 "Running '$myc' audit on '$HOSTNAME'"
+		[[ -n $VERBOSE ]] && print -u2 "${HOSTNAME}/$myc"
 
 		WARN=$(nr_warn $myc)
 
@@ -4542,6 +4550,7 @@ then
 			done
 
 		else
+			print -u2 "Running $zf on $z"
 			zlogin -S $z /var/tmp/${zf##*/} $Z_OPTS $CL >&3 \
 				|| disp "error" "incomplete audit"
 		fi
