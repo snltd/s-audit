@@ -256,7 +256,7 @@ function disp
 		[[ -n $SHOW_PATH && -n $pth ]] && sp="@=$pth"
 		[[ -n $LAST_KEY && $key != $LAST_KEY ]] && flush_json
 
-		[[ ${val}$sp == *\"* ]] \
+		[[ ${val}$sp == *'"'* ]] \
 			&& J_DAT[$J_C]=$(print "${val}$sp" | sed 's/"/\\"/g') \
 			|| J_DAT[$J_C]="${val}$sp"
 
@@ -833,6 +833,7 @@ function usage
 	  -L   syslog facility - must be lower case
 	  -T   maximum time, in s, for any audit class
 	  -v   be verbose
+	  -Z   if parseable or JSON file is written, compress it (requires gzip)
 	  -F   if lock file exists, ignore and remove it
 	  -l   list tests in each audit type
 	  -V   print version and exit
@@ -2375,19 +2376,17 @@ function get_zpools
 
 				zpext="(last scrub: $zls)"
 
-				# Get the version, if we can
+				# Get the version, the size, and capacity, if we can
 
 				if [[ -n $zsup ]]
 				then
 					zpool get version,size $zp | sed '1d;$!N;s/\n/ /' \
 					| read a b zv x
 					zpext="$zpext [${zv}/${zsup}]"
+
+					zpool get capacity $zp | sed 1d | read a b zc x
+					zpool get size $zp | sed 1d | read a b zsz x
 				fi
-
-				# capacity and %used
-
-				zpool get capacity $zp | sed 1d | read a b zc x
-				zpool get size $zp | sed 1d | read a b zsz x
 
 				# Get the pool layout - this is hard and might change
 
@@ -4194,7 +4193,7 @@ log "${0##*/} invoked"
 trap 'die "user hit CTRL-C"' 2
 # Get options
 
-while getopts "CD:e:f:FlL:Mo:pjPqR:T:vVz:" option 2>/dev/null
+while getopts "CD:e:f:FlL:Mo:pjPqR:T:vVz:Z" option 2>/dev/null
 do
 	case $option in
 
@@ -4288,6 +4287,10 @@ do
 			unset RUN_HERE
 			;;
 
+		"Z")	# Compress output file
+			COMPRESS=1
+			;;
+
 		*)	print -u2 "unknown option '$option'"
 			exit 2
 
@@ -4361,6 +4364,12 @@ then
 
 fi
 
+# Get the compression tool, if we need it. We'll always have compress,
+# probably gzip
+
+[[ -n $COMPRESS ]] && ! can_has gzip && die "no gzip binary"
+	
+
 # If this zone has been named, remove it from the zlist
 
 if can_has zonename && [[ " $ZL " == *" $(zonename) "* ]]
@@ -4417,12 +4426,14 @@ then
 
 	if [[ -n $OUT_J ]]
 	then
-		exec 3>"${OD}/${HOSTNAME}.machine.json"
+		OUTFILE="${OD}/${HOSTNAME}.machine.json"
 	elif [[ -n $OUT_P ]]
 	then
-		exec 3>"${OD}/${HOSTNAME}.machine.saud"
+		OUTFILE="${OD}/${HOSTNAME}.machine.saud"
 		print -u3 "@@BEGIN_s-audit v-$MY_VER $MY_DATE" $(date "+%Y %m %d %H %M")
 	fi
+
+	exec 3>$OUTFILE
 
 	msg "Writing audit data to ${OD}."
 else
@@ -4570,13 +4581,21 @@ fi
 
 [[ -n $OUT_J ]] && print -u3 "}"
 
+# Compression
+
+if [[ -n ${OUT_J}$OUT_P && -n $COMPRESS ]]
+then
+	gzip -9 $OUTFILE
+	OUTFILE=${OUTFILE}.gz
+fi
+
 # Do we have to copy the output directory?
 
 if [[ -n $REM_STR ]]
 then
 	can_has scp	|| die "no scp binary."
 
-	scp -rqCp $DP $REM_STR >/dev/null 2>&1 \
+	scp -rqCp ${OUTFILE%.*} $REM_STR >/dev/null 2>&1 \
 		&& msg "copied data to $REM_STR" \
 		|| die "failed to copy data to $REM_STR"
 fi
