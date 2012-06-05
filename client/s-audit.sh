@@ -196,7 +196,7 @@ L_FS_TESTS="zpools root_fs fs exports"
 
 function flush_json
 {
-	if [[ ${#J_DAT[@]} == 1 ]]
+	if [[ -n $J_DAT && ${#J_DAT[@]} == 1 ]]
 	then
 		print "    \"$LAST_KEY\": \"$J_DAT\","
 	else
@@ -220,8 +220,8 @@ function flush_json
 function disp
 {
 	# Print information in plain, machine-parseable or JSON form.
-	# If SHOW_PATH is set, the path to the binary is printed, presuming it
-	# was ever passed.
+	# If SHOW_PATH is set, the path to the binary is printed, if it was
+	# passed
 
 	# $1 is the name of the thing, e.g. MySQL or the OBP @PATH
     # remaining arguments are the version strings
