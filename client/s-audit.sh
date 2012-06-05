@@ -54,7 +54,7 @@ LOCKFILE="${VARBASE}/s-audit.lock"
 RUN_HERE=1
 	# run checks in this zone, unless told otherwise
 
-Z_OPTS="-C"
+Z_OPTS="-CF"
 	# options passed to script when it is run via zlogin
 
 # Set a big PATH. This should try to include everywhere we expect to find
