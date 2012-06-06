@@ -758,7 +758,7 @@ class compareGeneric {
 
 		$d_arr = array();
 
-		$now = mktime();
+		$now = time();
 
 		foreach($data as $datum) {
 			$d = preg_split("/[:\s\/]+/", $datum[0]);
@@ -889,7 +889,10 @@ class compareOS extends compareGeneric {
 		$dist_arr = array();
 
 		foreach($data as $svr=>$dat) {
-			$dist_arr[] = $dat["distribution"];
+
+			if (isset($data["distribution"]))
+				$dist_arr[] = $dat["distribution"];
+
 		}
 
 		$dists = array_unique($dist_arr);

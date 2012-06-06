@@ -50,7 +50,7 @@ class auditGroupDesc {
 		$ret .= ".";
 		
 		if ($nd > 0) {
-			$last_upd = round((mktime() - $latest) / 86400);
+			$last_upd = round((time() - $latest) / 86401);
 
 			if ($last_upd == 0)
 				$last_txt = "today.";

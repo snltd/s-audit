@@ -58,7 +58,7 @@ class serverView extends HostGrid {
 		$this->gzd = $servers[$this->parent];
 	}
 
-	public function show_grid()
+	public function show_grid($width = "95%")
 	{
 		// The grid in this case is a list of tables, one for each audit
 		// type. Each table is created by its own class
@@ -307,7 +307,7 @@ class singleApp extends singleGeneric {
 
 	}
 
-	protected function show_generic($data)
+	public function show_generic($data, $field = false, $subname = false)
 	{
 		// Call the softwareGrid version, not the singleGeneric version
 
@@ -590,7 +590,7 @@ Class serverListGrid extends HostGrid
 		$this->cols = $high;
 	}
 	
-	public function show_grid()
+	public function show_grid($width = "95%")
 	{
 		// This function prints out a whole grid, ready for echoing.
 

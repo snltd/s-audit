@@ -59,4 +59,7 @@ define("LOWEST_T", 1293840000);
 	// This should help you catch hosts with way-off clocks. Default is
 	// 00:00:00 01/01/2011
 
+date_default_timezone_set("Europe/London");
+	// PHP requires a default timezone. Set yours here. See
+	// http://www.php.net/manual/en/timezones.php for a list of values
 ?>

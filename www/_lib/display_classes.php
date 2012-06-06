@@ -643,7 +643,7 @@ class HostGrid {
 	//------------------------------------------------------------------------
 	// show_property() functions
 
-	protected function show_generic($data)
+	public function show_generic($data, $field = false, $subname = false)
 	{
 		// This function prints properties which don't have a dedicated
 		// function. It can handle none, one or many rows of data.
@@ -760,7 +760,7 @@ class HostGrid {
 			$time_str = preg_replace("/:\d{2}$/", "", $t_arr[0]);
 
 			$date = mktime(0, 0, 0, $d_arr[1], $d_arr[0], $d_arr[2]);
-			$now = mktime();
+			$now = time();
 
 			// Flag up audits done in the future or impossibly early - help
 			// people catch machines with the wrong time
@@ -4158,7 +4158,7 @@ class SoftwareGrid extends HostGrid
 		return array($ta[0], $class, $style, false, false, $path);
 	}
 
-	public function show_generic($data, $field, $subname = false)
+	public function show_generic($data, $field = false, $subname = false)
 	{
 		// This is a replacement show_generic() only used on the application
 		// and tool audits.  It can handle single and multiple rows of data.
