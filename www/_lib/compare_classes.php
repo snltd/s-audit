@@ -55,7 +55,6 @@ class compareListPage extends audPage {
 			file($file))), 1);
 		}
 
-
 		parent::__construct($title, false);
 	}
 

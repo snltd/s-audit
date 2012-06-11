@@ -401,7 +401,7 @@ class HostGrid {
 	{
 		// Display the HTML for a single server and all its zones, if
 		// necessary
-
+		
 		// Set the audit file version - we may need it
 
 		$this->af_ver = $this->map->get_af_ver($server);
@@ -419,9 +419,12 @@ class HostGrid {
 		if (is_array($zl)) {
 
 			foreach($this->map->list_server_zones($server) as $zone) {
+				$zname = "${server}/$zone";
 
-				if (isset($this->servers[$zone][$this->c]))
-					$ret .= $this->show_zone($this->servers[$zone][$this->c]);
+				if (isset($this->servers[$zname][$this->c])) {
+					$ret .= $this->show_zone($this->servers[$zname][$this->c]);
+				}
+
 			}
 
 		}
@@ -1437,8 +1440,7 @@ class HostGrid {
 		// If we've got something in the array above, translate it. We need
 		// the Solaris revision first.
 	
-		preg_match("/^.*SunOS ([\d.]+).*$/",
-		$this->servers[$zn]["os"]["version"][0], $vi);
+		preg_match("/^.*SunOS ([\d.]+).*$/", $this->cz["version"][0], $vi);
 
 		if (isset($vi[1])) {
 			$sv = $vi[1];
@@ -5522,7 +5524,9 @@ class singleServerLink {
 	{
 		$map = ZoneMap::getInstance();
 
-		if (!$map->has_data($host))
+		$s_name = ($parent) ? "${parent}/$host" : $host;
+
+		if (!$map->has_data($s_name))
 			$this->html = $host;
 		else {
 			$qs = "g=" . $_GET["g"] . "&amp;s=";

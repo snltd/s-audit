@@ -179,6 +179,7 @@ class GetServers extends GetServersBase {
 					$this->servers = array_merge($this->servers,
 					$this->parse_m_file($f, array("platform", "os"), $a[1]));
 			}
+
 		}
 
 		// Finish the map
@@ -245,7 +246,8 @@ class GetServers extends GetServersBase {
 		//
 		// [global_hn] => [os]
 		//             => [net]
-		// [zone_1_hn] => [os]
+		// [gobal_hn/zone_1_hn] => [os]
+		//                      => [net]
 		// etc. etc.
 
 		// File is readable?
@@ -257,6 +259,11 @@ class GetServers extends GetServersBase {
 
 		if (!$fa = file($file, FILE_IGNORE_NEW_LINES))
 			page::warn("Could not read file. [${file}]");
+
+
+		$global = basename(dirname($file));
+
+		$match = ($this->map->is_global($zone)) ? $zone : "${global}/$zone";
 
 		$last_row = count($fa) - 1;
 
@@ -296,12 +303,13 @@ class GetServers extends GetServersBase {
 				// If we hit a BEGIN line, start recording the data in a
 				// temporary array
 
-				$this_h = $a[2];
+				$this_h = ($a[2] == $global) ? $a[2] : "${global}/" . $a[2];
+				$inside = $a[2];
 				$this_c = $a[1];
 
 				if (($cl && ! in_array($this_c, $cl)) ||
 				(defined("NO_ZONES") && !in_array($this_h, $this->globals))
-				|| ($zone && ($this_h != $zone)))
+				|| ($zone && ($this_h != $match)))
 					$skip = 1;
 				else {
 					$tmp = array();
@@ -314,7 +322,7 @@ class GetServers extends GetServersBase {
 				// If we hit the END line corresponding to the last BEGIN,
 				// store the data. If not, store an error
 
-				$ret[$this_h][$this_c] = ($e[1] == "${this_c}@$this_h")
+				$ret[$this_h][$this_c] = ($e[1] == "${this_c}@$inside")
 					? $tmp
 					: "ERROR";
 

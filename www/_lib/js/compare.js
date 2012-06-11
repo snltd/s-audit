@@ -12,6 +12,8 @@ function toggleCommon(id)
 		}
 
 		curr_state.innerHTML = "show common data";
+
+
 	}
 	else {
 

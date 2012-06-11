@@ -48,7 +48,7 @@ class serverView extends HostGrid {
 
 		if (preg_match("/@/", $this->hostname)) {
 			$zn = explode("@", $this->hostname);
-			$this->hostname = $zn[0];
+			$this->hostname = "$zn[1]/$zn[0]";
 			$this->parent = $zn[1];
 		}
 		else
@@ -311,7 +311,8 @@ class singleApp extends singleGeneric {
 	{
 		// Call the softwareGrid version, not the singleGeneric version
 
-		return softwareGrid::show_generic($data, false);
+		return;
+		return $this->show_generic($data, false);
 	}
 
 	public function ver_cols($data)
