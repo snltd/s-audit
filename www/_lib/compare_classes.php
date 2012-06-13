@@ -763,7 +763,7 @@ class compareGeneric {
 			$d = preg_split("/[:\s\/]+/", $datum[0]);
 
 			if (isset($d[5]))
-				$d_arr[] = mktime($d[0], $d[1], $d[2], $d[3], $d[4], $d[5]);
+				$d_arr[] = mktime($d[0], $d[1], $d[2], $d[4], $d[3], $d[5]);
 			else
 				$broken = true;
 		}
