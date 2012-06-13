@@ -3700,7 +3700,7 @@ class HostGrid {
 		$no = $os + PER_PAGE;
 		$po = $os - PER_PAGE;
 
-		$qs = new queryString(1);
+		$qs = new queryString();
 
 		if ($this->map->all > PER_PAGE) {
 
@@ -3719,6 +3719,8 @@ class HostGrid {
 		}
 
 		// Are zones currently shown or hidden? Offer the alternative.
+
+		$qs = new queryString(true);
 
 		$txt = (defined("NO_ZONES"))
 			? "show"
