@@ -1234,7 +1234,7 @@ function get_mpath
 	if is_root && can_has mpathadm
 	then
 
-		mpathadm list LU | grep Total | uniq -c | while read num pths
+		mpathadm list LU | grep Total | sort | uniq -c | while read num pths
 		do
 			disp "multipath" "$num mpxio devices (${pths##* } paths)"
 		done
