@@ -4452,6 +4452,16 @@ can_has zpool && (( $(zpool status | wc -l) > 1)) && HAS_ZFS=1
 if [[ -n $RUN_HERE ]]
 then
 
+	# If we're in a zone, consider the zone name canonical, not the hostname
+
+	hn=$HOSTNAME
+
+	if can_has zonename
+	then
+		znm=$(zonename)
+		[[ $znm != global ]] && hn=$znm
+	fi
+
 	# Don't write head and foot to file for non-parseable, and issue a
 	# warning if we're not root
 
@@ -4471,15 +4481,15 @@ then
 			print ","
 		fi
 
-		print "\"$HOSTNAME\": {"
+		print "\"$znm\": {"
 	fi >&3
 
 	for myc in $CL
 	do
 
-		[[ -n $of_h ]] && exec 3>"${OD}/${HOSTNAME}.${myc}.saud"
+		[[ -n $of_h ]] && exec 3>"${OD}/${znm}.${myc}.saud"
 
-		[[ -n $VERBOSE ]] && print -u2 "${HOSTNAME}/$myc"
+		[[ -n $VERBOSE ]] && print -u2 "${znm}/$myc"
 
 		WARN=$(nr_warn $myc)
 
@@ -4495,7 +4505,7 @@ then
 		# Run the audit class
 
 		{
-		class_head $HOSTNAME $myc
+		class_head $znm $myc
 
 		if [[ $C_TIME != 0 ]]
 		then
@@ -4504,7 +4514,7 @@ then
 			run_class $myc
 		fi
 
-		class_foot $HOSTNAME $myc
+		class_foot $znm $myc
 		} >&3
 	done
 
@@ -4565,7 +4575,7 @@ then
 			done
 
 		else
-			print -u2 "Running $zf on $z"
+			[[ -n $VERBOSE ]] && print -u2 "Running $zf on $z"
 			zlogin -S $z /var/tmp/${zf##*/} $Z_OPTS $CL >&3 \
 				|| disp "error" "incomplete audit"
 		fi
