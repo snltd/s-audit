@@ -196,6 +196,13 @@ L_FS_TESTS="zpools root_fs fs exports"
 
 function flush_json
 {
+	# JSON strings are built up in global variable J_DAT[], by disp() and
+	# printed here once we start on a new key. So, with JSON output you're
+	# always printing one check behind what's being tested. We have to
+	# escape soft quotes, and replace literal tabs in here
+ 	
+	J_DAT=$(print $J_DAT | sed 's/"/\\"/g;s/	/\\t/g') # literal tab!
+
 	if [[ -n $J_DAT && ${#J_DAT[@]} == 1 ]]
 	then
 		print "    \"$LAST_KEY\": \"$J_DAT\","
@@ -256,10 +263,7 @@ function disp
 		[[ -n $SHOW_PATH && -n $pth ]] && sp="@=$pth"
 		[[ -n $LAST_KEY && $key != $LAST_KEY ]] && flush_json
 
-		[[ ${val}$sp == *'"'* ]] \
-			&& J_DAT[$J_C]=$(print "${val}$sp" | sed 's/"/\\"/g') \
-			|| J_DAT[$J_C]="${val}$sp"
-
+		J_DAT[$J_C]="${val}$sp"
 		J_C=$(($J_C+1))
 		LAST_KEY=$key
 	elif [[ -n $OUT_P ]]
@@ -726,6 +730,7 @@ function show_checks
 		eval print '$'"L_${cn}_TESTS" | fold -sw 65 | sed "s/^/  /"
 	done
 }
+
 function is_global
 {
 	# Are we running in the global zone? True if we are, false if we're not.
@@ -808,12 +813,10 @@ function get_disk_type
 	fi
 }
 
-function usage
+usage()
 {
-	# How to use the script
-
 	cat<<-EOUSAGE
-	Usage: s-audit.sh [-f [dir]] [-z zone,...|all] [-qjpPMFlV] [-D sec] [T sec]
+	Usage: ${0##*/} [-f [dir]] [-z zone,...|all] [-qjpPMFlV] [-D sec] [T sec]
 	[-L facility] [-o test,...] [-R user@host:dir ] [-e file] audit_type
 
 	where
@@ -850,6 +853,7 @@ function usage
           fs : local and remote filesystem information
        patch : lists installed patches and packages
     security : shows some potential security issues, cron jobs, and  RBAC
+
      machine : all of the above, for all zones
          all : all audit types for the current zone
 
@@ -972,19 +976,18 @@ function get_memory
 	disp "memory" "$(timeout_job prtconf \
 		| sed -n '/Memory*/s/^.*: \([0-9]*\).*$/\1/p')Mb physical"
 
-	swap=$(swap -l 2>/dev/null | sed '1d' | tr -s " " | cut -d\  -f4)
-
 	# Can have multiple swap devices
 
 	ss=0
-	for s in $swap
+
+	swap -l 2>/dev/null | sed 1d | while read a b c d e
 	do
-		ss=$(print "$ss + $s" | bc)
+		ss=$(print "$ss + $d" | bc)
 	done
 
-	[[ -n $swap ]] \
-		&& disp "memory" "$(num_suff $(print "$ss * 512" | bc))b swap" \
-		|| disp "memory" "no swap space"
+	[[ $ss == 0 ]] \
+		&& disp "memory" "no swap space" \
+		|| disp "memory" "$(num_suff $(print "$ss * 512" | bc))b swap"
 }
 
 function get_cpus
@@ -1284,7 +1287,7 @@ function get_cards
 
 		[[ -n $OUT_P ]] && x_sed='' || x_sed="s/[${WSP}]\{1,\}/ /g"
 
-		$PRTDIAG -v | grep -i pci | egrep -v "^[$WSP]+/pci@" \
+		$PRTDIAG -v 2>/dev/null | grep -i pci | egrep -v "^[$WSP]+/pci@" \
 		| sed "$x_sed" | while read line
 		do
 			disp "card" "PCI ($line)"
@@ -1371,10 +1374,15 @@ function get_virtualization
 
 			if can_has ldm && is_root
 			then
-				ldm ls primary >/dev/null && VIRT="primary LDOM"
-			elif ! $PRTDIAG -v | $EGS "PS0"
-			then
-				VIRT="guest LDOM"
+
+				if ldm ls primary >/dev/null 2>&1
+				then
+					VIRT="primary LDOM"
+				elif ! $PRTDIAG -v | $EGS "PS0"
+				then
+					VIRT="guest LDOM"
+				fi
+
 			fi
 
 		else
@@ -4218,7 +4226,6 @@ do
 
 		"F")	# Force removal of lock file
 			rm -f $LOCKFILE
-			Z_OPTS="$Z_OPTS -F"
 			;;
 
 		"l")	# display the checks we have
@@ -4452,7 +4459,9 @@ can_has zpool && (( $(zpool status | wc -l) > 1)) && HAS_ZFS=1
 if [[ -n $RUN_HERE ]]
 then
 
-	# If we're in a zone, consider the zone name canonical, not the hostname
+	# If we're in a zone, consider the zone name canonical, not the
+	# hostname. If the system doesn't have zones, call this zone "global".
+	# This is for the benefit of the interface.
 
 	hn=$HOSTNAME
 
@@ -4460,6 +4469,8 @@ then
 	then
 		znm=$(zonename)
 		[[ $znm != global ]] && hn=$znm
+	else
+		znm="global"
 	fi
 
 	# Don't write head and foot to file for non-parseable, and issue a
@@ -4474,7 +4485,7 @@ then
 			"header": {
 			  "sauditver": "$MY_VER",
 			  "hostname": "$HOSTNAME",
-			  "starttime": "$(date "+%Y %m %d %H %M")"
+			  "starttime": "$(date "+%Y %m %d %H %M %S")"
 			},
 			EOJSON
 		else
