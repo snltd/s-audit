@@ -90,6 +90,7 @@ if (!isset($locals)) define("NO_ZONES", 1);
 
 $data = new GetServers($map, $hosts, array("os", "net", "fs", "app", "tool",
 "hosted", "security", "patch" ));
+pr($data->get_array());
 
 $view = new compareView($data->get_array(), $map);
 

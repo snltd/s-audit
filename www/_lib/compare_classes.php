@@ -233,7 +233,6 @@ class compareCyc {
 //============================================================================
 // COMPARISON PAGE
 
-
 class comparePage extends audPage {
 
 	// The basic HTML template for the page used for the actual comparison.

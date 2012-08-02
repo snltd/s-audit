@@ -406,11 +406,19 @@ class HostGrid {
 
 		$this->af_ver = $this->map->get_af_ver($server);
 
-		if (isset($this->servers[$server][$this->c]))
-			$ret = $this->show_zone($this->servers[$server][$this->c]);
+		// as of 3.2 the client file calls the global zone 'hostname/global'.
+		// Prior to that it was just called 'hostname'. This is the key of
+		// the $this->servers array.
+
+		$fetch = ($this->af_ver >= 3.2)
+			? "${server}/global"
+			: $server;
+
+		if (isset($this->servers[$fetch][$this->c]))
+			$ret = $this->show_zone($this->servers[$fetch][$this->c]);
 		else 
 			return $this->erred_zone_print(array("hostname"=> array($server),
-			"_err_"=> array("missing data")));
+			"_err_"=> array("missing data for $fetch/$this->c")));
 
 		$zl = (defined("NO_ZONES"))
 			? false
@@ -2845,7 +2853,7 @@ class HostGrid {
 
 			if ($a[1] == "unmounted") {
 				$txt = "<div class=\"faint\"><strong>$a[4]</strong>"
-				. "unmounted ZFS ($a[3] referenced)</div>";
+				. " unmounted ZFS ($a[3] referenced)</div>";
 				$c_arr[] = array($txt);
 				continue;
 			}
@@ -3905,6 +3913,9 @@ class OSGrid extends PlatformGrid
 		$z = ($this->map->is_global($zn))
 			? $zn
 			: $this->map->get_parent_zone($zn);
+
+		if ($this->map->get_af_ver($z) >= 3.2)
+			$z = "$z/global";
 
 		$arch = (preg_match("/SPARC/",
 		$this->servers[$z]["platform"]["hardware"][0]))
