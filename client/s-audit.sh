@@ -1372,7 +1372,14 @@ function get_virtualization
 			# domain. If we can't see the power supply, assume we're a guest
 			# LDOM
 
-			if can_has ldm && is_root
+			if can_has virtinfo
+			then
+
+				virtinfo | $EGS guest \
+					&& VIRT="guest LDOM" \
+					|| VIRT="primary LDOM"
+
+			elif can_has ldm && is_root
 			then
 
 				if ldm ls primary >/dev/null 2>&1
@@ -1789,7 +1796,7 @@ function get_ldoms
 	if is_root && can_has ldm
 	then
 
-		ldm ls | sed 1d | while read n st fl co cp m x
+		ldm ls 2>/dev/null | sed 1d | while read n st fl co cp m x
 		do
 			disp VM "LDOM: $n (port $co:$st) [${cp}vCPU/${m}]"
 		done
@@ -1865,8 +1872,8 @@ function get_net
 
 	if is_root && can_has ldm
 	then
-		VSW_IF_LIST=" $(ldm list-domain -p -o network primary | \
-		sed -n '/^VSW/s/^.*net-dev=\([^|]*\).*$/\1/p' | tr '\n' ' ') "
+		VSW_IF_LIST=" $(ldm list-domain -p -o network primary 2>/dev/null \
+		| sed -n '/^VSW/s/^.*net-dev=\([^|]*\).*$/\1/p' | tr '\n' ' ') "
 	fi
 
 	for nic in $DEVLIST
@@ -2356,7 +2363,7 @@ function get_zpools
 
 		# Get all the zpools under cluster control
 
-		if can_has clresource
+		if can_has clresource && clresource list | $EGS HAStoragePlus
 		then
 			zpclus=" $(clresource show -v -t HAStoragePlus | sed -n \
 			'/Zpools:/s/^.* //p' | tr '\n' ' ') "
@@ -2700,9 +2707,9 @@ function get_exports
 
 	if can_has ldm && is_root
 	then
-		LDMS=$(ldm ls | sed '1,2d;s/ .*$//')
+		LDMS=$(ldm ls 2>/dev/null | sed '1,2d;s/ .*$//')
 
-		ldm ls-services -p \
+		ldm ls-services -p 2>/dev/null \
 		| sed -n '/vol=/s/^|vol=\([^|]*\).*dev=\([^|]*\).*$/\1 \2/p' | \
 		while read vol dev
 		do
@@ -3328,7 +3335,7 @@ function get_ldm
 
 	for BIN in $(find_bins ldm)
 	do
-		is_run_ver "ldm@$BIN" ${BIN}d $($BIN --version \
+		is_run_ver "ldm@$BIN" ${BIN}d $($BIN --version 2>/dev/null \
 		| sed -n '/^Logic/s/^.*(v \([^)]*\).*/\1/p')
 	done
 }
@@ -4437,10 +4444,12 @@ then
 	elif [[ -n $OUT_P ]]
 	then
 		OUTFILE="${OD}/${HOSTNAME}.machine.saud"
-		print -u3 "@@BEGIN_s-audit v-$MY_VER $MY_DATE" $(date "+%Y %m %d %H %M")
 	fi
 
 	exec 3>$OUTFILE
+
+	[[ -n $OUT_P ]] && print -u3 \
+		"@@BEGIN_s-audit v-$MY_VER $MY_DATE" $(date "+%Y %m %d %H %M")
 
 	msg "Writing audit data to ${OD}."
 else
