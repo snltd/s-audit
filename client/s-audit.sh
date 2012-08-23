@@ -60,7 +60,7 @@ Z_OPTS="-CF"
 # Set a big PATH. This should try to include everywhere we expect to find
 # software. SPATH is for quicker searching later.
 
-SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin /etc \
+SPATH="$HOME/glassfish3/bin /bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin /etc \
 	$(find /usr/*/*bin /usr/local/*/*bin /opt/*/*bin /usr/*/libexec \
 	/usr/local/*/libexec /opt/*/libexec /usr/postgres/*/bin \
 	/opt/local/*/bin /*/bin -prune \
@@ -167,10 +167,11 @@ G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
 L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 	patch_count pkg_repo uptime"
 
-L_APP_TESTS="apache coldfusion tomcat iplanet_web nginx mysql_s ora_s
-	postgres_s mongodb_s svnserve sendmail exim cronolog mailman splunk sshd
-	named ssp symon samba x vbox smc ai_srv networker_c"
-G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s nb_s"
+L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx mysql_s 
+	ora_s postgres_s mongodb_s svnserve sendmail exim cronolog mailman
+	splunk sshd named ssp symon samba x vbox smc ai_srv networker_c"
+	G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
+	nb_s"
 
 L_TOOL_TESTS="openssl rsync mysql_c postgres_c sqlplus svn_c java perl php_cmd
 	python ruby node cc gcc pca nettracker saudit scat explorer jass jet"
@@ -931,13 +932,17 @@ function get_hardware
 		can_has isainfo && BITS=$(isainfo -b)
 	else
 		HW_OUT=$HW_CHIP
+
+		# If it's x86 it might be a ZFS appliance
+
+		is_running akd && HW_OUT="${HW_OUT} ZFS appliance"
 	fi
 
 	# Is this part of a cluster?
 
 	if can_has cluster
 	then
-		cnm=" [member of SC $(cluster list)]"
+		cnm=" [member of SC $(cluster list 2>/dev/null)]"
 	elif can_has scconf
 	then
 		cnm=" [member of SC $(scconf -p | sed -n '/Cluster name/s/^.* //p')]"
@@ -2927,6 +2932,29 @@ function get_tomcat
 		disp "Tomcat" $TC_VER $TC_EXTRA
 	done
 
+}
+
+function get_glassfish
+{
+	# Get the version of Glassfish. It tries to get the version from the
+	# running server
+
+	for BIN in $(find_bins asadmin)
+	do
+		VSTR=$(print "version --local" | $BIN | grep "Version =")
+
+		[[ $VSTR == *Open* ]] && GFT="Open Source" || GFT=Oracle
+
+		# I'm not sure about this. It makes a strong assumption about the
+		# glassfish command line, which may not be safe
+
+		[[ $(ps -ef | grep -c "java -cp ${BIN%%/bin*}") == 1 ]] \
+			&& xtra=" (not running)" || xtra=''
+
+		disp "Glassfish@$BIN" "$(print $VSTR | \
+		sed 's/^[^0-9]*//') [$GFT version]$xtra"
+		
+	done
 }
 
 function get_iplanet_web
