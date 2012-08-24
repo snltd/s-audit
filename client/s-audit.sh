@@ -60,7 +60,7 @@ Z_OPTS="-CF"
 # Set a big PATH. This should try to include everywhere we expect to find
 # software. SPATH is for quicker searching later.
 
-SPATH="$HOME/glassfish3/bin /bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin /etc \
+SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin /etc \
 	$(find /usr/*/*bin /usr/local/*/*bin /opt/*/*bin /usr/*/libexec \
 	/usr/local/*/libexec /opt/*/libexec /usr/postgres/*/bin \
 	/opt/local/*/bin /*/bin -prune \
@@ -167,10 +167,10 @@ G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
 L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 	patch_count pkg_repo uptime"
 
-L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx mysql_s 
-	ora_s postgres_s mongodb_s svnserve sendmail exim cronolog mailman
+L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
+	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog mailman
 	splunk sshd named ssp symon samba x vbox smc ai_srv networker_c"
-	G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
+G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
 	nb_s"
 
 L_TOOL_TESTS="openssl rsync mysql_c postgres_c sqlplus svn_c java perl php_cmd
@@ -3023,6 +3023,14 @@ function get_coldfusion
 	for BIN in $(find_bins cfinfo)
 	do
 		is_run_ver "Coldfusion@$BIN" fusion $($BIN -version)
+	done
+}
+
+function get_squid {
+
+	for BIN in $(find_bins squid)
+	do
+		is_run_ver "Squid@$BIN" squid $($BIN -v | sed -n '1s/^.*ion //p')
 	done
 }
 
