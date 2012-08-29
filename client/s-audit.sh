@@ -4651,7 +4651,7 @@ fi
 
 if [[ -n ${OUT_J}$OUT_P && -n $COMPRESS ]]
 then
-	gzip -9 $OUTFILE
+	gzip -f9 $OUTFILE
 	OUTFILE=${OUTFILE}.gz
 fi
 
