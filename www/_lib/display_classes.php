@@ -182,8 +182,8 @@ class HostGrid {
 
 		$p = $this->map->get_parent_zone($zone);
 		
-		if (isset($this->servers[$p][$class][$prop])) {
-			$r = $this->servers[$p][$class][$prop];
+		if (isset($this->servers["$p/global"][$class][$prop])) {
+			$r = $this->servers["$p/global"][$class][$prop];
 
 			$r = (count($r) == 1)
 				? $r[0]
@@ -683,11 +683,13 @@ class HostGrid {
 
 		if ($this->map->is_global($z)) {
 			$row_class = "server";
+			$zname = "${z}/global";
 			$parent = false;
 		}
 		else {
 			$row_class = "zone";
-			$parent = $this->get_parent_prop($z, "platform", "hostname");
+			$parent = $this->map->get_parent_zone($z);
+			$zname = "${parent}/$z";
 		}
 
 		// The hostname cell is coloured according to the virtualization (or
@@ -696,8 +698,8 @@ class HostGrid {
 		// Get the virtualization. We always have this because we always
 		// have platform audit data
 
-		$v = (isset($this->servers[$z]["platform"]["virtualization"]))
-			? $this->servers[$z]["platform"]["virtualization"][0]
+		$v = (isset($this->servers[$zname]["platform"]["virtualization"]))
+			? $this->servers[$zname]["platform"]["virtualization"][0]
 			: "unknown";
 
 		// The basic visualization type is vb - this is all we need for most
@@ -1560,7 +1562,7 @@ class HostGrid {
 			$class = false;
 
 			if (preg_match("/^failsafe:/", $row))
-				preg_match("/^(\w+): \"([^\"]*)\" \((.*)\)$/", $row, $a);
+				preg_match("/^(\w+): [\"']([^\"']*)[\"'] \((.*)\)$/", $row, $a);
 
 				// [1] => "failsafe"
 				// [2] => BE name
@@ -1574,6 +1576,8 @@ class HostGrid {
 				// [3] => LU="(in)complete"/beadm=mount point
 				// [4] => flags
 
+			if (!isset($a[2]))
+				echo "<h2>$row</h2>";
 			$txt = "<strong>$a[2]</strong> ($a[1])";
 
 			if ($a[1] == "failsafe")
@@ -1688,7 +1692,11 @@ class HostGrid {
 		return new Cell($data, $class);
 	}
 
-	protected function show_publisher($data)
+	protected function show_publisher($data) {
+		return $this->show_repository($data);
+	}
+
+	protected function show_repository($data)
 	{
 		// Publisher info. Put the preferred publisher in a green box, and
 		// link to the repository
@@ -1703,7 +1711,8 @@ class HostGrid {
 			$url = preg_replace("/[\(\)]/", "", $a[1]);
 			$lt = preg_replace("/^\(http:\/\/|\/\)$/", "", $a[1]);
 
-			$c_arr[] = array("<strong>$a[0]</strong> (<a href=\"$url\">$lt</a>)", $class);
+			$c_arr[] = array("<strong>$a[0]</strong> " 
+			. "(<a href=\"$url\">$lt</a>)", $class);
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -4767,7 +4776,7 @@ class Page {
 		exit();
 	}
 
-	public function error($msg = "undefined error")
+	static function error($msg = "undefined error")
 	{
 		// Print an error message and close the page
 
@@ -4775,7 +4784,7 @@ class Page {
 		exit();
 	}
 
-	public function warn($msg = "undefined warning")
+	static function warn($msg = "undefined warning")
 	{
 		// Print a warning message across the page
 

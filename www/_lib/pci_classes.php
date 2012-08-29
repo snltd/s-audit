@@ -1,5 +1,18 @@
 <?php
 
+//============================================================================
+//
+// pci_classes.php
+// ---------------
+//
+// An abstract class and a bunch of extensions which parse raw prtdiag(1)
+// PCI data. Required by platform audits.
+//
+// Part of s-audit. (c) 2011-2012 SearchNet Ltd
+//  see http://snltd.co.uk/s-audit for licensing and documentation
+//
+//============================================================================
+
 abstract class pci_parser {
 
 	// A template for parsing PCI card info from prtdiag
@@ -183,6 +196,16 @@ abstract class pci_parser {
 // of the machine itself. Still, I hope they all provide information which
 // is useful, and not confusing.
 
+//- x86 machines -------------------------------------------------------------
+
+// With Solaris 11, these can produce info, but it's not particularly
+// useful. It just tells you what slots the machine has. For now, I'm just
+// going to filter all the "available"s out.
+
+class pci_i386 extends pci_parser {
+	protected $ignore_str = "available";
+}
+
 //- old SunFire machines -----------------------------------------------------
 
 class pci_sunfirev240 extends pci_parser {
@@ -282,7 +305,7 @@ class pci_sunfiret200 extends pci_parser {
 	protected $c_type_field = 4;
 	protected $c_model_field = 5;
 	protected $c_loc_field = 0;
-	protected $ignore_str = "usb|IOBD\/NET|\/PCIX |PCI-SWITCH";
+	protected $ignore_str = "IOBD";
 }
 
 class pci_sparct32 extends pci_parser {
