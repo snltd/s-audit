@@ -1515,6 +1515,9 @@ function get_os_dist
 	if (($OSVERCMP < 511))
 	then
 		OS_D="Solaris"
+	elif $EGS "illumian" $r
+	then
+		OS_D="Illumian"
 	elif $EGS "SmartOS" $r
 	then
 		OS_D="SmartOS"
