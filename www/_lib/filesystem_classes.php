@@ -14,7 +14,7 @@
 
 class Filesystem {
 
-	public function get_files($base, $type = false, $pattern = false) {
+	static function get_files($base, $type = false, $pattern = false) {
 
 		// Returns an array of files in the directory given by the first
 		// argument used to call it. If the second argument is "d" then it

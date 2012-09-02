@@ -78,9 +78,9 @@ $za = "td.lz, ";
 $zk = "li.lz, ";
 
 foreach($cols->get_col_list("m_cols") as $name=>$hex) {
-	echo "\ntd.${name}, li.k$name { border: 2px solid $hex }";
+	echo "\ntd.${name}, div.k$name, li.k$name { border: 2px solid $hex }";
 	$ga .= "td.${name}, ";
-	$gk .= "li.k${name}, ";
+	$gk .= "div.k${name}, li.k${name}, ";
 }
 
 echo "\n\n", preg_replace("/, $/", " {\n  white-space: nowrap;\n  " .
@@ -88,9 +88,9 @@ echo "\n\n", preg_replace("/, $/", " {\n  white-space: nowrap;\n  " .
 "\n\n", preg_replace("/, $/", " { background-color: #c0c9e4 }", $gk);
 
 foreach($cols->get_col_list("z_cols") as $name=>$hex) {
-	echo "\ntd.$name, li.k$name { border: 2px solid $hex }";
+	echo "\ntd.$name, div.k${name}, li.k$name { border: 2px solid $hex }";
 	$za .= "td.${name}, ";
-	$zk .= "li.k${name}, ";
+	$zk .= "div.k${name}, li.k${name}, ";
 }
 
 echo "\n\n", preg_replace("/, $/", " {\n  white-space: nowrap;\n  " .

@@ -1,4 +1,4 @@
-<script language="javascript"> 
+<script type="text/javascript"> 
 
 function toggleCommon(id)
 {
@@ -7,7 +7,7 @@ function toggleCommon(id)
 
 	if (curr_state.innerHTML == "hide common data") {
 
-		for (i=0; i<arr.length; i++) {
+		for (i=0; i < arr.length; i++) {
 			arr[i].style.display = 'none';
 		}
 
@@ -17,7 +17,7 @@ function toggleCommon(id)
 	}
 	else {
 
-		for (i=0; i<arr.length; i++) {
+		for (i=0; i < arr.length; i++) {
 			arr[i].style.display = 'table-row';
 		}
 

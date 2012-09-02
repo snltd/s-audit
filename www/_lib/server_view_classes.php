@@ -49,13 +49,28 @@ class serverView extends HostGrid {
 		if (preg_match("/@/", $this->hostname)) {
 			$zn = explode("@", $this->hostname);
 			$this->hostname = "$zn[1]/$zn[0]";
-			$this->parent = $zn[1];
+			$this->parent = "$zn[1]/$zn[1]";
+			$local = true;
 		}
-		else
-			$this->parent = $this->hostname;
+		else {
+			$this->hostname = "$this->hostname/$this->hostname";
+		}
+
+		if (!isset($servers[$this->hostname]))  {
+			page::f_error("Failed to retrieve $this->hostname server data.");
+		}
 
 		$this->zdata = $servers[$this->hostname];
-		$this->gzd = $servers[$this->parent];
+
+		if (isset($local)) {
+
+			if (isset($servers[$this->parent]))
+				$this->gzd = $servers[$this->parent];
+			else
+				page::warn("Failed to retrieve parent zone data.");
+
+		}
+
 	}
 
 	public function show_grid($width = "95%")

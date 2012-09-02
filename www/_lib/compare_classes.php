@@ -70,126 +70,104 @@ class compareListPage extends audPage {
 		
 		// If we don't have a friends file, we're done
 
-		if (!file_exists($this->ff)) 
-			return $ret
-			. "You do not have a $ff_link for this audit group.</p>";
-		else
+		if (!file_exists($this->ff))  {
+			$ret .= "You do not have a $ff_link for this audit group.</p>";
+		}
+		else {
 			$ret .= "The following server comparisons are defined in the
 			$ff_link at <tt>$this->ff</tt>.</p>\n\n<ul>";
 
-		// Read in the friends file and make an array of the pairs, and
-		// possibly descriptions, inside it. 
+			// Read in the friends file and make an array of the pairs, and
+			// possibly descriptions, inside it. 
 
-		foreach(file($this->ff) as $row) {
+			foreach(file($this->ff) as $row) {
 
-			// clear some vars
+				// clear some vars
 
-			$desc = $pass = $trimmed = false;
+				$desc = $pass = $trimmed = false;
 
-			// Discard anything that doesn't start with a letter.  Hostnames
-			// have to start with a letter
+				// Discard anything that doesn't start with a letter.  Hostnames
+				// have to start with a letter
 
-			if (!preg_match("/^\w/", $row)) continue;
-	
-			// Split off the description, if we have one
-
-			$a = explode(":", $row, 2);
-
-			$desc = (isset($a[1])) ? $a[1] : false;
-
-			// a[0] has the friends, a[1] has the comment
-
-			$friends = explode(",", $a[0]);
-
-			// Discard friendless loners
-
-			if (count($friends) == 1) continue;
-
-			// Make sure all the friends exist in the map. If they don't,
-			// make an array called "missing".
+				if (!preg_match("/^\w/", $row)) continue;
 		
-			foreach($friends as $h) {
-				$h = trim($h);
+				// Split off the description, if we have one
 
-				if (!$this->map->has_data($h)) {
-					$missing[] = array($friends, $desc);
-					$pass = true;
-					break;
-				}
-				else
-					$trimmed[] = $h;
+				$a = explode(":", $row, 2);
 
-			}
+				$desc = (isset($a[1])) ? $a[1] : false;
 
-			// if $pass is true, we take no further action on this group of
-			// friends
+				// a[0] has the friends, a[1] has the comment
 
-			if ($pass) continue;
+				$friends = explode(",", $a[0]);
 
-			// Create the list entry for this group of friends
+				// Discard friendless loners
 
-			$ret .= "\n  <ul><a href=\"" . $_SERVER["PHP_SELF"] . "?g="
-			. $this->group . "&amp;d=" . urlencode(serialize($trimmed))
-			. "\">" . $trimmed[0];
+				if (count($friends) == 1) continue;
 
-			for ($i = 1; $i < count($trimmed) - 1; $i++)
-				$ret .= ", " . $trimmed[$i];
+				// Make sure all the friends exist in the map. If they don't,
+				// make an array called "missing".
+			
+				foreach($friends as $h) {
+					$h = trim($h);
 
-			$ret .= " and " . $trimmed[count($trimmed) - 1] . "</a>";
+					if (!$this->map->has_data($h)) {
+						$missing[] = array($friends, $desc);
+						$pass = true;
+						break;
+					}
+					else
+						$trimmed[] = $h;
 
-			if ($desc) $ret .= " ($desc)";
-
-			$ret .= "</ul>";
-		}
-
-		if (isset($missing)) {
-			$ret .= "<p class=\"center\">The following friends are defined,
-			but we do not have sufficient data to compare them.</p>\n<ul>";
-
-			foreach ($missing as $friends) {
-				$hosts = $friends[0];
-				$nhosts = count($hosts);
-
-				$ret .= "\n<li>" . new singleServerLink($hosts[0]);
-
-				for($i = 1; $i < $nhosts - 1; $i++) {
-					$ret .= ", " . new singleServerLink($hosts[$i]);
 				}
 
-				$ret .= " and " . new singleServerLink($hosts[$i]);
+				// if $pass is true, we take no further action on this group of
+				// friends
 
-				if (isset($friends[1])) $ret .= " (" . $friends[1] . ")";
+				if ($pass) continue;
 
-				$ret .= "</li>";
+				// Create the list entry for this group of friends
+
+				$ret .= "\n  <ul><a href=\"" . $_SERVER["PHP_SELF"] . "?g="
+				. $this->group . "&amp;d=" . urlencode(serialize($trimmed))
+				. "\">" . $trimmed[0];
+
+				for ($i = 1; $i < count($trimmed) - 1; $i++)
+					$ret .= ", " . $trimmed[$i];
+
+				$ret .= " and " . $trimmed[count($trimmed) - 1] . "</a>";
+
+				if ($desc) $ret .= " ($desc)";
+
+				$ret .= "</ul>";
 			}
 
-			$ret .= "\n</ul>";
+			if (isset($missing)) {
+				$ret .= "<p class=\"center\">The following friends are defined,
+				but we do not have sufficient data to compare them.</p>\n<ul>";
 
-		}
+				foreach ($missing as $friends) {
+					$hosts = $friends[0];
+					$nhosts = count($hosts);
 
-			/*
-					$missing_friends[] = $pair;
-			}
+					$ret .= "\n<li>" . new singleServerLink($hosts[0]);
 
-			$ret .= "\n</ul>";
+					for($i = 1; $i < $nhosts - 1; $i++) {
+						$ret .= ", " . new singleServerLink($hosts[$i]);
+					}
 
-			if (isset($missing_friends)) {
+					$ret .= " and " . new singleServerLink($hosts[$i]);
 
-				$ret .= "\n\n<ul>";
-
-				foreach($missing_friends as $friends) {
-					$ret .= "<li>$friends[0] and $friends[1]";
-					
-					if (isset($friends["desc"])) $ret .= $friends["desc"];
+					if (isset($friends[1])) $ret .= " (" . $friends[1] . ")";
 
 					$ret .= "</li>";
 				}
 
 				$ret .= "\n</ul>";
+
 			}
 
 		}
-			*/
 
 		return $ret . new compareCyc($this->map->list_all(), $this->group);
 	}

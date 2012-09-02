@@ -130,8 +130,6 @@ class docHelper {
 			// those
 
 			$txt = str_replace("<br/>", " ", $arr[0]);
-
-
 			$ret .= "\n  <li><div ${il}>$txt</div></li>";
 		}
 
@@ -224,30 +222,9 @@ innacurate clocks.</dd>
 
 	public function list_omitted($index, $class = "omitlist")
 	{
-		// Show what data is being omitted, by printing the relevant index
-		// of $omit_data as a list
+		// We don't have an omitted data file any more.
 
-		// Get the omitted data if we haven't already
-
-		require_once(ROOT . "/_conf/omitted_data.php");
-
-		$omit = new omitData;
-
-		$data = $omit->get_data($index);
-
-		if ($data) {
-			$ret = "\n\n<ul class=\"$class\">";
-
-			foreach($data as $datum) {
-				$ret .= "\n  <li>" . htmlentities($datum) . "</li>";
-			}
-
-			$ret .= "</ul>\n";
-		}
-		else
-			$ret = "<p class=\"err\">can't get data for ${index}.</p>";
-	
-		return $ret;
+		return;
 	}
 
 }

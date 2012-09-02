@@ -190,8 +190,17 @@ class ZoneMapBase {
 
 		$ret = false;
 
-		if ($file = $this->map[$server]) {
-			$ret = $this->af_vers[$file];
+		if (isset($this->map[$server])) {
+			$ret = $this->af_vers[$this->map[$server]];
+		}
+		else {
+			// try stripping off "/global"
+	
+			$newname = preg_replace("/\/global/", "", $server);
+
+			if (isset($this->map[$newname])) {
+				$ret = $this->af_vers[$this->map[$newname]];
+			}
 		}
 
 		return $ret;

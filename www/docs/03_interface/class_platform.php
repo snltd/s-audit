@@ -46,7 +46,8 @@ for local zones.</dd>
 <dd>This field explains what type of environment the system is running in.
 If it is a physical server, &quot;physical&quot; is displayed. For
 virtualized environments, the nature of that virtualization is given, which
-may be LDOM, VirtualBox or VMWare.</dd>
+may be a harware domain (as on an E10K for instance), XEN domain, Logical
+Domain, VirtualBox or VMWare.</dd>
 
 <dd>The following colour-coding is used:</dd>
 
@@ -117,9 +118,9 @@ installed OBP version for that particular server type.</dd>
 	echo $dh->colour_key($dh->grid_key["OBP"]);
 ?>
 
-<dt>ALOM f/w</dt>
-<dd>On supported SPARC servers, shows the version of the ALOM firmware.
-Blank in local zones.</dd>
+<dt>LOM f/w</dt>
+<dd>On supported SPARC servers, shows the version of the LOM or SC firmware,
+along with the type of controller.  Blank in local zones.</dd>
 
 <dd>As with the OBP version, boxes are colour coded to show the highest
 installed version numbers for each hardware type.</dd>
@@ -128,9 +129,13 @@ installed version numbers for each hardware type.</dd>
 	echo $dh->colour_key($dh->grid_key["ALOM f/w"]);
 ?>
 
-<dt>ALOM IP</dt>
+<dd>Note that old versions of the s-audit client call this field &quot;ALOM
+IP&quot;, so you may see both fields in your audits.</dd>
+
+
+<dt>LOM IP</dt>
 <dd>On some SPARC servers, for instance v210s, it is possible to get the
-firmware version and IP address of the system ALOM from inside Solaris.
+firmware version and IP address of the system LOM or SC from inside Solaris.
 <tt>s-audit.sh</tt> does this if it can, and such results are presented in
 this column on a solid coloured field. (The default colour is orange, but it
 can be changed in <tt>_conf/nic_colours.php</tt>. Please see below for the
@@ -145,7 +150,7 @@ would be <tt>cs-db-02-lom</tt>. If you use a similar convention, the s-audit
 interface will try to &quot;guess&quot; ALOM addresses by appending your
 suffix to the hostname of the server it is looking at, then seeing if the
 name it has created resolves in DNS.  If it does, then the address to which
-it resolves is displayed. You can set your own ALOM suffix by changing
+it resolves is displayed. You can set your own LOM suffix by changing
 the</dd>
 
 <dd>
@@ -168,6 +173,9 @@ the site for which s-audit was originally developed connected ALOMs with
 orange cable. This system colour codes authoritative and &quot;guessed&quot;
 ALOM addresses as follows:</dd>
 
+<dd>Note that old versions of the s-audit client call this field &quot;ALOM
+IP&quot;, so you may see both fields in your audits.</dd>
+
 <?php
 	echo $dh->colour_key($dh->grid_key["ALOM IP"]);
 ?>
@@ -184,7 +192,9 @@ colour-coding is used to highlight different storage types:</dd>
 (note that SATA disks are shown as &quot;IDE&quot;), SCSI VHCI, SAS, etc.
 Optical disk drives are again grouped by bus type, and those which have
 disks loaded or mounted are highlighted by amber and green fields
-respectively.</dd>
+respectively. The number of disks reported may not be the number of physical
+drives, as multipathed devices are typically presented to the system as
+multiple drives.</dd>
 
 <dd>Note that tape jukeboxes typically contain multiple drives, and the
 drives are reported, not the enclosures.</dd>
@@ -192,7 +202,14 @@ drives are reported, not the enclosures.</dd>
 <dd>For some optical storage arrays, for instance T3s and 3510s shown on a
 dark blue field. If they can be retrieved, the model name and firmware
 revision are shown. Note that the disks the array contains will be listed AS
-WELL AS the array itself.</dd>
+WELL AS the array itself. FC devices which cannot be identified display
+their WWN.</dd>
+
+<dt>multipath</dt>
+
+<dd>Displays the type(s) of multipathing used on the system (currently
+native mpxio and EMC PowerPath are recognized), and the number of
+multipathed devices. PowerPath devices are broken down by type.</dd>
 
 <dt>card</dt>
 <dd>Lists PCI and SBUS cards. If the card can be indentifed by consulting

@@ -29,7 +29,6 @@ data and extra files.</p>
 		<dd>You can have as many groups of machines as you wish. Each
 		group has its own data. The default group is called
 		&quot;default&quot;.</dd>
-		<dt>
 
 		<dl>
 			<dt><tt>hosts/</tt></dt>

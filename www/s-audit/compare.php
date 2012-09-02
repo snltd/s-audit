@@ -28,6 +28,13 @@ define("SINGLE_SERVER", 1);
 
 $map = ZoneMap::getInstance();
 
+// We need to create a GetServers object here, because it adds local zones
+// to the map. If we don't do this, we don't know any of the locals exist,
+// so we can't compare them
+
+new GetServers($map, false, false);
+	
+
 // $d should contain a serialized array of the hosts to compare
 
 if (isset($_GET["d"]))
@@ -35,7 +42,7 @@ if (isset($_GET["d"]))
 elseif(isset($_POST["hosts"]))
 	$hosts = $_POST["hosts"];
 else {
-	
+
 	// Looks like we don't have any hosts to compare. Show the friends list
 	// and the compare selector
 
@@ -73,6 +80,8 @@ href=\"javascript:toggleCommon();\">hide common data</a></p></div>";
 
 // Get host data
 
+//pr($map);
+
 foreach($hosts as $host) {
 
 	// Make sure we have data for the host
@@ -90,7 +99,6 @@ if (!isset($locals)) define("NO_ZONES", 1);
 
 $data = new GetServers($map, $hosts, array("os", "net", "fs", "app", "tool",
 "hosted", "security", "patch" ));
-pr($data->get_array());
 
 $view = new compareView($data->get_array(), $map);
 

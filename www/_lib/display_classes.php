@@ -147,7 +147,7 @@ class HostGrid {
 					if (in_array($to_follow, $fields)) {
 					
 						foreach($fields as $f) {
-							$newf[] = $f;
+							$NEWF[] = $f;
 							if ($f == $to_follow) $newf[] = $xf;
 						}
 						$fields = $newf;
@@ -182,8 +182,8 @@ class HostGrid {
 
 		$p = $this->map->get_parent_zone($zone);
 		
-		if (isset($this->servers["$p/global"][$class][$prop])) {
-			$r = $this->servers["$p/global"][$class][$prop];
+		if (isset($this->servers["$p/$p"][$class][$prop])) {
+			$r = $this->servers["$p/$p"][$class][$prop];
 
 			$r = (count($r) == 1)
 				? $r[0]
@@ -406,13 +406,9 @@ class HostGrid {
 
 		$this->af_ver = $this->map->get_af_ver($server);
 
-		// as of 3.2 the client file calls the global zone 'hostname/global'.
-		// Prior to that it was just called 'hostname'. This is the key of
-		// the $this->servers array.
+		// Now every zone name is prefixed by the physical host name
 
-		$fetch = ($this->af_ver >= 3.2)
-			? "${server}/global"
-			: $server;
+		$fetch = "$server/$server";
 
 		if (isset($this->servers[$fetch][$this->c]))
 			$ret = $this->show_zone($this->servers[$fetch][$this->c]);
@@ -585,9 +581,10 @@ class HostGrid {
 		// This function informs the user that a zone audit failed part-way
 		// through. There probably won't even be an audit completed field
 
-		return $this->show_hostname($data["hostname"], "error") 
+		return "\n<tr>" . $this->show_hostname($data["hostname"], "error") 
 		. new Cell("Audit errored. Message was &quot;" . $data["_err_"][0] .
-		"&quot;", "error", false, false, (sizeof($this->fields) - 1));
+		"&quot;", "error", false, false, (sizeof($this->fields) - 1)) .
+		"</tr>";
 	}
 
 
@@ -3923,11 +3920,8 @@ class OSGrid extends PlatformGrid
 			? $zn
 			: $this->map->get_parent_zone($zn);
 
-		if ($this->map->get_af_ver($z) >= 3.2)
-			$z = "$z/global";
-
 		$arch = (preg_match("/SPARC/",
-		$this->servers[$z]["platform"]["hardware"][0]))
+		$this->servers["$z/$z"]["platform"]["hardware"][0]))
 			? "s"
 			: "x";
 
@@ -4605,9 +4599,6 @@ class Page {
 	);
 		// HTTP meta tags. Key/value pairs
 	
-	protected $verstr;
-		// string describing version of interface or documentation
-
 	protected $mystring = "interface";
 		// What kind of pages we're doing. In a variable so it can be
 		// overridden
@@ -4629,7 +4620,7 @@ class Page {
 
 		$this->type = $title;
 		$this->title = SITE_NAME . " s-audit $this->mystring :: $title";
-		$this->verstr = "interface version " . MY_VER;
+		$GLOBALS["verstr"] = "interface version " . MY_VER;
 		$this->styles[] = "dynamic_css.php?" . basename($_SERVER["PHP_SELF"]);
 
 
@@ -4722,25 +4713,25 @@ class Page {
 		return $nav->display_navbar() . "\n<div id=\"content\">";
 	}
 
-	public function spacer()
+	static function spacer()
 	{
 		return "\n\n<div class=\"spacer\">&nbsp;</div>";
 	}
 
-	public function close_page()
+	static function close_page()
 	{
 		echo "</div>" . Page::add_footer() . "\n</body>\n</html>";
 	}
 
-	protected function add_footer()
+	static function add_footer()
 	{
 		// The bar at the bottom of every page
 
 		$ret = "\n\n<div id=\"footer\">This is &quot;" .  SITE_NAME 
 		. "&quot; s-audit web interface ::";
 
-		if (isset($this->verstr))
-			$ret .= " $this->verstr ::";
+		if (isset($GLOBALS["verstr"]))
+			$ret .= " " . $GLOBALS["verstr"] ." ::";
 			
 		$ret .= " (c) " . C_YEAR . " <a href=\"http://snltd.co.uk\">SNLTD</a>";
 
@@ -4752,7 +4743,20 @@ class Page {
 		
 	}
 
-	public function f_error($msg = "undefined error", $depth = 0)
+	static function warn($msg = "undefined error", $depth = 0) {
+		echo "\n\n<div class=\"f_err\">\n<h3>S-AUDIT WARNING</h3>\n\n"
+		. "<p>$msg</p></div>";
+	}
+
+	static function error($msg = "undefined error", $depth = 0) {
+		Page::err_box($msg, "Error", $depth);
+	}
+
+	static function f_error($msg = "undefined error", $depth = 0) {
+		Page::err_box($msg, "Fatal Error", $depth);
+	}
+
+	static function err_box($msg = "undefined error", $title, $depth = 0)
 	{
 		// For fatal errors outside a grid. The $depth argument is to close
 		// off open DIVs. Use with care and the pages will stay valid.
@@ -4761,34 +4765,25 @@ class Page {
 		// create the HTML we're missing
 
 		if (!isset($GLOBALS["pg_open"])) {
-			$pg = new Page("fatal error");
+			$pg = new Page($title);
 		}
 
-		echo "\n\n<div class=\"f_err\">\n<h3>S-AUDIT FATAL ERROR</h3>\n\n"
-		. "<p>$msg</p>\n\n<p><a href=\"" . ROOT_URL 
-		. "/index.php\">Return to front page</a>.</p>";
+		echo "\n\n<div class=\"f_err\">\n<h3>S-AUDIT "
+		. strtoupper($title) . "</h3>\n\n"
+		. "<p>$msg</p>";
 		
+		if (preg_match("/error/", $title))
+			echo "\n\n<p><a href=\"" . ROOT_URL 
+			. "/index.php\">Return to front page</a>.</p>";
+		
+		echo "</div>";
+
 		if ($depth)
 			for ($i = 1; $i < $depth; $i++) echo "\n\n</div>";
 
 		Page::close_page();
 
 		exit();
-	}
-
-	static function error($msg = "undefined error")
-	{
-		// Print an error message and close the page
-
-		echo "<p class=\"error\">ERROR: $msg</p>" .  Page::close_page();
-		exit();
-	}
-
-	static function warn($msg = "undefined warning")
-	{
-		// Print a warning message across the page
-
-		echo "<p class=\"warn\">WARNING: ${msg}</p>";
 	}
 
 }
@@ -4902,7 +4897,7 @@ class ssPage extends audPage {
 
 		return (isset($_GET["s"]))
 			? " (member of <strong><a href=\"single_server.php?g=$group"
-			. "\">$group</strong> group)"
+			. "\">$group</a></strong> group)"
 			: parent::header_group_name($group);
 	}
 
@@ -4942,7 +4937,12 @@ class docPage extends Page {
 
 		$verfile = DOC_ROOT . "/.version";
 
-		$this->verstr = (file_exists($verfile))
+		// Yes, I know all about using global variables. This used to be a
+		// private class variable, but now we have to call all these methods
+		// statically all the time, it's got to go global. I wouldn't do
+		// this if I wasn't discontinuing the software.
+
+		$GLOBALS["verstr"] = (file_exists($verfile))
 			? " documentation version " . file_get_contents($verfile)
 			: "";
     }
@@ -4957,7 +4957,7 @@ class docPage extends Page {
 		. "\n<div id=\"docwrapper\">\n<div id=\"doccontent\">";
 	}
 
-	private function dyn_menu()
+	static function dyn_menu()
 	{
 		// Put the dynamic menu on the right of the page. For documentation
 		// pages. First close the "content" div, and open another. That'll
@@ -4968,10 +4968,10 @@ class docPage extends Page {
 		return "\n</div>\n<div id=\"vmenu\">" . $vm->print_list() . "</div>";
 	}
 
-	public function close_page()
+	static function close_page()
 	{
-		echo  $this->dyn_menu() . "</div>" . $this->spacer() .
-		$this->add_footer() . "\n\n</body>\n</html>";
+		echo  docPage::dyn_menu() . "</div>" . docPage::spacer() .
+		Page::add_footer() . "\n\n</body>\n</html>";
 	}
 
 }
@@ -4993,9 +4993,9 @@ class indexPage extends docPage {
 
 	protected $link_root = ROOT_URL;
 
-	public function close_page()
+	static function close_page()
 	{
-		echo "</div></div>" . $this->spacer() . $this->add_footer() .
+		echo "</div></div>" . Page::spacer() . indexPage::add_footer() .
 		"\n\n</body>\n</html>";
 	}
 
@@ -5172,13 +5172,13 @@ class queryString {
 
 		if (isset($_GET["g"])) {
 
-			if ($qs) $qs .= "&";
+			if ($qs) $qs .= "&amp;";
 
 			$qs .= "g=$_GET[g]";
 		}
 		elseif (isset($_POST["g"])) {
 
-			if ($qs) $qs .= "&";
+			if ($qs) $qs .= "&amp;";
 
 			$qs .= "g=$_POST[g]";
 		}
@@ -5197,7 +5197,7 @@ class queryString {
 		}
 		elseif (isset($_GET["h"])) {
 
-			if ($qs) $qs .= "&";
+			if ($qs) $qs .= "&amp;";
 
 			$qs .= "h=1";
 		}
@@ -5554,8 +5554,8 @@ class singleServerLink {
 			$qs = "g=" . $_GET["g"] . "&amp;s=";
 
 			$qs .= ($parent)
-				? "${host}@$parent"
-				: $host;
+				? "$host@$parent"
+				: "$host";
 
 			$this->html = "<a ${class}href=\"single_server.php?$qs\">$host</a>";
 		}

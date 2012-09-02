@@ -154,7 +154,7 @@ class GetServers extends GetServersBase {
 			$s_list = array($s_list);
 
 		foreach($s_list as $g) {
-			
+
 			// We might have been asked for a zone and told what server file
 			// to use
 
@@ -162,6 +162,16 @@ class GetServers extends GetServersBase {
 				$a = explode("@", $g);
 				$c_g = $srv_b = $a[1];
 				$hn = $a[0];
+			}
+			elseif(preg_match("/\//", $g)) {
+
+				// This is how they come from the cycle gadget on the
+				// compare page
+
+				$a = explode("/", $g);
+				$c_g = $srv_b = $a[0];
+				$hn = $a[1];
+				$compare = true;
 			}
 			else {
 				$srv_b = $g;
@@ -175,9 +185,15 @@ class GetServers extends GetServersBase {
 				// If we were only asked for a local zone, also get the
 				// global zone's O/S audit data
 
-				if (isset($a))
+				if (isset($a)) {
+					$gl_nm = (isset($compare))
+						? "$a[1]/$a[1]"
+						: $a[1];
+					
 					$this->servers = array_merge($this->servers,
-					$this->parse_m_file($f, array("platform", "os"), $a[1]));
+					$this->parse_m_file($f, array("platform", "os"),
+					$gl_nm));
+				}
 			}
 
 		}
@@ -238,6 +254,7 @@ class GetServers extends GetServersBase {
 	{
 		// Only get classes in the second arg and zones in the third (if
 		// supplied)
+			
 
 		if ($cl && is_string($cl))
 			$cl = array($cl);
@@ -260,10 +277,11 @@ class GetServers extends GetServersBase {
 		if (!$fa = file($file, FILE_IGNORE_NEW_LINES))
 			page::warn("Could not read file. [${file}]");
 
-
 		$global = basename(dirname($file));
 
-		$match = ($this->map->is_global($zone)) ? $zone : "${global}/$zone";
+		//$match = ($this->map->is_global($zone)) ? $global : $zone;
+
+		$match = ($zone) ? $zone : $global;
 
 		$last_row = count($fa) - 1;
 
@@ -272,11 +290,21 @@ class GetServers extends GetServersBase {
 
 		preg_match("/^([^ ]+) v-([^ ]*) .*$/", $fa[0], $ca);
 
-		if ($ca[1] != "@@BEGIN_s-audit")
+		if ((count($ca) != 3) || ($ca[1] != "@@BEGIN_s-audit")) {
+			$this->map->af_vers[$file] = "invalid";
 			page::warn("Invalid audit file. [${file}]");
+			return array();
+		}
 
-		if ($ca[2] > MAX_AF_VER || $ca[2] < MIN_AF_VER)
+		// Write the audit file version into the map. The key is the
+		// filename, the value is the version number
+
+		$this->map->af_vers[$file] = $ca[2];
+
+		if ($ca[2] > MAX_AF_VER || $ca[2] < MIN_AF_VER) {
 			page::warn("Invalid audit file version. [${file}]");
+			return array();
+		}
 
 		// And do we have a good-looking footer?
 
@@ -291,8 +319,6 @@ class GetServers extends GetServersBase {
 		$ret = array();
 		$skip = 0;
 
-		// Write the audit file version into the map. The key is the
-		// filename, the value is the version number
 
 		$this->map->af_vers[$file] = $ca[2];
 
@@ -300,18 +326,38 @@ class GetServers extends GetServersBase {
 
 			if (preg_match("/^BEGIN ([^@]+)@(.*)$/", $l, $a)) {
 
+				// a[1] is the audit class
+				// a[2] is the zone name. For files from >= 3.2, the machine
+				//      itself is called 'global'; before that is was called
+				//      by its hostname
+
 				// If we hit a BEGIN line, start recording the data in a
 				// temporary array
 
-				$this_h = ($a[2] == $global) ? $a[2] : "${global}/" . $a[2];
+				if  ($a[2] == "global") {
+					$this_h = $global;
+				}
+				else {
+					$this_h = $a[2];
+				}
+
 				$inside = $a[2];
 				$this_c = $a[1];
+				$element_name = "${global}/$this_h";
+
+				// Remember the file format changed in 3.2. We have to
+				// correct for it here
 
 				if (($cl && ! in_array($this_c, $cl)) ||
 				(defined("NO_ZONES") && !in_array($this_h, $this->globals))
-				|| ($zone && ($this_h != $match)))
+				|| ($zone && ($this_h != $match))) {
 					$skip = 1;
+					//echo "<br> no match on $l";
+					//echo " when this_h was $this_h and match was $match";
+				}
 				else {
+					//echo "<br> match on $l";
+					//echo " when this_h was $this_h";
 					$tmp = array();
 					$skip = 0;
 				}
@@ -321,8 +367,9 @@ class GetServers extends GetServersBase {
 
 				// If we hit the END line corresponding to the last BEGIN,
 				// store the data. If not, store an error
+				
 
-				$ret[$this_h][$this_c] = ($e[1] == "${this_c}@$inside")
+				$ret[$element_name][$this_c] = ($e[1] == "${this_c}@$inside")
 					? $tmp
 					: "ERROR";
 
