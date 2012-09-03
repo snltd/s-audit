@@ -4518,7 +4518,10 @@ then
 		znm=$(zonename)
 		[[ $znm != global ]] && hn=$znm
 	else
-		znm="global"
+		# Branded zones don't know they are a zone, so we have to trust that
+		# the hostname is the zone name.
+
+		[[ $KERNVER == Generic_Virtual ]] && znm=$HOSTNAME || znm="global"
 	fi
 
 	# Don't write head and foot to file for non-parseable, and issue a
