@@ -19,7 +19,7 @@
 #
 #   http://snltd.co.uk/s-audit
 #
-# v3.2 (c) 2011-2012 SNLTD.
+# v3.3 (c) 2011-2012 SNLTD.
 #
 #=============================================================================
 
@@ -31,7 +31,7 @@ PATH=/bin:/usr/bin
 WSP="	 "
 	# A space and a literal tab. ksh88 won't accept \t
 
-MY_VER="3.2"
+MY_VER="3.3"
 	# The version of the script
 
 typeset -R15 RKEY
@@ -746,7 +746,7 @@ function is_global
 		RET=$IS_GLOBAL
 	else
 		(($OSVERCMP > 59)) && ID="sbin" || ID="etc"
-		(($(my_pgrep "/${ID}/init") == 1)) || RET=1
+		[[ x$(my_pgrep "/${ID}/init") == x1 ]] || RET=1
 		IS_GLOBAL=$RET
 	fi
 
@@ -1384,17 +1384,12 @@ function get_virtualization
 					&& VIRT="guest LDOM" \
 					|| VIRT="primary LDOM"
 
-			elif can_has ldm && is_root
+			elif can_has ldm && is_root && ldm ls primary >/dev/null 2>&1
 			then
-
-				if ldm ls primary >/dev/null 2>&1
-				then
-					VIRT="primary LDOM"
-				elif ! $PRTDIAG -v | $EGS "PS0"
-				then
-					VIRT="guest LDOM"
-				fi
-
+				VIRT="primary LDOM"
+			elif ! $PRTDIAG -v | $EGS "PS0"
+			then
+				VIRT="guest LDOM"
 			fi
 
 		else
@@ -1907,6 +1902,10 @@ function get_net
 			type=$(eval dladm $DL_TYPE_CMD 2>/dev/null)
 		fi
 
+		# S10 brands have dladm, but can't use it
+
+		[[ -z $type ]] && type="unknown"
+
 		# Old dladms can't show the class
 
 		if [[ $type == "non-vlan" ]]
@@ -1980,7 +1979,7 @@ function get_net
 		fi
 
 		if [[ $type == "phys" || $type == "vnic" || $type == "virtual" \
-		|| $type == "legacy" ]]
+		|| $type == "legacy" || $type == "unknown" ]]
 		then
 
 			# Ask ifconfig for the IP address
@@ -2675,7 +2674,7 @@ function get_exports
 	if can_has sbdadm
 	then
 
-		sbdadm list-lu | sed '1,/^-/d' | while read guid size src
+		sbdadm list-lu 2>/dev/null | sed '1,/^-/d' | while read guid size src
 		do
 			disp export "$src (iscsi) [${size}b]"
 		done
@@ -3877,23 +3876,29 @@ function get_uid_0
 function get_ports
 {
 	# Get a list of all the programs with open ports, and stick them in a
-	# horrible kind of eval-ey array thing. This is not nice
+	# horrible kind of eval-ey array thing. This is not nice. Skip things
+	# that never have open ports, and any process which belongs to us.
+
+	NOTEST_F=" cron ttymon kcfd utmpd logadm nscd zsched ps svc.conf \
+	 automoun ksh bash vi vim cluster statd sac sed init rcapd "
+	NOTEST_P=" $(ptree $$ | sed 's/^ *//' | cut -d\  -f1 | tr '\n' ' ' ) "
 
 	if is_root && can_has pfiles
 	then
 
 		[[ -n $Z_FLAG ]] && PSFLAGS=$Z_FLAG || PSFLAGS="-e"
 
-		ps $PSFLAGS -o pid,fname | sed 1d | while read pid fname
+		ps -e $PSFLAGS -o pid,fname | sed 1d | while read pid fname
 		do
 
-			[[ $fname == "logadm" ]] && continue
+			[[ $NOTEST_F == *" $fname "* || $NOTEST_P == *" $pid "* ]] \
+				&& continue
 
-			pfiles $pid 2>/dev/null | egrep "sockname.*port:" \
+			timeout_job "pfiles $pid" 10 2>/dev/null | egrep "sockname.*port:" \
 			| while read p
 			do
 				PORT=${p##*: }
-				eval port_$PORT=$fname
+				eval port_$PORT=$fname 2>/dev/null
 				unset PORT
 			done
 
@@ -4154,20 +4159,22 @@ function get_db_mysql
 function get_ai
 {
 	# Get install services on an AI server. List AI service name with path
-	# and architecture
+	# and architecture. 'installadm list' changed in 11/11
 
 	if can_has installadm
 	then
-
-		installadm list 2>&1 | sed '1,2d' | while read n st a p pth
+		installadm list | sed '1q' | $EGS Port && old=1
+		installadm list 2>&1 | egrep "x86|Sparc" | while read n f2 f3 f4 p
 		do
-			disp "AI service" "$n $pth (${a}/${st})"
+			[[ -n $old ]] && x="($f3/$f2)" || x="($f4/$f3) [$f2]"
+
+			disp "AI service" "$n $p $x"
 		done
 
 		# Now list the install clients by MAC address, with the associated
 		# install service and architecture
 
-		installadm list -c 2>&1 | sed '1,2d' | while read s cm a pth
+		installadm list -c 2>&1 | grep : | while read s cm a pth
 		do
 
 			# installadm output is not easily parsable. It only prints the
