@@ -26,6 +26,20 @@ $grid_key = array(
 		array("database not updated in last month", "solidamber", false),
 	),
 
+	"AI service" => array(
+		array("SPARC service", false, $this->cols->icol("box", "sparc",
+		"ai_cols")),
+		 array("x86 service", false, $this->cols->icol("box", "x86",
+		 "ai_cols"))
+	),
+
+	"AI client" => array(
+		array("SPARC client", false, $this->cols->icol("box", "sparc",
+		"ai_cols")),
+		array("x86 client", false, $this->cols->icol("box", "x86", "ai_cols"))
+	)
+
+
 );
 
 // Generate the rest of the db and webserver keys automatically

@@ -254,7 +254,6 @@ class GetServers extends GetServersBase {
 	{
 		// Only get classes in the second arg and zones in the third (if
 		// supplied)
-			
 
 		if ($cl && is_string($cl))
 			$cl = array($cl);
@@ -319,7 +318,6 @@ class GetServers extends GetServersBase {
 		$ret = array();
 		$skip = 0;
 
-
 		$this->map->af_vers[$file] = $ca[2];
 
 		foreach($fa as $l) {
@@ -352,13 +350,9 @@ class GetServers extends GetServersBase {
 				(defined("NO_ZONES") && !in_array($this_h, $this->globals))
 				|| ($zone && ($this_h != $match))) {
 					$skip = 1;
-					//echo "<br> no match on $l";
-					//echo " when this_h was $this_h and match was $match";
 				}
 				else {
-					//echo "<br> match on $l";
-					//echo " when this_h was $this_h";
-					$tmp = array();
+					$TMP = array();
 					$skip = 0;
 				}
 

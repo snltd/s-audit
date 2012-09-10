@@ -125,6 +125,15 @@ class colours {
 		"sparc" => "#c7a49c"
 	);
 
+	// AI service type and install client architecture on the hosted
+	// services page
+
+	protected $ai_cols = array(
+		"sparc" => "#c7a49c",
+		"x86" => "#230997",
+	);
+
+
 	protected $card_cols = array(
 		"pci" => "#7b7a94",
 		"pcie" => "#3b7a34",

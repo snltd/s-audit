@@ -173,7 +173,8 @@ if ($qs == "hosted.php" || defined("ALL")) {
 	echo "\n/* begin hosted */\n";
 
 	foreach(array_merge($cols->get_col_list("db_cols"),
-	$cols->get_col_list("ws_cols")) as $name=>$hex) {
+	$cols->get_col_list("ws_cols"), $cols->get_col_list("ai_cols")) as
+	$name=>$hex) {
 
 		// Have to do td and dot because of style priority problems
 

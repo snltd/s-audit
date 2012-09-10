@@ -423,10 +423,13 @@ class HostGrid {
 		if (is_array($zl)) {
 
 			foreach($this->map->list_server_zones($server) as $zone) {
-				$zname = "${server}/$zone";
+				$zname = preg_replace("/\..*/", "", "${server}/$zone");
 
 				if (isset($this->servers[$zname][$this->c])) {
 					$ret .= $this->show_zone($this->servers[$zname][$this->c]);
+				}
+				else {
+					page::warn("Can't get data for '$server/$zone'.");
 				}
 
 			}
@@ -680,7 +683,7 @@ class HostGrid {
 
 		if ($this->map->is_global($z)) {
 			$row_class = "server";
-			$zname = "${z}/global";
+			$zname = "${z}/$z";
 			$parent = false;
 		}
 		else {
@@ -716,6 +719,8 @@ class HostGrid {
 				$c = "szone";
 			elseif ($v == "zone (whole root/native)")
 				$c = "lz";
+			elseif (preg_match("/solaris[189]/", $v))
+				$c = "bzone";
 			else 
 				$c = "lz";
 		}
@@ -1656,6 +1661,9 @@ class HostGrid {
 		preg_match("/^(\d+) installed \((\d+) online[, ]*(.*)\)/", $data[0],
 		$a);
 
+		if (count($a) != 4)
+			return new Cell("<strong>ERROR</strong>", "solidred");
+
 		// a[1] is the total number of services
 		// a[2] is the number of online services
 		// a[3] may by "x in maintenence"
@@ -1699,17 +1707,26 @@ class HostGrid {
 		// link to the repository
 
 		foreach($data as $row) {
-			$a = explode(" ", $row);
 
-			$class = (sizeof($a) == 3)
-				? "boxgreen"
-				: false;
+			// Hack to handle Joyent pkgsrc repos, which just show up as a
+			// URI
 
-			$url = preg_replace("/[\(\)]/", "", $a[1]);
-			$lt = preg_replace("/^\(http:\/\/|\/\)$/", "", $a[1]);
+			if (preg_match("/^http/", $row)) {
+				$c_arr[] = array("<strong>pkgsrc repo</strong> ($row)");
+			}
+			else {
+				$a = explode(" ", $row);
 
-			$c_arr[] = array("<strong>$a[0]</strong> " 
-			. "(<a href=\"$url\">$lt</a>)", $class);
+				$class = (sizeof($a) == 3)
+					? "boxgreen"
+					: false;
+
+				$url = preg_replace("/[\(\)]/", "", $a[1]);
+				$lt = preg_replace("/^\(http:\/\/|\/\)$/", "", $a[1]);
+
+				$c_arr[] = array("<strong>$a[0]</strong> " 
+				. "(<a href=\"$url\">$lt</a>)", $class);
+			}
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
@@ -3265,6 +3282,82 @@ class HostGrid {
 		return new listCell($c_arr, "smallauditl", false, 1);
 	}
 
+	protected function show_AI_service($data)
+	{
+		// Present AI service information. Put the service name in bold.
+		// Sometimes we'll have a service alias on the end in [square
+		// brackets], sometimes not
+
+		$c_arr = array();
+
+		foreach($data as $datum) {
+			$id = array();
+			$a = preg_split("/\s/", $datum);
+
+			// Now
+			// a[0] is the service name
+			// a[1] is the service path
+			// a[2] is (arch/status)
+			// a[3] is [aliased_service] or unset
+
+			$txt = "<strong>$a[0]</strong>";
+			$id["path"] = $a[1];
+
+			$xtra = preg_split("/[\(\)\/]/", $a[2]);
+			$id["arch"] = $xtra[1];
+			$id["status"] = $xtra[2];
+			
+			$class = ($xtra[1] == "x86")
+				? "x86"
+				: "sparc";
+
+			// Solaris 11 11/11 introduced the service aliases. If we have
+			// one, report it.
+
+			if (isset($a[3])) {
+				$alias = trim($a[3], "[]");
+
+				if ($alias != "-") {
+					$id["alias of"] = $alias;
+				}
+			}
+
+			$c_arr[] = array($txt . $this->indent_print($id), $class);
+		}
+
+		return new listCell($c_arr, "smallauditl", false, 1);
+	}
+
+	protected function show_AI_client($data) 
+	{
+		// AI clients
+
+		$c_arr = array();
+
+		// Sort by MAC address
+
+		sort($data);
+
+		foreach($data as $datum) {
+			$id = array();
+			$a = preg_split("/\s/", $datum);
+			$txt = "<strong>$a[0]</strong>";
+
+			$id["service"] = $a[1];
+			$id["arch"] = trim($a[2], "()");
+
+			$class = ($id["arch"] == "x86")
+				? "x86"
+				: "sparc";
+
+			$c_arr[] = array($txt . $this->indent_print($id), $class);
+
+		}
+
+		return new listCell($c_arr, "smallauditl", false, 1);
+
+	}
+
 	//-- security ------------------------------------------------------------
 
 	protected function show_user($data)
@@ -3890,7 +3983,7 @@ class OSGrid extends PlatformGrid
 	protected $sol_upds;	// Solaris update dates, from misc.php
 
 	protected $def_fields = array("distribution", "version", "release",
-	"kernel", "hostid", "packages", "patches", "publisher", "VM",
+	"kernel", "hostid", "packages", "patches", "repositorY", "VM",
 	"scheduler", "SMF services", "boot env", "uptime");
 
     public function __construct($map, $servers, $c)
@@ -3977,7 +4070,7 @@ class NetGrid extends HostGrid {
 	protected $type = "net";
 
 	protected $def_fields = array("name service", "DNS server", "NTP",
-	"SNMP", "name server", "route", "routing", "port", "net");
+	"SNMP", "name server", "route", "routing", "port", "NFS domain", "net");
 }
 
 //==============================================================================
@@ -4429,7 +4522,8 @@ class AppGrid extends SoftwareGrid
 	protected $def_fields = array("powermt", "VxVm", "VxFS", "VCS",
 	"Sun Cluster", "SMC", "sshd", "BIND", "X server", "sendmail", "exim",
 	"Samba", "ldm", "AI server", "Apache", "apache so", "mod_php", "Tomcat",
-	"iPlanet web", "Nginx", "Oracle", "MySQL server", "Postgres", "svn server" );
+	"Glassfish", "iPlanet web", "Nginx", "Squid", "Oracle", "MySQL server",
+	"Postgres", "svn server", "Networker clnt", "Networker srvr"  );
 }
 
 //----------------------------------------------------------------------------

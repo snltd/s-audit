@@ -203,7 +203,7 @@ abstract class pci_parser {
 // going to filter all the "available"s out.
 
 class pci_i386 extends pci_parser {
-	protected $ignore_str = "available";
+	protected $ignore_str = "in use|available";
 }
 
 //- old SunFire machines -----------------------------------------------------

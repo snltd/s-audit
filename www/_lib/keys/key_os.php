@@ -57,7 +57,7 @@ $grid_key = array(
 		array("partially installed<br/>packages", "solidamber", false)
 	),
 
-	"publisher" => array(
+	"repositorY" => array(
 		array("preferred publisher", "boxgreen", false)
 	),
 

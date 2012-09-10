@@ -79,10 +79,6 @@ the process which owns the open port. If <tt>s-audit.sh</tt> was unable to
 find a service name or owning process, a dash is displayed. This is common
 for kernel-level services like <tt>lockd</tt> or <tt>sunrpc</tt>.</dd>
 
-<dd>The inteface holds a list of ports it expects to be open. This is stored
-in the <a href="../extras/omitted_data.php"><tt>OMITTED_DATA_FILE</tt></a>
-file. The expected ports on this system are:</dd>
-
 <dd>
 <?php
 	echo $dh->list_omitted("usual_ports");

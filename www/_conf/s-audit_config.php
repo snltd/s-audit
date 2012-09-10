@@ -36,10 +36,7 @@ define("AUDIT_DIR", "/var/snltd/s-audit");
 	// Root of audit data
 
 define("SITE_CONFIG", CONF_DIR . "/site_config.php");
-	// Path to omitted data file
-
-define("OMITTED_DATA_FILE", CONF_DIR . "/omitted_data.php");
-	// Path to omitted data file
+	// Path to site config file file
 
 define("PER_PAGE", 20);
 	// How many servers to show on each page. This refers to GLOBAL zones
