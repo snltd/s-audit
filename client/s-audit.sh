@@ -92,7 +92,7 @@ SCADM=/usr/platform/${HW_HW}/sbin/scadm
 	&& PRTDIAG=/usr/sbin/prtdiag \
 	|| PRTDIAG=/usr/platform/${HW_HW}/sbin/prtdiag
 
-IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc "
+IGNOREFS=" dev devfs ctfs mntfs sharefs tmpfs fd objfs proc lxproc "
 	# Ignore these fs types in the fs audit
 
 # On Nexenta, egrep is really ggrep, and the two have different flags.
@@ -1599,8 +1599,6 @@ function get_be
 {
 	# Get beadm, LiveUpgrade and failsafe boot environments
 
-	is_global || return
-
 	if (($OSVERCMP > 510 )) && can_has beadm
 	then
 		# show the name, root, active flags and mountpoint. There are
@@ -1608,7 +1606,7 @@ function get_be
 
 		beadm list | sed 1q | $EGS Policy && newbea=1
 
-		beadm list | sed '1,/^-/d' | while read be f2 f3 f4 junk
+		beadm list | grep "[0-9]" | while read be f2 f3 f4 junk
 		do
 
 			if [[ -n $newbea ]]
@@ -1624,7 +1622,7 @@ function get_be
 			disp "boot env" "beadm: $be ($r) [$fl]"
 		done
 
-	elif is_root && can_has lustatus
+	elif is_global && is_root && can_has lustatus
 	then
 
 		lustatus 2>/dev/null | sed '1,3d' | while read nm c an ar a
@@ -1639,7 +1637,7 @@ function get_be
 		done
 	fi
 
-	if (($OSVERCMP > 59))
+	if [[ $OSVERCMP -gt 59 && -d /boot ]]
 	then
 
 		[[ -f /boot/grub/menu.lst ]] && GM=/boot/
@@ -2367,6 +2365,10 @@ function get_zpools
 		zpool help 2>&1 | $EGS get \
 			&& zsup=$(zpool upgrade -v \
 			| sed '1!d;s/^.*version \([0-9]*\).*$/\1/')
+
+		# Illumos now has feature flags.
+
+		[[ $zsup == *feature* ]] && zsup="feature flags"
 
 		# Get all the zpools under cluster control
 
@@ -4163,7 +4165,7 @@ function get_ai
 
 	if can_has installadm
 	then
-		installadm list | sed '1q' | $EGS Port && old=1
+		installadm list 2>/dev/null | sed '1q' | $EGS Port && old=1
 		installadm list 2>&1 | egrep "x86|Sparc" | while read n f2 f3 f4 p
 		do
 			[[ -n $old ]] && x="($f3/$f2)" || x="($f4/$f3) [$f2]"
@@ -4174,7 +4176,7 @@ function get_ai
 		# Now list the install clients by MAC address, with the associated
 		# install service and architecture
 
-		installadm list -c 2>&1 | grep : | while read s cm a pth
+		installadm list -c 2>/dev/null | grep : | while read s cm a pth
 		do
 
 			# installadm output is not easily parsable. It only prints the
