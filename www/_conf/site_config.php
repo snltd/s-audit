@@ -46,9 +46,20 @@ define("OMIT_STANDARD_CRON", true);
 	// If this is defined, standard cron jobs are not shown on the security
 	// audit page
 
+define("OMIT_MISSING_CRON", true);
+	// If this is defined, "missing" cron jobs are not shown on the security
+	// audit page. The definition files used to define standard jobs come
+	// from entire installs, and many cron jobs come from packages.
+
 define("OMIT_STANDARD_ATTRS", true);
 	// If this is defined, standard user_attrs are not shown on the security
 	// audit page
+
+define("OMIT_MISSING_ATTRS", true);
+	// If this is defined, "missing" user_attrs are not shown on the
+	// security audit page. The definition files used to define standard
+	// jobs come from entire installs, and many attributes and roles come
+	// from packages.
 
 define("SS_HOST_COLS", 6);
     // How many columns of local zones on the single server view page

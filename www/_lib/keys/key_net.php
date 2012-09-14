@@ -77,6 +77,7 @@ else {
 		array("vswitch", "boxnetvswitch", false),
 		array("etherstub", "boxnetetherstub", false),
 		array("aggregate", "boxnetaggr", false),
+		array("bridge", "boxnetbridge", false),
 		array("Sun Cluster private", "boxnetclprivnet"),
 		array("VCS LLT link", "boxnetLLT"),
 		array("member of IPMP group", "solidgreen", false),

@@ -153,6 +153,7 @@ class colours {
 		"etherstub" => "#9A5F0B",
 		"vswitch" => "#571C56",
 		"aggr" => "#DC8A82",
+		"bridge" => "#6A48dE",
 		"clprivnet" => "#2A480E",
 		"LLT" => "#2B2E70"
 	);

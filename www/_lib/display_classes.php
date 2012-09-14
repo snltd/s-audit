@@ -2242,7 +2242,7 @@ class HostGrid {
 
 			$subnet = false;
 
-			// If there's an IP address, try to get it's subnet.
+			// If there's an IP address, try to get its subnet.
 
 			if (preg_match("/^\d/", $na[1]))
 				$subnet = PlatformGrid::get_subnet($na[1]); 
@@ -2491,74 +2491,80 @@ class HostGrid {
 		//  [8] => number of devices in pool
 		//  [9] => clustered (blank or literal string 'CLUSTERED')
 		
-		if (count(explode("|", $data[0])) < 9)
-			return $this->show_zpool_legacy($data);
-		
 		$c_arr = false;
 
 		foreach($data as $pool) {
 			$id = $idc = array();
 			$a = explode("|", $pool);
 			
-			// Pool name in bold, (status) after it
+			// If the pool is FAULTED, that's all the info we have.
 
-			$txt = "<strong>$a[0]</strong> ($a[1])";
-
-			// Pool size, and how much of it is used. Highlight in amber or
-			// red if it's nearly full
-
-			$id["size"] = $a[2] . " ($a[3] used)";
-
-			if ($a[3] > 90)
-				$idc["size"] = "solidred";
-			elseif ($a[3] > 80)
-				$idc["size"] = "solidamber";
-
-			// pool layout, and the number of devices it contains
-
-			$id["layout"] = $a[7];
-			$id["devices"] = $a[8];
-
-			// Is the pool under cluster control? Highlight this, because
-			// it's unusual
-
-			if ($a[9] == "CLUSTERED") {
-				$id["clustered"] = "yes";
-				$idc["clustered"] = "solidpink";
+			if ($a[1] == "FAULTED") {
+				$c_arr[] = array("<strong>$a[0]</strong> ($a[1])",
+				"solidred");
 			}
-
-			// The pool version. If a higher version is supported (i.e. the
-			// pool can be upgraded) put it on an orange field
-
-			if ($a[5] == $a[6])
-				$id["version"] = $a[5];
 			else {
-				$id["version"] = "$a[5] ($a[6] supported)";
-				$idc["version"] = "solidorange";
-			}
-			
-			// When the pool was last scrubbed. See legacy function for the
-			// $c[] array
+				// Pool name in bold, (status) after it
 
-			if ($a[4] == "none") 
-				$id["scrubbed"] = $a[4];
-			else {
-				$c = preg_split("/\W+/ ", $a[4]);
-				$id["scrubbed"] = "$c[2] $c[1] $c[6]";
-			}
+				$txt = "<strong>$a[0]</strong> ($a[1])";
 
-			// Get the class for the cell. This depends on the pool's status
+				// Pool size, and how much of it is used. Highlight in amber or
+				// red if it's nearly full
 
-			if ($a[1] == "FAULTED")
-				$class = "solidred";
-			elseif($a[1] == "DEGRADED")
-				$class = "boxamber";
-			else
-				$class = "boxgreen";
+				$id["size"] = $a[2] . " ($a[3] used)";
 
-			// Done. Life is so much easier with delimiters
+				if ($a[3] > 90)
+					$idc["size"] = "solidred";
+				elseif ($a[3] > 80)
+					$idc["size"] = "solidamber";
 
-			$c_arr[] = array($txt . $this->indent_print($id, $idc), $class);
+				// pool layout, and the number of devices it contains
+
+				$id["layout"] = $a[7];
+				$id["devices"] = $a[8];
+
+				// Is the pool under cluster control? Highlight this, because
+				// it's unusual
+
+				if ($a[9] == "CLUSTERED") {
+					$id["clustered"] = "yes";
+					$idc["clustered"] = "solidpink";
+				}
+
+				// The pool version. If a higher version is supported (i.e. the
+				// pool can be upgraded) put it on an orange field
+
+				if ($a[6] == "feature flags") {
+					$id["version"] = "n/a (feature flags)";
+				}
+				elseif ($a[5] == $a[6])
+					$id["version"] = $a[5];
+				else {
+					$id["version"] = "$a[5] ($a[6] supported)";
+					$idc["version"] = "solidorange";
+				}
+				
+				// When the pool was last scrubbed. See legacy function for the
+				// $c[] array
+
+				if ($a[4] == "none") 
+					$id["scrubbed"] = $a[4];
+				else {
+					$c = preg_split("/\W+/ ", $a[4]);
+					$id["scrubbed"] = "$c[2] $c[1] $c[6]";
+				}
+
+				// Get the class for the cell. This depends on the pool's status
+
+				$class = ($a[1] == "DEGRADED")
+					? "boxamber"
+					: "boxgreen";
+
+
+				$c_arr[] = array($txt . $this->indent_print($id, $idc),
+				$class);
+			 }
+
 
 		}
 
@@ -3518,6 +3524,9 @@ class HostGrid {
 				$omit = false;
 			}
 
+			if (defined("OMIT_MISSING_ATTRS"))
+				$m_arr = array();
+
 			// x_arr[] => non-standard attrs
 			// m_arr[] => standard attrs which haven't been found
 
@@ -3578,6 +3587,9 @@ class HostGrid {
 				$m_arr = array();
 				$omit = false;
 			}
+			
+			if (defined("OMIT_MISSING_CRON"))
+				$m_arr = array();
 
 			// x_arr[] => non-standard cron jobs
 			// m_arr[] => standard cron jobs which haven't been found
@@ -3983,7 +3995,7 @@ class OSGrid extends PlatformGrid
 	protected $sol_upds;	// Solaris update dates, from misc.php
 
 	protected $def_fields = array("distribution", "version", "release",
-	"kernel", "hostid", "packages", "patches", "repositorY", "VM",
+	"kernel", "hostid", "packages", "patches", "repository", "VM",
 	"scheduler", "SMF services", "boot env", "uptime");
 
     public function __construct($map, $servers, $c)
@@ -4070,7 +4082,8 @@ class NetGrid extends HostGrid {
 	protected $type = "net";
 
 	protected $def_fields = array("name service", "DNS server", "NTP",
-	"SNMP", "name server", "route", "routing", "port", "NFS domain", "net");
+	"SNMP", "name server", "domainname", "route", "routing", "port", 
+	"NFS domain", "net");
 }
 
 //==============================================================================
@@ -4170,15 +4183,24 @@ class SecurityGrid extends HostGrid{
 		// class
 
 		$this->curr_omit = array();
+	
+		$global_name = "$server/$server";
 
-		if (isset($this->server[$server]["os"])) {
+		if (isset($this->servers[$global_name]["os"])) {
 			$dist = preg_replace("/ /", "_",
-			$this->servers[$server]["os"]["distribution"][0]);
+			$this->servers[$global_name]["os"]["distribution"][0]);
 
 			preg_match("/.*(5\.\d+).*/",
-			$this->servers[$server]["os"]["version"][0], $a);
+			$this->servers[$global_name]["os"]["version"][0], $a);
 
-			$myos = "${dist}-$a[1]";
+			// We don;t specify a SunOS version for some of the Illumos
+			// distributions, but they're all 5.11
+
+			$sunosrev = (isset($a[1]))
+				? $a[1]
+				: "5.11";
+
+			$myos = "${dist}-$sunosrev";
 
 			if (isset($this->defs[$myos]))
 				$this->curr_omit = $this->defs[$myos];

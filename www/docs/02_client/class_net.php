@@ -65,6 +65,11 @@ $pg = new docPage($menu_entry);
 	are reported separately. Only enabled services are shown, so on a system
 	with routing and forwarding disabled, expect no information.</dd>
 
+	<dd>On Solaris 10 and later, when <tt>routeadm</tt> is available, status
+	is reported in two parts, for exampled <tt>enabled/enabled</tt>. The
+	first part is the current configuration, the second the system state.
+	See the <tt>routeadm</tt> man page for further information.</dd>
+
 	<dt>port</dt>
 	<dd>Gets a list of all open ports, and attempts to work out which
 	program is using each one. Output is of the form</dd>

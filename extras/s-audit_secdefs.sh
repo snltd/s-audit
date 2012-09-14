@@ -20,7 +20,7 @@
 # A range of sec_def files are bundled with the s-audit interface, so no one
 # other than me will probably ever use this.
 #
-# Part of s-audit. (c) 2011 SearchNet Ltd
+# Part of s-audit. (c) 2011-2012 SearchNet Ltd
 #   see http://snltd.co.uk/s-audit for licensing and documentation
 #
 #=============================================================================
@@ -39,11 +39,25 @@ function die
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
+if [[ $1 == "help" || $1 == "-h" ]]
+then
+	print "usage: ${0##*/} [distribution_name]"
+	exit 2
+fi
+
+if ! id | egrep -s "^uid=0"
+then
+	print "ERROR: script must be run as root."
+	exit 1
+fi
+
 DIST=${1:-Solaris}
 
 # Now we know what to call the file, and we can open it 
 
 OUTFILE="sec_defs-$DIST-$(uname -r).php"
+
+print -u2 "Creating definition file '$OUTFILE'."
 
 exec 1>$OUTFILE
 
@@ -62,20 +76,27 @@ cat << EOPHP
 
 EOPHP
 
-# user attrs, if this system has them
+# user attrs, if this system has them. 5.11 introduced the /etc/user_attr.d
+# directory
 
-if [[ -f /etc/user_attr ]]
+if [[ -n /etc/user_attr ]]
 then
+	ATTR_FILES=/etc/user_attr
+
+	[[ -d /etc/user_attr.d ]] \
+		&& ATTR_FILES="$ATTR_FILES $(ls /etc/user_attr.d/*)"
+
 	print '	"user_attrs" => array('
-	sed -n '/^[^#]/s/.*/		"&",/p' /etc/user_attr | sed '$s/,$/),/'
+	cat $ATTR_FILES | sed -n '/^[^#]/s/.*/		"&",/p' | sort -u \
+	| sed '$s/,$/),/'
 fi
 
-# Users 
+# Users. Remove my 264 user, because it's always there
 
 print '\n	"users" => array('
 
 cut -d: -f1,3 /etc/passwd | sed 's/:/ (/;s/$/)/;s/.*/		"&",/' \
-| sed '$s/,$/),/'
+| grep -v "rob (264)" | sed '$s/,$/),/'
 
 # Crontabs. Prefix every cron job with "username:"
 

@@ -82,8 +82,11 @@ class defs {
 				"10/09" => "update 8",
 				"9/10" => "update 9",
 				"8/11" => "update 10"
-				)
+				),
 
+			"5.11" => array(
+				"11/11" => "GA"
+				)
             );
 
 	// Sun Studio's -V output mapped to marketing release number
