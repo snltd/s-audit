@@ -1550,13 +1550,23 @@ function get_os_dist
 
 function get_os_ver
 {
-	# Get the SunOS version of the operating system
+	# Get the version of the operating system. Not everything gives itself a
+	# version
 
 	if (($OSVERCMP < 511))
 	then
 		MV=${OSVER#*.}
 		(($OSVERCMP < 57)) && MV="2.$MV"
 		OS_V="$MV (SunOS $OSVER)"
+	elif [[ $OS_D == "Oracle Solaris" ]]
+	then
+		OS_V="11 (SunOS 5.11)"
+	elif [[ $OS_D == "OmniOS" ]]
+	then
+		OS_V=$(sed '1!d;s/^.*v\([^ ]*\) .*$/\1/' /etc/release)
+	elif [[ $OS_D == "Illumian" ]]
+	then
+		OS_V=$(sed 's/illumian \([^ ]*\).*$/\1/' /etc/issue)
 	else
 		OS_V="SunOS $OSVER"
 	fi
@@ -1579,11 +1589,26 @@ function get_os_rel
 	elif [[ $OS_D == SXCE || $OS_D == "Nevada" ]]
 	then
 		OS_R=$(sed '1!d;s/^.* \(snv[^ ]*\).*$/\1/' $r)
+	elif [[ $OS_D == "Oracle Solaris" ]]
+	then
+		OS_R=$(sed '1!d;s/^.*is 11 \([^ ]*\).*$/\1/' $r)
+	elif [[ $OS_D == "OpenIndiana" ]]
+	then
+		OS_R=$(sed '1!d;s/^.*oi_\([^ ]*\).*$/\1/' $r)
 	elif [[ $OS_D == "OpenSolaris" ]]
 	then
 		[[ -f /etc/release ]] \
 			&& OS_R=$(sed '1!d;s/^.*aris \([^ ]*\) .*$/\1/' $r) \
 			|| OS_R="unknown"
+	elif [[ $OS_D == "Illumian" ]]
+	then
+		OS_R=$(cut -d\( -f2 /etc/issue | tr -d \))
+	elif [[ $OS_D == "OmniOS" ]]
+	then
+		OS_R=$(sed '1!d;s/^.* //' $r)
+	elif [[ $OS_D == "SmartOS" ]]
+	then
+		OS_R=$(sed '1!d;s/^.*OS \([^ ]*\).*$/\1/' $r)
 	elif [[ $OS_D == "BeleniX" ]]
 	then
 		OS_R=$(sed '1!d;s/^.*iX \([^ ]*\) \(.*\)$/\1 \(\2\)/' $r)
@@ -1728,10 +1753,18 @@ function get_pkg_repo
 	if [[ -f /opt/local/etc/pkgin/repositories.conf ]]
 	then
 
-		while read repo
+		while read a
 		do
-			disp "repository" $repo
+			disp "repository" $a
 		done < /opt/local/etc/pkgin/repositories.conf
+
+	elif can_has dpkg
+	then
+
+		apt-cache policy | grep http | while read a b c d
+		do
+			disp "repository" "$c ($b)"
+		done
 
 	elif can_has pkg
 	then
@@ -2386,7 +2419,7 @@ function get_zpools
 
 			if [[ $st == "FAULTED" ]]
 			then
-				disp "zpool" $zp $st
+				[[ -n $OUT_P ]] && disp zpool "$zp|$st" || disp zpool $zp $st
 			else
 
 				# get the last scrub
