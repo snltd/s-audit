@@ -67,7 +67,8 @@ Domain, VirtualBox or VMWare.</dd>
 box in this field then it does not support zones.</dd>
 
 <dd>For non-global zones, the nature of the zone (whole or sparse root) is
-listed, along with the brand, if it is not native.</dd>
+listed, along with the brand, if it is not native. On Solaris 11 hosts,
+&quot;solaris&quot; branded zones are considered native.</dd>
 
 
 <dt>CPU</dt>

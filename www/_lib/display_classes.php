@@ -922,7 +922,8 @@ class HostGrid {
 		elseif (preg_match("/^zone \(/", $vz)) {
 			
 			// For local zones, we highlight whole-root with a red box, and
-			// put non-native zones on an amber field
+			// put non-native zones on an amber field. We now consider
+			// "solaris" brand zones native
 
 			$za = explode("/", preg_replace("/zone \((.*)\)/", "\\1", $vz));
 
@@ -938,7 +939,7 @@ class HostGrid {
 				// Have to colour this with inline style - we've probably
 				// already used the class doing a box
 				
-				if ($za[1] != "native") {
+				if ($za[1] != "native" && $za[1] != "solaris") {
 					$col = $this->cols->icol("solid", "amber");
 					$str .= " (<strong>$za[1]</strong> brand)";
 				}
