@@ -3915,7 +3915,7 @@ function get_ports
 	# that never have open ports, and any process which belongs to us.
 
 	NOTEST_F=" cron ttymon kcfd utmpd logadm nscd zsched ps svc.conf \
-	 automoun ksh bash vi vim cluster statd sac sed init rcapd "
+	 automoun ksh bash vi vim cluster statd sac sed init rcapd smbiod "
 	NOTEST_P=" $(ptree $$ | sed 's/^ *//' | cut -d\  -f1 | tr '\n' ' ' ) "
 
 	if is_root && can_has pfiles
@@ -3923,14 +3923,18 @@ function get_ports
 
 		[[ -n $Z_FLAG ]] && PSFLAGS=$Z_FLAG || PSFLAGS="-e"
 
-		ps -e $PSFLAGS -o pid,fname | sed 1d | while read pid fname
+		# If we're in a global, filter out everything in a local
+
+		(($OSVERCMP > 59)) && is_global && SED=';/ global$/!d' || SED=''
+		
+		ps -e $PSFLAGS -o pid,fname | sed "1d$SED" | while read pid fname z
 		do
 
 			[[ $NOTEST_F == *" $fname "* || $NOTEST_P == *" $pid "* ]] \
 				&& continue
 
-			timeout_job "pfiles $pid" 10 2>/dev/null | egrep "sockname.*port:" \
-			| while read p
+			timeout_job "pfiles $pid" 4 2>/dev/null | \
+			egrep "sockname.*port:" | while read p
 			do
 				PORT=${p##*: }
 				eval port_$PORT=$fname 2>/dev/null
