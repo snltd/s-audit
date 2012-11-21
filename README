@@ -1,3 +1,7 @@
+See it working at:
+
+  http://snltd.co.uk/s-audit/demonstrator/s-audit/index.php?g=example
+
 s-audit is designed to help you manage Solaris networks. At its core is the
 client; a shell script which is run on any host you wish to audit, and which
 produces clear, human-readable output, or a machine-parseable audit file
