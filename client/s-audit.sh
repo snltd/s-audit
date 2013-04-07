@@ -895,7 +895,7 @@ function get_hostid
 {
 	# I don't need to comment this, do I?
 
-	disp "hostid" $(hostid)
+	disp "hostid" $(hostid 2>/dev/null)
 }
 
 function get_printers
@@ -1540,6 +1540,9 @@ function get_os_dist
 	elif $EGS "OpenIndiana" $r
 	then
 		OS_D="OpenIndiana"
+	elif $EGS "^Tribblix" $r
+	then
+		OS_D="Tribblix"
 	elif $EGS "Solaris 11" $r
 	then
 		OS_D="Oracle Solaris"
@@ -1629,9 +1632,9 @@ function get_be
 		# show the name, root, active flags and mountpoint. There are
 		# different beadms, but give them both the same output here
 
-		beadm list | sed 1q | $EGS Policy && newbea=1
+		beadm list 2>/dev/null | sed 1q | $EGS Policy && newbea=1
 
-		beadm list | grep "[0-9]" | while read be f2 f3 f4 junk
+		beadm list 2>/dev/null | grep "[0-9]" | while read be f2 f3 f4 junk
 		do
 
 			if [[ -n $newbea ]]
