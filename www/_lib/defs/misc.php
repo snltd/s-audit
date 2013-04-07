@@ -81,7 +81,8 @@ class defs {
 				"5/09" => "update 7",
 				"10/09" => "update 8",
 				"9/10" => "update 9",
-				"8/11" => "update 10"
+				"8/11" => "update 10",
+				"1/13" => "update 11"
 				),
 
 			"5.11" => array(

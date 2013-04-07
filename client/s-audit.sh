@@ -1594,7 +1594,8 @@ function get_os_rel
 		OS_R=$(sed '1!d;s/^.* \(snv[^ ]*\).*$/\1/' $r)
 	elif [[ $OS_D == "Oracle Solaris" ]]
 	then
-		OS_R=$(sed '1!d;s/^.*is 11 \([^ ]*\).*$/\1/' $r)
+		OS_R=$(sed '1!d;s/^.*is \(.*\) .*/\1/' $r)
+		OS_R=${OS_R#11 }
 	elif [[ $OS_D == "OpenIndiana" ]]
 	then
 		OS_R=$(sed '1!d;s/^.*oi_\([^ ]*\).*$/\1/' $r)
