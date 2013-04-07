@@ -247,7 +247,7 @@ function disp
 
 	[[ -z $val ]] && return
 
-	# Some thing like patches or memory have multiple values, and for JSON
+	# Some things like patches or memory have multiple values, and for JSON
 	# we need to group those together. Store the key we last saw in LAST_KEY
 	# and the values so far in an array called J_DAT. We need to escape soft
 	# quotes in JSON
@@ -634,9 +634,9 @@ function class_head
 		print "BEGIN $2@$1"
 	elif [[ -z $TO_FILE ]]
 	then
-		tput bold
+		tput bold 2>/dev/null
 		print "\n'$2' audit on $1\n"
-		tput sgr0
+		tput sgr0 2>/dev/null
 	fi
 }
 
@@ -3601,7 +3601,7 @@ function get_node
 	for BIN in $(find_bins node)
 	do
 		NV=$($BIN -v)
-		disp "node.js@$BIN" ${NV#v}
+		disp "node@$BIN" ${NV#v}
 	done
 }
 
