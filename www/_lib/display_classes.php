@@ -2450,8 +2450,10 @@ class HostGrid {
 				$sshvend = "Sun";
 				$subname = "Sun_SSH";
 			}
-			else
+			else {
 				$sshvend = preg_replace("/_[\d].*$/", "", $datum);
+				$subname = "unknown";
+			}
 
 			$vc = $this->ver_cols("$sshvend $sshver", "sshd", $subname);
 			$c_arr[] = array($vc[0], $vc[1], $vc[2]);
@@ -2492,6 +2494,11 @@ class HostGrid {
 		//  [8] => number of devices in pool
 		//  [9] => clustered (blank or literal string 'CLUSTERED')
 		
+
+		if (preg_match("/|/", $data[0])) {
+			return $this->show_zpool_legacy($data);
+		}
+
 		$c_arr = false;
 
 		foreach($data as $pool) {
@@ -4441,7 +4448,8 @@ class SoftwareGrid extends HostGrid
 	{
 		foreach($ver_arr as $ver) {
 			preg_match("/$regex/", $ver, $a);
-			$arr[$a[1]][] = $a[2];
+
+			if (sizeof($a) > 1) $arr[$a[1]][] = $a[2];
 		}
 
 		foreach($arr as $type=>$vers) {
@@ -4565,7 +4573,7 @@ class ToolGrid extends SoftwareGrid
 	protected $def_fields = array("PCA", "OpenSSL", "Java",
 	"perl", "Python", "PHP cmdline", "ruby", "node.js", "Sun CC", "GCC",
 	"sqlplus", "MySQL client", "Postgres client", "svn client", "rsync",
-	"Explorer", "VTS", "JASS", "Sneep", "SunCAT", "s-audit");
+	"Explorer", "VTS", "JASS", "JET", "Sneep", "SunCAT", "s-audit");
 	public function __construct($map, $servers, $c)
 	{
 
