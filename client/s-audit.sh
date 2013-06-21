@@ -946,7 +946,7 @@ function get_hardware
 	elif can_has scconf
 	then
 		cnm=" [member of SC $(scconf -p | sed -n '/Cluster name/s/^.* //p')]"
-	elif can_has haclus
+	elif can_has haclus && my_pgrep hashadow
 	then
 		cnm=" [member of VCS $(haclus -value ClusterName)]"
 	fi
