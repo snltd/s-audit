@@ -168,8 +168,9 @@ L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 	patch_count pkg_repo uptime"
 
 L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
-	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog mailman
-	splunk sshd named ssp symon samba x vbox smc ai_srv networker_c"
+	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog 
+	mailman splunk sshd named ssp symon samba x vbox smc ai_srv
+	networker_c chef_client"
 G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
 	nb_s"
 
@@ -1319,12 +1320,17 @@ function get_virtualization
 			is_running xenconsoled && VIRT="xVM dom0" || VIRT="xVM domU"
 		elif [[ $HW_HW == "i86pc" ]]
 		then
+			# Are we a KVM guest?
+
+			if $PRTDIAG 2>/dev/null | $EGS Bochs
+			then
+				VIRT="KVM guest"
 
 			# Prtdiag is not supported on x86 Solaris < 10u2. At the moment
 			# I can't work out a bulletproof way to tell whether those old
 			# OSes are running on a physical machine or in a virtualbox
 
-			if (($OSVERCMP > 59)) && $PRTDIAG >/dev/null 2>&1
+			elif (($OSVERCMP > 59)) && $PRTDIAG >/dev/null 2>&1
 			then
 				sc=$($PRTDIAG 2>/dev/null | sed 1q)
 
@@ -3337,6 +3343,15 @@ function get_vcs
 	# Report "not running" if hashadow isn't in the process table
 
 	can_has had && is_run_ver "VCS" hashadow $(had -version)
+}
+
+function get_chef_client
+{
+	for BIN in $(find_bins chef-client)
+	do
+		CHEFC_VER="$($BIN --version)"
+		is_run_ver "chef-client@/$BIN" $BIN ${CHEFC_VER##* }
+	done
 }
 
 function get_samba
