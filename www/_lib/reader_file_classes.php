@@ -237,6 +237,8 @@ class GetServers extends GetServersBase {
 					$map->dom0[] = $hn;
 
 			}
+			elseif($t == "KVM")
+				$map->kvm[] = $hn;
 			elseif($t == "VMware")
 				$map->vmws[] = $hn;
 			elseif($t == "zone") {

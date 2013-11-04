@@ -58,6 +58,9 @@ class ZoneMapBase {
 	public $domu = array();
 		// XEN domUs
 	
+	public $kvm = array();
+		// KVM guests
+	
 	public $vbox = array();
 		// List of virtualboxes. Subset of $globals
 
@@ -151,6 +154,14 @@ class ZoneMapBase {
 
 		return $this->domu;
 	}
+
+	public function list_kvms()
+	{
+		// Returns an array of hosts running as KVM guests
+
+		return $this->kvm;
+	}
+
 
 	public function list_locals()
 	{

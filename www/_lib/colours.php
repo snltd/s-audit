@@ -81,6 +81,7 @@ class colours {
 		"ldm" => "#21701A",		// guest logical domain
 		"dom0" => "#985355",	// XEN dom0
 		"domu" => "#703D3E",	// XEN domU
+		"kvm" => "#571C56",		// KVM guest
 		"unk" => "#DC8A82"		// unknown virtualization
 	);
 

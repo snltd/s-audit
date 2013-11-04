@@ -736,6 +736,8 @@ class HostGrid {
 			$c = "dom0";
 		elseif ($vt == "xVM domU")
 			$c = "domu";
+		elseif ($vt == "KVM guest")
+			$c = "kvm";
 		elseif ($vt == "unknown") {
 			
 			// unknown could be branded, or not-running zones
@@ -2495,7 +2497,7 @@ class HostGrid {
 		//  [9] => clustered (blank or literal string 'CLUSTERED')
 		
 
-		if (preg_match("/|/", $data[0])) {
+		if (!preg_match("/|/", $data[0])) {
 			return $this->show_zpool_legacy($data);
 		}
 
@@ -3705,6 +3707,7 @@ class HostGrid {
 		$vb = sizeof($this->map->list_vbox());
 		$vm = sizeof($this->map->list_vmws());
 		$xvm = sizeof($this->map->list_domus());
+		$kvm = sizeof($this->map->list_kvms());
 		$unk = sizeof($this->map->list_unknowns());
 		$others = $this->map->all - PER_PAGE;
 		$parts = 0;
@@ -3745,7 +3748,8 @@ class HostGrid {
 		// XEN domains
 
 		if ($xvm > 0) {
-			$ret_str .= ($lz == 0 && $ld == 0 && $vm == 0 && $unk == 0)
+			$ret_str .= ($lz == 0 && $ld == 0 && $vm == 0 && $unk == 0 && 
+			$kvm == 0)
 				? " and"
 				: ",";
 
@@ -3759,7 +3763,8 @@ class HostGrid {
 		// VMWare hosts
 
 		if ($vm > 0) {
-			$ret_str .= ($lz == 0 && $ld == 0 && $unk == 0) ? " and" : ",";
+			$ret_str .= ($lz == 0 && $ld == 0 && $unk == 0 && $kvm == 0) ?
+			   	" and" : ",";
 
 			$ret_str .= " <strong>$vm</strong> VMware instance";
 
@@ -3771,9 +3776,22 @@ class HostGrid {
 		// Now LDOMs
 
 		if ($ld > 0) {
-			$ret_str .= ($lz == 0 && $unk == 0) ? " and" : ",";
+			$ret_str .= ($lz == 0 && $unk == 0 && $kvm == 0) ? " and" : ",";
 
 			$ret_str .= " <strong>$ld</strong> logical domain";
+
+			if ($ld != 1) $ret_str .= "s";
+
+			$parts++;
+		}
+
+
+		// KVM guests
+
+		if ($kvm > 0) {
+			$ret_str .= ($lz == 0 && $unk == 0) ? " and" : ",";
+
+			$ret_str .= " <strong>$kvm</strong> KVM guest";
 
 			if ($ld != 1) $ret_str .= "s";
 
@@ -4004,7 +4022,7 @@ class OSGrid extends PlatformGrid
 
 	protected $def_fields = array("distribution", "version", "release",
 	"kernel", "hostid", "packages", "patches", "repository", "VM",
-	"scheduler", "SMF services", "boot env", "uptime");
+	"scheduler", "SMF services", "boot env", "timezone", "uptime");
 
     public function __construct($map, $servers, $c)
 	{
@@ -4551,10 +4569,11 @@ class AppGrid extends SoftwareGrid
 		// Don't try to find the latest versions of these fields
 
 	protected $def_fields = array("powermt", "VxVm", "VxFS", "VCS",
-	"Sun Cluster", "SMC", "sshd", "BIND", "X server", "sendmail", "exim",
-	"Samba", "ldm", "AI server", "Apache", "apache so", "mod_php", "Tomcat",
-	"Glassfish", "iPlanet web", "Nginx", "Squid", "Oracle", "MySQL server",
-	"Postgres", "svn server", "Networker clnt", "Networker srvr"  );
+	"Sun Cluster", "SMC", "sshd", "BIND", "X server", "chef-client", 
+	"sendmail", "exim", "Samba", "ldm", "AI server", "Apache", "apache 
+	so", "mod_php", "Tomcat", "Glassfish", "iPlanet web", "Nginx", 
+	"Squid", "Oracle", "MySQL server", "Postgres", "svn server", 
+	"Networker clnt", "Networker srvr"  );
 }
 
 //----------------------------------------------------------------------------

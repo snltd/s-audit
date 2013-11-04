@@ -36,6 +36,7 @@ $eng = array(
 	"dom0" => "XEN dom0",
 	"vbox" => "VirtualBox",
 	"vmware" => "VMWare",
+	"kvm" => "KVM guest",
 	"ldmp" => "primary LDOM",
 	"ldm" => "guest LDOM");
 
