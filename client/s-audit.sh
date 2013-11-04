@@ -163,9 +163,10 @@ L_NET_TESTS="name_service dns_serv domainname name_server snmp ports routes
 	rt_fwd net"
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
-	vboxes scheduler svc_count package_count patch_count pkg_repo uptime "
+	vboxes scheduler svc_count package_count patch_count pkg_repo uptime 
+	timezone"
 L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
-	patch_count pkg_repo uptime"
+	patch_count pkg_repo uptime timezone"
 
 L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
 	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog 
@@ -1461,6 +1462,11 @@ function get_uptime
 	[[ $ut == *user* ]] && ut="unknown"
 
 	disp uptime $ut
+}
+
+function get_timezone 
+{
+	disp timezone $(date "+%Z")
 }
 
 function get_xvmdoms
