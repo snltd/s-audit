@@ -35,9 +35,8 @@
 /* FIXED WIDTH AND CODE EXAMPLES */
 
 tt, pre, ul.omitlisttt { /* embedded and inline code */
-	font-family: "Consolas";
-	/*"DejaVu Sans Mono", "Consolas", "Lucida Sans Typewriter",
-	"Bitstream Vera Sans Mono", "Monaco", monospace;*/
+	font-family: "Consolas", "DejaVu Sans Mono", "Lucida Sans Typewriter",
+    "Bitstream Vera Sans Mono", "Monaco", monospace;
 	font-size: 95%;
 	font-weight: bold;
 }

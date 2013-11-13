@@ -820,7 +820,7 @@ usage()
 {
 	cat<<-EOUSAGE
 	Usage: ${0##*/} [-f [dir]] [-z zone,...|all] [-qjpPMFlV] [-D sec] [T sec]
-	[-L facility] [-o test,...] [-R user@host:dir ] [-e file] audit_type
+	       [-L facility] [-o test,..] [-R user@host:dir ] [-e file] audit_type
 
 	where
 	  -f   write files to an (optionally) supplied local directory.
@@ -4318,7 +4318,7 @@ log "${0##*/} invoked"
 trap 'die "user hit CTRL-C"' 2
 # Get options
 
-while getopts "CD:e:f:FlL:Mo:pjPqR:T:vVz:Z" option 2>/dev/null
+while getopts "CD:e:f:FhlL:Mo:pjPqR:T:vVz:Z" option 2>/dev/null
 do
 	case $option in
 
@@ -4344,6 +4344,10 @@ do
 		"F")	# Force removal of lock file
 			rm -f $LOCKFILE
 			;;
+
+        "h")    # Usage
+            usage
+            ;;
 
 		"l")	# display the checks we have
 			show_checks
