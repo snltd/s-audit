@@ -26,9 +26,11 @@ $pg = new docPage($menu_entry);
 
 	<dt>zpool</dt>
 	<dd>Lists the names of all imported zpools along with their capacity,
-	their version, their state, and on recent versions of Solaris 10 and 11,
-	the highest zpool version supported on the machine. Not run in local
-	zones.</dd>
+    their version, their state, and on recent versions of Solaris 10 and
+    11, the highest zpool version supported on the machine. The number of
+    devices reported includes any devices assigneed to log and/or cache. If
+    a pool has a log or cache, it will be stated. Not run in local
+     zones.</dd>
 
 	<dt>disk group</dt>
 	<dd>Lists Veritas Volume Manager disk groups. The name of the group is
