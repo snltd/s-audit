@@ -163,15 +163,15 @@ L_NET_TESTS="name_service dns_serv domainname name_server snmp ports routes
 	rt_fwd net"
 
 G_OS_TESTS="os_dist os_ver os_rel kernel be hostid local_zone ldoms xvmdoms
-	vboxes scheduler svc_count package_count patch_count pkg_repo uptime 
+	vboxes scheduler svc_count package_count patch_count pkg_repo uptime
 	timezone"
 L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 	patch_count pkg_repo uptime timezone"
 
 L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
-	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog 
+	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog
 	mailman splunk sshd named ssp symon samba x vbox smc ai_srv
-	networker_c chef_client"
+	networker_c chef_client puppet"
 G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
 	nb_s"
 
@@ -203,7 +203,7 @@ function flush_json
 	# printed here once we start on a new key. So, with JSON output you're
 	# always printing one check behind what's being tested. We have to
 	# escape soft quotes, and replace literal tabs in here
- 	
+
 	J_DAT=$(print $J_DAT | sed 's/"/\\"/g;s/	/\\t/g') # literal tab!
 
 	if [[ -n $J_DAT && ${#J_DAT[@]} == 1 ]]
@@ -771,7 +771,7 @@ function get_disk_type
 		print "untraceable"
 		return
 	fi
-	
+
 	s=$(ls -l /dev/dsk/${1}s2)
 
 	if [[ $s == *ide@* ]]
@@ -924,7 +924,7 @@ function get_hardware
 {
 	# Get a string which identifies the hardware, and pretty it up a bit.
 	# This gives the name of the hardware platform, which doesn't always
-	# exactly tally with what's printed on the front of the box.  
+	# exactly tally with what's printed on the front of the box.
 
 
 	if [[ $HW_CHIP == "sparc" ]]
@@ -1098,7 +1098,7 @@ function get_disks
 	can_has powermt \
 		&& PPDSKS=" $(powermt display dev=all | grep "c[0-9]*t[0-9]" \
 		| cut -d\  -f3 | tr "\n" " ") "
-	
+
 	# If we have a vendor line, tag the following "size" line on to it. This
 	# makes the lines look similar on SPARC and x86, with or without a
 	# Vendor: string.
@@ -1263,7 +1263,7 @@ function get_mpath
 				&& disp "multipath" "powerpath ($num $typ devices)"
 
 		done
-	
+
 	fi
 }
 
@@ -1271,7 +1271,7 @@ function get_cards
 {
 	# Have a go at finding cards
 
-	if [[ -x $PRTDIAG ]] 
+	if [[ -x $PRTDIAG ]]
 	then
 		# SBUS first. Works on the Ultra 2, YMMV.  I'm not very confident
 		# about only checking below slot 14
@@ -1286,7 +1286,7 @@ function get_cards
 			done
 
 		fi
-	
+
 		# Get PCI information from prtdiag. We don't process it any more -
 		# it was getting out of hand as every machine presents the info
 		# differently. The PHP interface knows lots of machines though.
@@ -1464,7 +1464,7 @@ function get_uptime
 	disp uptime $ut
 }
 
-function get_timezone 
+function get_timezone
 {
 	disp timezone $(date "+%Z")
 }
@@ -2402,7 +2402,7 @@ function get_zpools
 	# Get a list of zpools, their versions, and capacities. There's no
 	# "zpool get" in early ZFS releases. Output:
 	# name status (last scrub:) [ver/max_ver]
-	# Now does parseable output 
+	# Now does parseable output
 	# pool|status|size|%full|scrub|ver|supp_ver|layout|devs|clustered
 
 	if [[ -n $HAS_ZFS ]]
@@ -3006,7 +3006,7 @@ function get_glassfish
 
 		disp "Glassfish@$BIN" "$(print $VSTR | \
 		sed 's/^[^0-9]*//') [$GFT version]$xtra"
-		
+
 	done
 }
 
@@ -3360,6 +3360,14 @@ function get_chef_client
 	done
 }
 
+function get_puppet
+{
+    for BIN in $(find_bins puppet)
+	do
+        disp "puppet@/$BIN" $($BIN --version)
+	done
+}
+
 function get_samba
 {
 	# Samba version. We get the shares elsewhere
@@ -3440,7 +3448,7 @@ function get_ldm
 
 function get_smc
 {
-	# Is SMC running and listening? 
+	# Is SMC running and listening?
 
 	if can_has smcwebserver
 	then
@@ -3453,11 +3461,11 @@ function get_smc
 			netstat -an | $EGS "6789.*LISTEN" && msg="running"
 		else
 			s="system/webconsole"
-		
+
 			if [[ $(svcs -H -o state $s) == "online" ]]
 			then
 				msg="running"
-			
+
 				[[ $(svcprop -p options/tcp_listen $s) == "true" ]] \
 					&& msg="$msg and listening"
 			else
@@ -3763,7 +3771,7 @@ function get_explorer
 	for BIN in $(find_bins explorer)
 	do
 		EXD=$(which explorer | sed "s|/bin/explorer||")
-		
+
 		# Only root can run explorer
 
 		if is_root
@@ -3791,7 +3799,7 @@ function get_jass
 function get_jet
 {
 	# Get JET version - I can't see a way to do this other than pkginfo
-	
+
 	disp "JET" $(pkginfo -l SUNWjet 2>/dev/null | sed -n '/VERSION/s/^.* //p')
 }
 
@@ -3951,7 +3959,7 @@ function get_ports
 		# If we're in a global, filter out everything in a local
 
 		(($OSVERCMP > 59)) && is_global && SED=';/ global$/!d' || SED=''
-		
+
 		ps -e $PSFLAGS -o pid,fname | sed "1d$SED" | while read pid fname z
 		do
 
@@ -4037,7 +4045,7 @@ function get_RBAC
 function get_jass_appl
 {
 	# Report when JASS was applied
-	
+
 	ls /etc/*JASS* 2>/dev/null | sed \
 	's/^.*JASS\.\([0-9]\{4\}\)\([0-9]\{2\}\)\([0-9]\{2\}\).*$/\1-\2-\3/' \
 	| sort -u | while read d
@@ -4496,7 +4504,7 @@ fi
 # probably gzip
 
 [[ -n $COMPRESS ]] && ! can_has gzip && die "no gzip binary"
-	
+
 
 # If this zone has been named, remove it from the zlist
 
@@ -4630,7 +4638,7 @@ then
 
 		WARN=$(nr_warn $myc)
 
-		if [[ -n $WARN ]] && ! is_root 
+		if [[ -n $WARN ]] && ! is_root
 		then
 			prt_bar
 			print "WARNING: running this script as an unprivileged user may
