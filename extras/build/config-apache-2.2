@@ -1,0 +1,69 @@
+#!/bin/ksh
+
+export CC=cc
+export CXX=CC
+CFLAGS="-fast -native"
+export CXXFLAGS="$CFLAGS -features=extensions"
+export CPPFLAGS=$CXXFLAGS
+export CONFIG_SHELL=/bin/bash
+
+cat<<-\EOLAYOUT >>config.layout
+
+<Layout s-audit>
+    prefix:        /usr/local/apache
+    exec_prefix:   $prefix
+    bindir:        ${prefix}/bin
+    sbindir:       ${prefix}/bin
+    libdir:        ${prefix}/lib
+    libexecdir:    ${prefix}/modules
+    mandir:        ${prefix}/man
+    sysconfdir:    /config/apache
+    datadir:       /config/apache
+    iconsdir:      ${prefix}/icons
+    htdocsdir:     ${prefix}/htdocs
+    manualdir:     ${prefix}/htdocs
+    cgidir:        ${prefix}/cgi-bin
+    includedir:    ${prefix}/include
+    localstatedir: /var/apache/run
+    runtimedir:    /var/apache/run
+    logfiledir:    /var/apache/logs
+    proxycachedir: /var/apache/proxy
+    infodir:   
+    installbuilddir: ${prefix}/build
+    errordir:      ${prefix}/error
+</Layout>
+EOLAYOUT
+
+./configure \
+	--enable-layout=s-audit \
+	--sysconfdir=/config/apache \
+	--with-mpm=prefork \
+	--with-included-apr \
+	--disable-charset-lite \
+	--disable-include \
+	--disable-env \
+	--disable-status \
+	--disable-asis \
+	--disable-userdir \
+	--disable-imap \
+	--disable-negotiation \
+	--disable-actions \
+	--disable-info \
+	--disable-static-support \
+	--disable-proxy \
+	--disable-ssl \
+	--disable-vhost-alias \
+	--disable-setenvif \
+	--disable-deflate \
+	--disable-rewrite \
+	--disable-filter \
+	--disable-version \
+	--disable-autoindex \
+	--disable-asis \
+	--disable-cgid \
+	--disable-cgi \
+	--enable-dir \
+	--disable-alias \
+	--enable-dav-fs=no \
+	--enable-so
+

@@ -1,0 +1,44 @@
+#!/bin/ksh
+
+# PHP configuration for s-audit 3.x using Sun Studio. Works on SPARC and
+# x86
+
+export CC=cc
+export CFLAGS="-fast"
+export CPPFLAGS=$CFLAGS
+export CONFIG_SHELL=/bin/bash
+
+./configure \
+	--prefix=/usr/local/apache \
+	--with-apxs2=/usr/local/apache/bin/apxs \
+	--with-config-file-path=/config/apache \
+	--with-pcre-dir=/usr \
+	--with-zlib=/usr \
+	--enable-inline-optimization \
+	--without-pear \
+	--without-cdb \
+	--without-iconv \
+	--without-mysql \
+	--without-pdo-sqlite \
+	--without-sqlite3 \
+    --disable-opcache \
+	--disable-json \
+	--disable-cli \
+	--disable-embedded-mysqli \
+	--disable-debug \
+	--disable-cgi \
+	--disable-dom \
+	--disable-hash \
+	--disable-ipv6 \
+	--disable-phar \
+	--disable-flatfile \
+	--disable-libxml \
+	--disable-ctype \
+	--disable-session \
+	--disable-simplexml \
+	--disable-tokenizer \
+	--disable-xml \
+	--disable-xmlreader \
+	--disable-xmlwriter \
+	--disable-mysqlnd-compression-support
+
