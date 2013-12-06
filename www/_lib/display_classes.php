@@ -2536,11 +2536,11 @@ class HostGrid {
 
                 if ($a[10]) {
 
-                    if (preg_match("/log/", $a[10]) {
+                    if (preg_match("/log/", $a[10])) {
                         $id["log device"] = "yes";
                     }
 
-                    if (preg_match("/cache/", $a[10]) {
+                    if (preg_match("/cache/", $a[10])) {
                         $id["cache device"] = "yes";
                     }
 
