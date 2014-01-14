@@ -927,16 +927,14 @@ function get_hardware
 	# exactly tally with what's printed on the front of the box.
 
 
+	can_has isainfo && BITS=$(isainfo -b)
+
 	if [[ $HW_CHIP == "sparc" ]]
 	then
 		HW_OUT=$($PRTDIAG | sed "1s/^.*$HW_PLAT //;q")
 		CH="SPARC"
-		can_has isainfo && BITS=$(isainfo -b)
 	else
 		HW_OUT=$HW_CHIP
-
-		# If it's x86 it might be a ZFS appliance
-
 		is_running akd && HW_OUT="${HW_OUT} ZFS appliance"
 	fi
 
