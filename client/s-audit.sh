@@ -169,14 +169,15 @@ L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 	patch_count pkg_repo uptime timezone"
 
 L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
-	mysql_s ora_s postgres_s mongodb_s svnserve sendmail exim cronolog
-	mailman splunk sshd named ssp symon samba x vbox smc ai_srv
-	networker_c chef_client puppet"
+    mysql_s ora_s postgres_s mongodb_s redis_s svnserve sendmail exim
+    cronolog mailman splunk sshd named ssp symon samba x vbox smc ai_srv
+    networker_c chef_client puppet"
 G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
 	nb_s"
 
-L_TOOL_TESTS="openssl rsync mysql_c postgres_c sqlplus svn_c java perl php_cmd
-	python ruby node cc gcc pca nettracker saudit scat explorer jass jet"
+L_TOOL_TESTS="openssl rsync mysql_c postgres_c sqlplus svn_c git_c redis_c
+    java perl php_cmd python ruby node cc gcc pca nettracker saudit scat
+    explorer jass jet"
 G_TOOL_TESTS="sccli sneep vts $L_TOOL_TESTS"
 
 G_HOSTED_TESTS="site_apache site_iplanet db_mysql ai"
@@ -2989,11 +2990,11 @@ function get_tomcat
 function get_glassfish
 {
 	# Get the version of Glassfish. It tries to get the version from the
-	# running server
+	# running server. May need to add --local to the version cmd.
 
 	for BIN in $(find_bins asadmin)
 	do
-		VSTR=$(print "version --local" | $BIN | grep "Version =")
+		VSTR=$(print version | $BIN | grep "Version =")
 
 		[[ $VSTR == *Open* ]] && GFT="Open Source" || GFT=Oracle
 
@@ -3105,6 +3106,14 @@ function get_mongodb_s {
 	do
 		is_run_ver "MongoDB@$BIN" $BIN $($BIN --version \
 		| sed -n '1s/db version v\([0-9.]*\).*$/\1/p')
+	done
+}
+
+function get_redis_s {
+	for BIN in $(find_bins redis-server)
+	do
+		is_run_ver "Redis server@$BIN" $BIN $($BIN -v \
+        | sed 's/^.*v=\([^ ]*\).*/\1/')
 	done
 }
 
@@ -3560,6 +3569,23 @@ function get_mysql_c
 	for BIN in $(find_bins mysql)
 	do
 		disp "MySQL client@$BIN" $($BIN -V | sed 's/^.*rib \([^ -,]*\).*$/\1/')
+	done
+}
+
+
+function get_redis_c
+{
+	for BIN in $(find_bins redis-client)
+	do
+        disp "Redis client@$BIN" $($BIN -v | sed 's/.* //')
+	done
+}
+
+function get_git_c
+{
+    for BIN in $(find_bins git)
+	do
+        disp "Git client@$BIN" $($BIN --version | sed 's/.* //')
 	done
 }
 

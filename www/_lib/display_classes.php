@@ -791,11 +791,19 @@ class HostGrid {
 				$date_str = "$t_arr[1]<div class=\"strl\">FUTURE TIME</div>";
 			}
 			elseif (($now - $date) < 86400) {
+                //
+                // Anything in the last 24 hours isn't coloured
+                //
 				$date_str = false;
 				$class = false;
 			}
 			elseif(($now - $date) < 680400) {
-				$date_str = "yesterday";
+                //
+                // Anything in the last week: colour it amber, and say
+                // how many days ago it was.
+                //
+                $ago = floor(($now - $date) / 86400);
+				$date_str = "$ago days ago";
 				$class = "solidamber";
 			}
 			else {
