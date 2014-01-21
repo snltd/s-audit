@@ -2542,7 +2542,7 @@ class HostGrid {
 				$id["layout"] = $a[7];
 				$id["devices"] = $a[8];
 
-                if ($a[10]) {
+                if (isset($a[10])) {
 
                     if (preg_match("/log/", $a[10])) {
                         $id["log device"] = "yes";
