@@ -803,7 +803,13 @@ class HostGrid {
                 // how many days ago it was.
                 //
                 $ago = floor(($now - $date) / 86400);
-				$date_str = "$ago days ago";
+                $date_str = "$ago day";
+
+                if ($ago != 1) {
+                    $date_str .= "s";
+                }
+
+                $date_str .= " ago";
 				$class = "solidamber";
 			}
 			else {
@@ -4590,12 +4596,14 @@ class AppGrid extends SoftwareGrid
 	"audit completed");
 		// Don't try to find the latest versions of these fields
 
+    // Be careful not to line-break the strings
+
 	protected $def_fields = array("powermt", "VxVm", "VxFS", "VCS",
 	"Sun Cluster", "SMC", "sshd", "BIND", "X server", "chef-client",
-	"sendmail", "exim", "Samba", "ldm", "AI server", "Apache", "apache
-	so", "mod_php", "Tomcat", "Glassfish", "iPlanet web", "Nginx",
-	"Squid", "Oracle", "MySQL server", "Postgres", "svn server",
-	"Networker clnt", "Networker srvr"  );
+    "sendmail", "exim", "Samba", "ldm", "AI server", "Apache",
+    "apache so", "mod_php", "Tomcat", "Glassfish", "iPlanet web", "Nginx",
+    "Squid", "Oracle", "MySQL server", "Postgres", "Redis server",
+    "svn server", "Networker clnt", "Networker srvr"  );
 }
 
 //----------------------------------------------------------------------------
@@ -4612,8 +4620,9 @@ class ToolGrid extends SoftwareGrid
 		// Sun Studio versions from misc.php
 
 	protected $def_fields = array("PCA", "OpenSSL", "Java",
-	"perl", "Python", "PHP cmdline", "ruby", "node.js", "Sun CC", "GCC",
-	"sqlplus", "MySQL client", "Postgres client", "svn client", "rsync",
+	"perl", "Python", "PHP cmdline", "ruby", "node", "Sun CC", "GCC",
+    "sqlplus", "MySQL client", "Postgres client", "Redis client",
+    "Git client", "svn client", "rsync",
 	"Explorer", "VTS", "JASS", "JET", "Sneep", "SunCAT", "s-audit");
 	public function __construct($map, $servers, $c)
 	{
