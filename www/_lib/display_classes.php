@@ -1070,7 +1070,9 @@ class HostGrid {
 		// multi-core chips have 6 elements, single core have 3
 
 		if (sizeof($arr) == 6) {
-			$cores = "$arr[2] cores @<br/>";
+            $cores = $arr[2];
+            $cores .= ($arr[2] == 1) ? " core" : " cores";
+            $cores .= " @<br/>";
 			$speed = $arr[5];
 		}
 		else {
