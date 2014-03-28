@@ -171,7 +171,7 @@ L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
     mysql_s ora_s postgres_s mongodb_s redis_s svnserve sendmail exim
     cronolog mailman splunk sshd named ssp symon samba x vbox smc ai_srv
-    networker_c chef_client puppet"
+    networker_c chef_client puppet collectd"
 G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
 	nb_s"
 
@@ -3375,6 +3375,16 @@ function get_puppet
         disp "puppet@/$BIN" $($BIN --version)
 	done
 }
+
+function get_collectd
+{
+    for BIN in $(find_bins collectd)
+	do
+        CD_VER=$($BIN -h | sed -n '/^collect/s/^collectd \([^,]*\).*/\1/p')
+        is_run_ver "collectd@/$BIN" $BIN $CD_VER
+	done
+}
+
 
 function get_samba
 {

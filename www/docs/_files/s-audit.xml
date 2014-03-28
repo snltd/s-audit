@@ -20,34 +20,27 @@
     </property_group>
 
     <instance name='default' enabled='true'>
-      <dependency 
-	  	name='multi-user' 
-		grouping='require_all' 
-		restart_on='none' 
+      <dependency
+	  	name='multi-user'
+		grouping='require_all'
+		restart_on='none'
 		type='service'>
         <service_fmri value='svc:/milestone/multi-user-server:default'/>
       </dependency>
 
-      <exec_method 
-	  	name='start' 
-		type='method' 
-		exec='%{options/pth} -qp -D %{options/delay} %{options/dest} 
+      <exec_method
+	  	name='start'
+		type='method'
+		exec='%{options/pth} -qp -D %{options/delay} %{options/dest}
 		machine' timeout_seconds='0'>
         <method_context/>
       </exec_method>
 
-      <exec_method 
-	  	name='stop' 
-		type='method' 
-		exec=':kill' 
-		timeout_seconds='10'>
-        <method_context/>
+      <exec_method type='method' name='stop' exec=':true' timeout_seconds='60' />
 
-      </exec_method>
-
-      <exec_method 
-	  	name='refresh' 
-		type='method' 
+      <exec_method
+	  	name='refresh'
+		type='method'
 		exec='%{options/pth} -qp %{options/dest} machine' timeout_seconds='0'>
         <method_context/>
       </exec_method>
