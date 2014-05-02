@@ -4595,17 +4595,18 @@ class AppGrid extends SoftwareGrid
 	protected $type = "app";
 
 	protected $ignore_version = array("hostname", "apache_so", "AI server",
-	"audit completed");
+	    "audit completed");
 		// Don't try to find the latest versions of these fields
 
     // Be careful not to line-break the strings
 
 	protected $def_fields = array("powermt", "VxVm", "VxFS", "VCS",
-	"Sun Cluster", "SMC", "sshd", "BIND", "X server", "chef-client",
-    "sendmail", "exim", "Samba", "ldm", "AI server", "Apache",
-    "apache so", "mod_php", "Tomcat", "Glassfish", "iPlanet web", "Nginx",
-    "Squid", "Oracle", "MySQL server", "Postgres", "Redis server",
-    "svn server", "Networker clnt", "Networker srvr"  );
+        "Sun Cluster", "SMC", "sshd", "BIND", "X server", "collectd",
+        "chef-client", "puppet", "cf-engine", "sendmail", "exim",
+        "Samba", "ldm", "AI server", "Apache", "apache so", "mod_php",
+        "Tomcat", "Glassfish", "iPlanet web", "Nginx", "Squid",
+        "Oracle", "MySQL server", "Postgres", "Redis server",
+        "svn server", "Networker clnt", "Networker srvr"  );
 }
 
 //----------------------------------------------------------------------------

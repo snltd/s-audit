@@ -171,7 +171,7 @@ L_OS_TESTS="os_dist os_ver os_rel kernel be hostid svc_count package_count
 L_APP_TESTS="apache coldfusion tomcat glassfish iplanet_web nginx squid
     mysql_s ora_s postgres_s mongodb_s redis_s svnserve sendmail exim
     cronolog mailman splunk sshd named ssp symon samba x vbox smc ai_srv
-    networker_c chef_client puppet collectd"
+    networker_c chef_client puppet cfengine collectd"
 G_APP_TESTS="powermt vxvm vxfs scs vcs ldm $L_APP_TESTS nb_c networker_s
 	nb_s"
 
@@ -3373,6 +3373,15 @@ function get_puppet
     for BIN in $(find_bins puppet)
 	do
         disp "puppet@/$BIN" $($BIN --version)
+	done
+}
+
+function get_cfengine
+{
+    for BIN in $(find_bins cf-agent)
+	do
+        cfe_ver=$($BIN --version)
+        disp "cf-engine@/$BIN" ${cfe_ver##* }
 	done
 }
 
