@@ -66,7 +66,7 @@ SPATH="/bin /usr/bin /usr/sbin /usr/lib/ssh /usr/xpg6/bin /usr/sun/bin /etc \
 	/opt/local/*/bin /*/bin -prune \
 	2>/dev/null) /usr/netscape/suitespot /opt/VirtualBox"
 
-PATH=$(print "$SPATH" | tr " " : | tr "\n" ":")
+PATH=$(print "$SPATH" | tr "$IFS" :)
 
 # Get host information and cache it to save us running uname all over. Also
 # strip the dot out of OSVER so we can use it in arithmetic comparisons.
@@ -124,7 +124,7 @@ then
 		DL_SPEED_CMD='show-ether -pospeed-duplex $nic'
 	fi
 
-	DL_AO_CMD='show-link $nic -po over | tr " " ,'
+	DL_AO_CMD='show-link $nic -po over | tr \   ,'
 	DL_AP_CMD='show-aggr -po policy,addrpolicy $a'
 	DL_AM_CMD='show-aggr -xpo address $a | sed 1q'
 	DL_ZONE_CMD='show-linkprop -c -pzone -o value $nic |
@@ -1096,7 +1096,7 @@ function get_disks
 
 	can_has powermt \
 		&& PPDSKS=" $(powermt display dev=all | grep "c[0-9]*t[0-9]" \
-		| cut -d\  -f3 | tr "\n" " ") "
+		| cut -d\  -f3 | tr "\n" \ ) "
 
 	# If we have a vendor line, tag the following "size" line on to it. This
 	# makes the lines look similar on SPARC and x86, with or without a
@@ -2591,7 +2591,7 @@ function get_fs
 	fi
 
 	dftab="$(df -k 2>/dev/null)"
-	vfstab=" $(grep "^/" /etc/vfstab | cut -f1 | tr "\n" " ") "
+	vfstab=" $(grep "^/" /etc/vfstab | cut -f1 | tr "\n" \ ) "
 
 	is_global && can_has zoneadm && \
 		ZONEROOTS=" $(zoneadm list -cp | egrep -v ^0:global | cut -d: -f4) "
@@ -3917,8 +3917,8 @@ function get_authorized_keys
 
 			cut -d\  -f3 $KEYFILE | while read key
 			do
-				user=$(ls -o $KEYFILE | tr -s " " | cut -d\  -f3)
-				disp "authorized key" "$key ($user)"
+				ls -o $KEYFILE | read a b c d
+				disp "authorized key" "$key ($c)"
 			done
 
 		fi
@@ -4415,7 +4415,7 @@ do
 			;;
 
 		"o")	# Omit the following tests
-			OMIT_TESTS=" $(print $OPTARG | tr "," " ") "
+			OMIT_TESTS=" $(print $OPTARG | tr , \ ) "
 			Z_OPTS="$Z_OPTS -o $OPTARG"
 			;;
 
@@ -4463,7 +4463,7 @@ do
 			;;
 
 		"z")	# Do a zone
-			ZL=$(print $OPTARG | tr "," " ")
+			ZL=$(print $OPTARG | tr , \ )
 			unset RUN_HERE
 			;;
 
@@ -4721,7 +4721,7 @@ then
 	do
 		[[ $ZL == "global" ]] && continue
 
-		zoneadm -z $z list -p | cut -d: -f3,4,6 | tr : " " | read zst zr zbr
+		zoneadm -z $z list -p | cut -d: -f3,4,6 | tr : \  | read zst zr zbr
 
 		# Running zones get properly audited but those which aren't running
 		# get some dummy output so the interface can show that the zone
