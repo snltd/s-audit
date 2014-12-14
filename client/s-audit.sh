@@ -108,7 +108,7 @@ egrep --version >/dev/null 2>&1 && EGS="ggrep -q" || EGS="egrep -s"
 
 [[ -f /usr/sbin/dladm ]] && HAS_DL=1
 
-if [[ -n $HAS_DL ]] && dladm 2>&1 | $EGS "show-ether.*-o"
+if [[ -n $HAS_DL ]] && dladm help 2>&1 | $EGS "show-ether.*-o|Misc"
 then
 
 	if dladm show-link -p >/dev/null 2>&1
