@@ -1582,13 +1582,18 @@ class HostGrid {
 		foreach($data as $row) {
 			$class = false;
 
-			if (preg_match("/^failsafe:/", $row))
-				preg_match("/^(\w+): [\"']([^\"']*)[\"'] \((.*)\)$/", $row, $a);
-
-				// [1] => "failsafe"
+            if (preg_match("/^failsafe:/", $row)
+                || preg_match("/^boot_archive:/", $row)) {
+				// [1] => archive type
 				// [2] => BE name
 				// [3] => miniroot path
+                // [4] => "MISSING" or nothing
 
+                preg_match("/^(\w+): [\"']([^\"']*)[\"'] \((.*)\)(.*)$/",
+                        $row, $a);
+                if ($a[4] == "MISSING")
+                    $class = "solidred";
+            }
 			else
 				preg_match("/^(\S+): (.*) \((.*)\) \[(\S*)\]$/", $row, $a);
 
@@ -1601,7 +1606,7 @@ class HostGrid {
 				echo "<h2>$row</h2>";
 			$txt = "<strong>$a[2]</strong> ($a[1])";
 
-			if ($a[1] == "failsafe")
+			if ($a[1] == "failsafe" || $a[1] == "boot_archive")
 				$id["path"] = $a[3];
 			else {
 
@@ -1626,7 +1631,6 @@ class HostGrid {
 			}
 
 			$c_arr[] = array($txt . $this->indent_print($id), $class);
-
 		}
 
 		return new listCell($c_arr, "smallauditl", false, 1);
