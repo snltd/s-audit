@@ -1637,7 +1637,7 @@ function get_os_rel
 
 function get_be
 {
-	# Get beadm, LiveUpgrade and failsafe boot environments
+	# Get beadm, LiveUpgrade, boot archive, and failsafe boot environments
 
 	if (($OSVERCMP > 510 )) && can_has beadm
 	then
@@ -1683,25 +1683,20 @@ function get_be
 		[[ -f /boot/grub/menu.lst ]] && GM=/boot/
 		[[ -f /rpool/boot/grub/menu.lst ]] && GM="/rpool/boot"
 
-		find /boot -name \*miniroot\* | while read f
+		grep -v "^#" ${GM}/grub/menu.lst | sed '1!G;h;$!d' | while read l
 		do
-			unset i
 
-			grep -v "^#" ${GM}/grub/menu.lst | sed '1!G;h;$!d' | while read l
-			do
-				if [[ $l == "module $f" ]]
-				then
-					i=1
-				elif [[ -n $i && $l == "title"* ]]
-				then
-					disp "boot env" "failsafe: '${l#* }' ($f)"
-					break;
-				fi
-
-			done
+			if [[ $l == "module "* ]]
+			then
+				m=${l#* }
+			elif [[ $l == "title "* ]]
+			then
+				[[ $m == *"miniroot-safe" ]] && t=failsafe || t=boot_archive
+				[[ -s $m ]] && s="" || s=" MISSING"
+				disp "boot env" "$t: '${l#* }' ($m)$s"
+			fi
 
 		done
-
 	fi
 }
 
