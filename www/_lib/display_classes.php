@@ -1734,6 +1734,7 @@ class HostGrid {
 				$c_arr[] = array("<strong>pkgsrc repo</strong> ($row)");
 			}
 			else {
+                pr($row);
 				$a = explode(" ", $row);
 
 				$class = (sizeof($a) == 3)
@@ -1743,8 +1744,13 @@ class HostGrid {
 				$url = preg_replace("/[\(\)]/", "", $a[1]);
 				$lt = preg_replace("/^\(http:\/\/|\/\)$/", "", $a[1]);
 
-				$c_arr[] = array("<strong>$a[0]</strong> "
-				. "(<a href=\"$url\">$lt</a>)", $class);
+                $str = "<strong>$a[0]</strong> ";
+
+                $str .= ($lt == "(system-repository)")
+                    ? $lt
+                    : "(<a href=\"$url\">$lt</a>)";
+
+                $c_arr[] = array($str, $class);
 			}
 		}
 

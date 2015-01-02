@@ -1788,7 +1788,7 @@ function get_pkg_repo
 		do
 			if [[ -n $f ]]
             then
-				str="$a ($f) $c $b"
+                str="$a ($(print $f | sed 's/[<>]//g')) $c $b"
 			elif [[ -n $e ]]
             then
 				str="$a ($e) $b"
