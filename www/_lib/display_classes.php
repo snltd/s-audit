@@ -1830,7 +1830,8 @@ class HostGrid {
 					$id["brand"] = $a[3];
 					$id["path"] = $a[6];
 
-					$class = ($a[3] != "native" && $a[3] != "ipkg")
+                    $class = ($a[3] != "native" && $a[3] != "ipkg" &&
+                              $a[3] != "solaris")
 						? "bzone"
 						: "lzone";
 
