@@ -1784,11 +1784,17 @@ function get_pkg_repo
 	elif can_has pkg
 	then
 
-		pkg publisher -H | while read a b c d e
+		pkg publisher -H | while read a b c d e f
 		do
-			[[ -n $e ]] \
-				&& str="$a ($e) $b" \
-				|| str="$a ($d)"
+			if [[ -n $f ]]
+            then
+				str="$a ($f) $c $b"
+			elif [[ -n $e ]]
+            then
+				str="$a ($e) $b"
+            else
+				str="$a ($d)"
+            fi
 
 			disp "repository" $str
 		done
