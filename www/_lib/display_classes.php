@@ -1734,7 +1734,6 @@ class HostGrid {
 				$c_arr[] = array("<strong>pkgsrc repo</strong> ($row)");
 			}
 			else {
-                pr($row);
 				$a = explode(" ", $row);
 
 				$class = (sizeof($a) == 3)
