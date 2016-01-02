@@ -1602,8 +1602,10 @@ class HostGrid {
 				// [3] => LU="(in)complete"/beadm=mount point
 				// [4] => flags
 
-			if (!isset($a[2]))
-				echo "<h2>$row</h2>";
+      if (preg_match("/^chainloader/", $row)) {
+        continue;
+      }
+
 			$txt = "<strong>$a[2]</strong> ($a[1])";
 
 			if ($a[1] == "failsafe" || $a[1] == "boot_archive")
