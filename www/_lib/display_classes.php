@@ -2513,7 +2513,7 @@ class HostGrid {
 		// don't have parseable output, pass the data on to the legacy
 		// method
 		//
-    	//  [0]  => pool name
+   	//  [0]  => pool name
 		//  [1]  => status
 		//  [2]  => size
 		//  [3]  => %full (capacity)
@@ -2523,10 +2523,11 @@ class HostGrid {
 		//  [7]  => pool layout
 		//  [8]  => number of devices in pool
 		//  [9]  => clustered (blank or literal string 'CLUSTERED')
-        //  [10] => log|cache
+    //  [10] => log|cache
 
 
-		if (!preg_match("/|/", $data[0])) {
+
+		if (!preg_match("/\|/", $data[0])) {
 			return $this->show_zpool_legacy($data);
 		}
 
@@ -2538,7 +2539,7 @@ class HostGrid {
 
 			// If the pool is FAULTED, that's all the info we have.
 
-			if ($a[1] == "FAULTED") {
+			if (isset($a[1]) && $a[1] == "FAULTED") {
 				$c_arr[] = array("<strong>$a[0]</strong> ($a[1])",
 				"solidred");
 			}
